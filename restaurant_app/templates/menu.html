@@ -1,0 +1,56 @@
+{% extends "base.html" %}
+
+{% block title %}Меню{% endblock %}
+
+{% load static %}
+<script src="https://unpkg.com/htmx.org/dist/htmx.min.js"></script>
+
+{% block content %}
+<div class="container">
+
+    <div class="my-4">
+        {% if table.orders.last %}
+        <a href="{% url 'order_detail' order_id=table.orders.last.id%}" type="submit" class="btn btn-primary d-inline-block mr-3">Корзина</a>
+        {% endif %}
+        <a href="{% url 'tables' %}" type="submit" class="btn btn-primary d-inline-block">Столы</a>
+    </div>
+    
+
+    <h1 class="my-4" style="color: white;">Меню</h1>
+    <section>
+        {% include 'search.html' %}
+    </section>
+        <ul class="nav nav-tabs mb-4">
+            {% for key, value in CATEGORIES.items %}
+            <li class="nav-item">
+                <a href="{% url 'menu' table_id=table.table_id category=key %}?{% if order_id %}&order_id={{ table.table_id }}&category={{ key }}{% endif %}" class="nav-link{% if category == key %} active{% endif %}">{{ value }}</a>
+            </li>
+            {% endfor %}
+        </ul>
+
+    <div class="row">
+        {% for product in products %}
+        <div class="col-md-3 mb-3">
+            <div class="card">
+                <img src="{{ product.product_img.url }}" class="card-img-top" alt="{{ product.product_name }}">
+                <div class="card-body">
+                    <h5 class="card-title">{{ product.product_name_rus }}</h5>
+                    <p class="card-text">{{ product.product_price }}₪</p>
+                    <form action="{% if table %}{% url 'add_to_cart' table_id=table.table_id %}{% endif %}" method="post">
+                        {% csrf_token %}
+                        <input type="hidden" name="product_id" value="{{ product.id }}">
+                        {{ product_quantity_form.as_p }}
+                        {% if table.active_orders.exists %}
+                        <input type="hidden" name="order_pk" value="{{ table.active_orders.first.pk }}">
+                        {% endif %}
+                    
+                        <button type="submit" class="btn btn-primary">Добавить в корзину</button>
+                    </form>
+                    
+                </div>
+            </div>
+        </div>
+        {% endfor %}
+    </div>
+</div>
+{% endblock %}

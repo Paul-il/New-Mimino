@@ -1,0 +1,23 @@
+<script src="https://unpkg.com/htmx.org/dist/htmx.min.js"></script>
+
+
+  <form method="GET" id="search-form" 
+      class="flex items-center rounded-md border border-gray-200" 
+      hx-get="{% url 'delivery_app:delivery_search_products' delivery_phone_number=delivery_phone_number %}" 
+      hx-target="#search_results">
+
+
+    <input type="text" 
+        name="q" 
+        class="py-2 px-4 text-gray-700 leading-tight focus:outline-none" 
+        placeholder="Искать Продукт" 
+        hx-swap="outerHTML"  
+        hx-trigger="keyup changed delay:500">
+        
+    <button type="submit" 
+        class="bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded-md">
+          Поиск
+    </button>
+  </form>
+  
+  <div id="search_results"></div>

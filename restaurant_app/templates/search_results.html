@@ -1,0 +1,30 @@
+{% block content %}
+  <h2 style="color: white;">То что получилось найти по запросу:"{{ query }}"</h2>
+  
+  {% if products %}
+    <ul>
+      {% for product in products %}
+        <li style="color: white;">
+          <div style="display: flex; align-items: center;">
+            <div style="flex: 1;">
+              <h5 class="card-title">{{ product.product_name_rus }}, {{ product.product_price }}₪</h5>
+            </div>
+            <div style="margin-left: 10px;">
+              <form action="{% if table %}{% url 'add_to_cart' table_id=table.table_id %}{% endif %}" method="post">
+                {% csrf_token %}
+                <input type="hidden" name="product_id" value="{{ product.id }}">
+                {{ product_quantity_form.as_p }}
+                {% if table.active_orders.exists %}
+                  <input type="hidden" name="order_pk" value="{{ table.active_orders.first.pk }}">
+                {% endif %}
+                <button type="submit" class="btn btn-primary">Добавить в корзину</button>
+              </form>
+            </div>
+          </div>
+        </li>
+      {% endfor %}
+    </ul>
+  {% else %}
+    <p style="color: white;">Ничего не найдено по запросу.</p>
+  {% endif %}
+{% endblock %}

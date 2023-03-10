@@ -1,0 +1,49 @@
+{% extends "base.html" %}
+{% load static %}
+{% block title %}Меню{% endblock %}
+<script src="https://unpkg.com/htmx.org/dist/htmx.min.js"></script>
+<script src="{% static 'scripts/search.js' %}"></script>
+
+{% block content %}
+<div class="container">
+    {% if pickup_order.phone %}
+    <div class="my-4">
+        <a href="{% url 'pickup_app:pickup_cart' phone_number=pickup_order.phone %}" type="submit" class="btn btn-primary">Корзина</a>
+    </div>
+    {% endif%}
+    <h1 class="my-4" style="color: white;">Меню на Самовывоз №: {{ phone_number }}</h1>
+    <section>
+        {% include 'pickup_search.html' %}
+    </section>
+    <ul class="nav nav-tabs mb-4">
+        {% for key, value in CATEGORIES.items %}
+            <li class="nav-item">
+                <a href="{% url 'pickup_app:pickup_menu' phone_number=phone_number category=key %}" class="nav-link{% if category == key %} active{% endif %}">{{ value }}</a>
+            </li>
+        {% endfor %}
+    </ul>
+
+    <div id="products-container" class="row" hx-target="#products-container">
+        {% for product in products %}
+        <div class="col-md-3 mb-3">
+            <div class="card">
+                <img src="{{ product.product_img.url }}" class="card-img-top" alt="{{ product.product_name_rus }}">
+                <div class="card-body">
+                    <h5 class="card-title">{{ product.product_name_rus }}</h5>
+                    <p class="card-text">{{ product.product_price }}₪</p>
+                    <form action="{% url 'pickup_app:pickup_add_to_cart' phone_number=phone_number product_id=product.id %}" method="POST">
+                        {% csrf_token %}
+                        {{ product_quantity_form.as_p }}
+                        <input type="hidden" name="product_id" value="{{ product.id }}">
+                        <input type="hidden" name="user_phone" value="{{ request.user.phone }}">
+                        <button type="submit" class="btn btn-primary">Добавить в корзину</button>
+                    </form>
+                </div>
+            </div>
+        </div>
+        {% endfor %}
+    </div>
+
+ 
+</div>
+{% endblock %}

@@ -1,0 +1,18 @@
+{% extends "base.html" %}
+{% load custom_tags %}
+
+{% block title %}Информация о заказе{% endblock %}
+<link rel="stylesheet" href="{{ STATIC_URL }}css/style.css">
+{% block content %}
+<div class="container">
+
+
+  <h1 class="my-4" style="color: white;">Нет товаров для №: {{ phone_number }}</h1>
+
+
+  <h1 class="my-4" style="color: white; font-size: 30px;">
+    для того чтоб добавить товар вернитесь <a href="{% url 'pickup_app:pickup_menu' phone_number=phone_number category='salads' %}" type="submit" class="btn btn-primary">Меню</a>
+  </h1>
+
+{% endblock %}
+        
