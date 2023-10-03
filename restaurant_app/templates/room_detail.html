@@ -1,0 +1,45 @@
+{% extends "base.html" %}
+
+{% block title %}Tables in {{ room_name }}{% endblock %}
+
+{% load static %}
+
+{% block content %}
+  <h2 style="color: white;">{{ room_name }}</h2>
+  <div class="row">
+    {% for table in tables %}
+    <div class="col-md-3 mb-3">
+      <div class="card rounded-lg">
+        {% if table.active_order %}
+            <img src="{% static 'img/active_order.jpg' %}" class="card-img-top">
+            <a href="{% url 'menu' table_id=table.table_id category='salads' %}" class="btn btn-primary">Добавить в Заказ.</a>
+            <a href="{% url 'order_detail' order_id=table.orders.last.id %}" class="btn btn-primary">Просмотреть заказ</a>
+        {% else %}
+            <img src="{% static 'img/empty_table.jpg' %}" class="card-img-top" alt="Стол {{ table.table_id }}">
+            <a href="{% url 'menu' table_id=table.table_id category='salads' %}" class="btn btn-primary">Начать Заказ.</a>
+            <a href="{% url 'book_table' table_id=table.table_id %}" class="btn btn-primary" >Забронировать.</a>
+        {% endif %}
+
+        <div class="card-body">
+          <h5 class="card-title">Стол {{ table.table_id }}</h5>
+        </div>
+        <div class="card-footer">
+          {% if table.is_booked and table.are_guests_here %}
+            {% if table.active_order %}
+              <a href="{% url 'table_order' table_id=table.table_id order_id=active_order.id %}" class="btn btn-primary">Добавить в заказ.</a>
+              <a href="{% url 'order_detail' order_id=table.active_order.id %}" class="btn btn-primary">Информация о заказе.</a>
+            {% else %}
+              <a href="{% url 'menu' table_id=table.table_id category='salads' %}" class="btn btn-primary">Начать Заказ.</a>
+            {% endif %}
+          {% endif %}
+          {% if table.active_order %}
+            <p class="card-text">Имя Официанта: {{ table.created_by_name }}</p>
+            <p class="card-text">Время начала заказа: {{ table.orders.last.created_at|time:"H:i" }}</p>
+            <p class="card-text">Сумма заказа: {{ table.active_order_total }}</p>
+          {% endif %}
+        </div>
+      </div>
+    </div>
+    {% endfor %}
+  </div>
+{% endblock %}

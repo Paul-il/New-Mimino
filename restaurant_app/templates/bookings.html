@@ -1,17 +1,17 @@
 {% extends "base.html" %}
 
 {% block title %}Bookings{% endblock %}
-
+{% load static %}
 {% block content %}
 <table class="table">
   <thead>
     <tr>
-      <th style="color: white; font-size: 15px;">Кто делал бронь</th>
-      <th style="color: white; font-size: 15px;">Номер стола</th>
-      <th style="color: white; font-size: 15px;">Дата бронирования</th>
-      <th style="color: white; font-size: 15px;">Время бронирования</th>
-      <th style="color: white; font-size: 15px;">Количество человек</th>
-      <th style="color: white; font-size: 15px;">Пришли ли гости</th>
+      <th style="color: white; font-size: 15px;">|Кто делал бронь| </th>
+      <th style="color: white; font-size: 15px;">|Номер стола|</th>
+      <th style="color: white; font-size: 15px;">|Дата бронирования|</th>
+      <th style="color: white; font-size: 15px;">|Время бронирования|</th>
+      <th style="color: white; font-size: 15px;">|Количество людей|</th>
+      <th style="color: white; font-size: 15px;">|Гости|</th>
       <th style="color: white; font-size: 15px;">Описание</th>
     </tr>
   </thead>
@@ -19,20 +19,33 @@
     {% for booking in bookings %}
     {% if not booking.is_deleted %}
         <tr>
-            <td style="color: white; font-size: 15px;">{{ booking.user }}</td>
-            <td style="color: white; font-size: 15px;">{{ booking.table.table_id }}</td>
-            <td style="color: white; font-size: 15px;">{{ booking.reserved_date }}</td>
-            <td style="color: white; font-size: 15px;">{{ booking.reserved_time }}</td>
-            <td style="color: white; font-size: 15px;">{{ booking.num_of_people }}</td>
+            <td style="color: white; font-size: 15px; text-align: center;">{{ booking.user.first_name }}</td>
+            <td style="color: white; font-size: 15px; text-align: center;">{{ booking.table.table_id }}</td>
+            <td style="color: white; font-size: 15px; text-align: center;">{{ booking.reserved_date }}</td>
+            <td style="color: white; font-size: 15px; text-align: center;">{{ booking.reserved_time|date:"H:i" }}</td>
+            <td style="color: white; font-size: 15px; text-align: center;">{{ booking.num_of_people }}</td>
             <td>
+              <div class="d-inline-block">
+
+                <!-- Форма для "Гости пришли" -->
                 <form method="POST" action="{% url 'guests_here' booking.id %}">
                     {% csrf_token %}
-                                         
-                    <button type="submit" class="btn btn-success btn-booking">
-                      {% if booking.are_guests_here %}Гости не пришли{% else %}Гости пришли{% endif %}
+                    <input type="hidden" name="action" value="arrived">
+                    <button type="submit" class="btn btn-primary mr-2">
+                        Пришли
                     </button>
-                                       
                 </form>
+            
+                <!-- Форма для "Гости не пришли" -->
+                <form method="POST" action="{% url 'guests_not_arrived' booking.id %}">
+                    {% csrf_token %}
+                    <input type="hidden" name="action" value="not_arrived">
+                    <button type="submit" class="btn btn-primary">
+                        Гости не пришли
+                    </button>
+                </form>
+            
+            </div>                                 
             </td>
             <td style="color: white; font-size: 15px;">{{ booking.description }}</td>
         </tr>

@@ -1,7 +1,7 @@
 from django.shortcuts import render, get_object_or_404, redirect
 
 from restaurant_app.models.product import Product
-from ..models import DeliveryCustomer, DeliveryOrder, DeliveryCart, DeliveryCartItem
+from ..models import DeliveryCustomer, DeliveryOrder, DeliveryCart, DeliveryCartItem, Courier
 from ..forms import ProductQuantityForm
 
 CATEGORIES = {
@@ -14,14 +14,24 @@ CATEGORIES = {
     'meat_dishes': 'Мясные блюда',
     'grill_meat': 'Мясо на огне',
     'garnish': 'Гарниры',
-    'drinks': 'Напитки',
     'dessert': 'Десерты',
     'sales': 'Акции',
+}
+TAT_CATEGORIES = {
+
+        'soft_drinks': 'Легкие напитки',
+        'beer': 'Пиво',
+        'wine' :'Вино',
+        'vodka': 'Водка',
+        'cognac': 'Коньяк',
+        'whisky': 'Виски',
+        'dessert_drinks': 'Горячие напитки',
+        'mishloha':'Мишлоха',
 }
 
 def delivery_menu_view(request, delivery_phone_number, category):
     delivery_customer = get_object_or_404(DeliveryCustomer, delivery_phone_number=delivery_phone_number)
-    delivery_order, created = DeliveryOrder.objects.get_or_create(customer=delivery_customer, is_completed=False)
+    delivery_order = DeliveryOrder.objects.filter(customer=delivery_customer, is_completed=False).first()  # Так как filter() возвращает QuerySet, мы добавляем .first() чтобы получить первый объект
     products = Product.objects.filter(category=category)
     product_quantity_form = ProductQuantityForm()
 
@@ -31,10 +41,18 @@ def delivery_menu_view(request, delivery_phone_number, category):
         'products': products,
         'product_quantity_form': product_quantity_form,
         'CATEGORIES': CATEGORIES,
+        'TAT_CATEGORIES': TAT_CATEGORIES,
     }
 
     if request.method == 'POST':
         product_id = request.POST.get('product_id')
+        
+        # Проверка наличия курьера в POST-данных
+        courier = request.POST.get('courier')
+        if courier:
+            request.session['selected_courier'] = courier
+            return redirect('delivery_app:delivery_menu', delivery_phone_number=delivery_phone_number, category=category)
+
         quantity = int(request.POST.get('quantity'))
         product = get_object_or_404(Product, id=product_id)
 
@@ -51,5 +69,26 @@ def delivery_menu_view(request, delivery_phone_number, category):
         
         return redirect('delivery_app:delivery_cart', delivery_phone_number=delivery_phone_number)
 
-
     return render(request, 'delivery_menu.html', context)
+
+def set_courier(request, delivery_phone_number):
+    if request.method == 'POST':
+        selected_courier_name = request.POST.get('courier')
+
+        # Получаем заказ по номеру телефона
+        delivery_customer = DeliveryCustomer.objects.get(delivery_phone_number=delivery_phone_number)
+        delivery_order = DeliveryOrder.objects.get(customer=delivery_customer, is_completed=False)
+
+        # Находим курьера по имени
+        try:
+            selected_courier = Courier.objects.get(name=selected_courier_name)
+        except Courier.DoesNotExist:
+            # здесь можно добавить сообщение об ошибке для пользователя
+            return render(request, 'error_page.html', {'message': 'Курьер не найден!'})
+
+
+        # Устанавливаем курьера для заказа и сохраняем заказ
+        delivery_order.courier = selected_courier
+        delivery_order.save()
+        
+    return redirect('delivery_app:delivery_menu', delivery_phone_number=delivery_phone_number, category='delivery')

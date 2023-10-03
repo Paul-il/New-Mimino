@@ -10,7 +10,7 @@
 
 <div class="container">
     <div class="my-4">
-        <a href="{% url 'pickup_app:pickup_menu' phone_number=pickup_order.phone category='salads' %}" class="btn btn-secondary">Меню</a>
+        <a href="{% url 'pickup_app:pickup_menu' phone_number=pickup_order.phone category='salads' %}" type="submit" class="btn-primary">Меню</a>
     </div>
   <h1 class="my-4" style="color: white;">Информация о заказе на Самовывоз</h1>
   <p style="color: white; font-size: 20px;">Номер Телефона: {{ pickup_order.phone }}</p>
@@ -24,11 +24,11 @@
         </tr>
     </thead>
     <tbody>
-        {% for item in cart_items %}
-        <tr>
-            <td style="color: rgb(231, 235, 5);">{{ item.product.product_name_rus }}</td>
-            <td id="order-item-{{ item.id }}-quantity" style="color: white;">{{ item.quantity }}</td>
-            <td style="color: rgb(255, 255, 255);">{{ item.product.product_price }}₪</td>
+      {% for item in cart_items %}
+      <tr>
+          <td style="color: rgb(231, 235, 5);">{{ item.product.product_name_rus }}</td>
+          <td id="order-item-{{ item.id }}-quantity" style="color: white;">{{ item.quantity|append_grams:item.product.product_name_rus }}</td>
+          <td style="color: rgb(255, 255, 255);">{{ item.product.product_price }}₪</td>
 
             <td class="product-quantity">
               
@@ -70,8 +70,8 @@
     
 
 <label class="form-group d-flex" style="color: rgb(238, 4, 4); font-size: 26px;">Метод Оплаты:</label>
-<form id="payment-form" method="post" hx-post="{% url 'pickup_app:pickup_generate_pdf' phone_number=pickup_order.phone order_id=pickup_order.id %}" hx-swap="outerHTML">
-    {% csrf_token %}
+<form id="payment-form" method="post" action="{% url 'pickup_app:pickup_generate_pdf' phone_number=pickup_order.phone order_id=pickup_order.id %}" hx-redirect="true">
+
     <div class="form-check">
         <input class="form-check-input" type="radio" name="payment_method" id="cash" value="מזומן">
         <label class="form-check-label mr-3" for="cash" style="color: rgb(238, 4, 4);">
@@ -89,13 +89,16 @@
           {% csrf_token %}
           <button id="pay-button" name="pay-button" value="aaa" type="submit" class="btn2 btn-primary2 mr-3" disabled>Счет Оплачен.</button>
         </form>
-        <form hx-post="{% url 'pickup_app:pickup_generate_pdf' phone_number=pickup_order.phone order_id=pickup_order.id %}"method="post">
+        <button type="button" id="print-kitchen" name="print-kitchen" class="btn-primary2">Подтвердить Заказ.</button>
+        <form hx-post="{% url 'pickup_app:pickup_pdf_template' phone_number=pickup_order.phone order_id=pickup_order.id %}" method="post">
             {% csrf_token %}
-            <button type="submit" id="print-bill" name="print-bill" class="btn-primary2" value="Распечатать Счет.">Распечатать Счет.</button>
-          </form>
+            <button type="button" id="print-bill" name="print-bill" class="btn-primary2" value="Распечатать Счет." onclick="printInvoice('{{ pickup_order.phone }}', '{{ pickup_order.id }}')">Распечатать Счет.</button>
+            
+        </form>        
       </div>
     
 </div>
+</form>
 <script src="https://unpkg.com/htmx.org/dist/htmx.min.js"></script>
 
 <script>
@@ -118,4 +121,52 @@
         }
     });
     </script>
+
+<script>
+function printInvoice(phoneNumber, orderId) {
+  var printWindow = window.open('', '', 'height=600,width=800,hidden');
+
+  // Отправляем запрос на сервер для загрузки pdf_template.html
+  fetch(`/pickup/pickup_pdf_template/${phoneNumber}/${orderId}/`, {
+    method: 'GET',
+    headers: {'X-Requested-With': 'XMLHttpRequest'}
+  })
+  .then(response => response.text())
+  .then(html => {
+    // Загружаем HTML в новое окно
+    printWindow.document.write(html);
+
+    // Вызываем функцию печати для нового окна через 2 секунды
+    setTimeout(function() {
+      printWindow.print();
+
+      // Закрываем окно печати через 30 секунд
+      setTimeout(function() {
+        printWindow.close();
+      }, 1);
+    }, 50);
+
+    // Добавляем обработчик события onbeforeunload
+    printWindow.onbeforeunload = function() {
+      printWindow.close();
+    };
+  }); 
+}
+    </script>
+
+<script>
+  document.getElementById('print-kitchen').addEventListener('click', function() {
+      var phone = '{{ pickup_order.phone }}';
+      var orderId = '{{ pickup_order.id }}';
+      var xhr = new XMLHttpRequest();
+      xhr.open('GET', '{% url "pickup_app:print_kitchen" %}?phone_number=' + phone + '&order_id=' + orderId);
+      xhr.onload = function() {
+          if (xhr.status === 200) {
+              var response = JSON.parse(xhr.responseText);
+              alert(response.message);
+          }
+      };
+      xhr.send();
+  });
+</script>
 {% endblock %}

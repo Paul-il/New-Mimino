@@ -3,74 +3,67 @@
 <html>
   <head>
     <title>{% block title %} {% endblock %}</title>
-    <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css">
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.2.1/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" type="text/css" href="https://cdn.datatables.net/v/dt/dt-1.11.3/datatables.min.css"/>
     <link rel="stylesheet" href="{% static 'css/style.css' %}">
     <link rel="stylesheet" href="{% static 'css/login-form.css' %}">
-    <script src="https://code.jquery.com/jquery-3.5.1.slim.min.js"></script>
+    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/htmx.org/dist/htmx.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/popper.js/1.16.0/umd/popper.min.js"></script>
-    <script src="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/js/bootstrap.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.2.1/dist/js/bootstrap.bundle.min.js"></script>
+    <script type="text/javascript" src="https://cdn.datatables.net/v/dt/dt-1.11.3/datatables.min.js"></script>
+    <link rel="stylesheet" href="https://code.jquery.com/ui/1.12.1/themes/base/jquery-ui.css">
+    <script src="https://code.jquery.com/ui/1.12.1/jquery-ui.min.js"></script>
   </head>
   <body>
     <nav class="navbar navbar-expand-lg navbar-light">
         <div class="container">
-          <a class="navbar-brand" href="{% url 'ask_where' %}">Mimino</a>
-          
-          
           {% if user.is_authenticated %}
-
             <ul class="navbar-nav mr-auto">
               <li class="nav-item">
-                <a class="nav-link" href="{% url 'bookings' %}">Забронированные Столы.</a>
+                <a class="nav-link" href="{% url 'rooms'  %}">Комнаты.</a>
+              </li>
+              {% if request.user_agent.is_pc %}
+              <li class="nav-item">
+                <a class="nav-link" href="{% url 'delivery_app:check_delivery_number'  %}">Доставка.</a>
               </li>
               <li class="nav-item">
-                <a class="nav-link" href="{% url 'tables'  %}">Столы.</a>
+                <a class="nav-link" href="{% url 'pickup_app:pickup_create'  %}">Самовывоз.</a>
               </li>
-
-            {% if delivery_phone_number %}
-              <span class="navbar-text mx-auto">Номер Доставки:
-                <a href="{% url 'delivery_app:delivery_cart' delivery_phone_number=delivery_phone_number %}">  {{ delivery_phone_number }}</a>
-                  
-              </span>
-
-              {% if name %}
-                  <span class="navbar-text mx-auto">
-                      Самовывоз Имя: {{ name }}
-                  </span>
+              <li class="nav-item">
+                <a class="nav-link" href="{% url 'manage_products'  %}">Продукты.</a>
+              </li>
+              {% if has_bookings %}
+                  <li class="nav-item">
+                      <a class="nav-link" href="{% url 'bookings' %}">Бронирования</a>
+                  </li>
               {% endif %}
-          {% endif %}
-
-            {% if phone_number %}
-              <span class="navbar-text mx-auto">Самовывоз Номер: 
-                <a href="{% url 'pickup_app:pickup_cart' phone_number=phone_number %}"> {{ phone_number }}</a>
-              </span>
-
-          {% endif %}
-          </ul>
-          
-
-          
-          <ul class="navbar-nav">
+              {% endif %}
+            </ul>
             
-                <ul class="navbar-nav ml-auto">
-                    <li class="nav-item dropdown">
-                    <a class="nav-link dropdown-toggle" href="#" id="user-dropdown" role="button" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
-                        {{ user.first_name }}
-                    </a>
-                    <div class="dropdown-menu" aria-labelledby="user-dropdown">
-                        <a class="dropdown-item" href="#">Настройки</a>
-                        <div class="dropdown-divider"></div>
-                        <form action="{% url 'logout' %}" method="POST">
-                        {% csrf_token %}
-                        <button type="submit" class="dropdown-item">Выход из системы</button>
-                        </form>
-                    </div>
-                    </li>
-                </ul>
+            <ul class="navbar-nav">
+              <li class="nav-item">
+                <a class="nav-link" href="{% url 'delivery_app:delivery_summary' %}">Сводка по доставке.</a>
+              </li>
+              <li class="nav-item">
+                <a class="nav-link" href="{% url 'user_detail' user.id %}">Чаевые: {{ tip_amount }}</a>
+              </li>
+              <ul class="navbar-nav ml-auto">
+                  <li class="nav-item dropdown">
+                      <a class="nav-link dropdown-toggle" href="#" id="user-dropdown" role="button" data-bs-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
+                          {{ user.first_name }}
+                      </a>
+                      <div class="dropdown-menu" aria-labelledby="user-dropdown">
+                          <a id="logout-button" class="dropdown-item" href="#">Выход из системы</a>
+                      </div>
+                  </li>
+              </ul>
+          </ul>
             {% endif %}
           </ul>
         </div>
       </nav>
+
     <div class="container mt-5">
       {% if messages %}
         {% for message in messages %}
@@ -82,5 +75,23 @@
       {% block content %}
       {% endblock %}
     </div>
+
+    <!-- Выход из системы -->
+    <form id="logout-form" action="{% url 'logout' %}" method="POST" style="display: none;">
+    {% csrf_token %}
+    </form>
+
+    <script>
+    $(document).ready(function() {
+        // При нажатии на кнопку выхода отправляем форму выхода.
+        $('#logout-button').click(function(event) {
+            event.preventDefault();
+            $('#logout-form').submit();
+        });
+    });
+    </script>
+
+    {% block script %}
+    {% endblock %}
   </body>
 </html>

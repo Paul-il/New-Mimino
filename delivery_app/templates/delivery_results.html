@@ -10,7 +10,7 @@
               <h5 class="card-title">{{ product.product_name_rus }}, {{ product.product_price }}₪</h5>
             </div>
             <div style="margin-left: 10px;">
-                <form action="{% url 'delivery_app:delivery_add_to_cart' delivery_phone_number=delivery_phone_number %}" method="POST">
+                <form action="{% url 'delivery_app:delivery_add_to_cart' delivery_phone_number=delivery_phone_number category=category %}" method="POST">
                 {% csrf_token %}
                 <input type="hidden" name="product_id" value="{{ product.id }}">
                 {{ product_quantity_form.as_p }}

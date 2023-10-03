@@ -1,0 +1,50 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="container">
+    <h1 style="color: white;">Рекомендации</h1>
+    <div class="my-4">
+
+        <a href="{% url 'menu' table_id=table.id category='salads' %}" type="submit" class="btn btn-primary">Меню</a>
+
+        <a href="{% url 'tables' %}" type="submit" class="btn btn-primary d-inline-block">Столы</a>
+
+        {% if table.orders.last %}
+            <a href="{% url 'order_detail' order_id=table.orders.last.id %}" type="submit" class="btn btn-primary d-inline-block mr-3">Корзина</a>
+            <!-- Кнопка корзины или ссылка на корзину не отображается, если нет заказов -->
+        {% endif %}
+
+
+    </div>
+    {% for recommendation in recommendations %}
+        <h2 style="color: white;">Рекомендации для {{ recommendation.product.product_name_rus }}:</h2>
+        <table class="table table-striped">
+            <thead>
+                <tr>
+                    <th style="color: white;">Рекомендуемые продукты</th>
+                    <th style="color: white;">Достоверность</th>
+                    <th style="color: white;">Добавить в корзину</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for item in recommendation.recommendations %}
+                    <tr>
+                        <td style="color: white;">{{ item.product.product_name_rus }}</td>
+                        <td style="color: white;">{{ item.confidence }}</td>
+                        <td>
+                            <div style="width: 100%; text-align: center;">
+                                <form action="{% url 'add_to_cart' table_id=active_table_id %}" method="post">
+                                    {% csrf_token %}
+                                    <input type="hidden" name="product_id" value="{{ item.product.id }}">
+                                    <input type="hidden" name="quantity" value="1">
+                                    <button type="submit" class="btn btn-primary">Добавить в корзину</button>
+                                </form>                                                              
+                            </div>
+                        </td>
+                    </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    {% endfor %}
+</div>
+{% endblock %}

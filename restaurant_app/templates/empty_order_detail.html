@@ -6,13 +6,10 @@
 {% block content %}
 <div class="container">
 
-
-  <h1 class="my-4" style="color: white;">Нет товаров для стола №: {{ table.id }}</h1>
-
+  <h1 class="my-4" style="color: white;">Нет товаров для стола №: {{ order.table.id }}</h1>
 
   <h1 class="my-4" style="color: white; font-size: 30px;">
     для того чтоб добавить товар вернитесь <a href="{% url 'menu' table_id=order.table_id category='salads' %}" type="submit" class="btn btn-primary">Меню</a>
   </h1>
 
 {% endblock %}
-        

@@ -3,7 +3,7 @@
 <html dir="rtl">
 <head>
     <style>
-        h1 {
+        h1,h2,h3,h4 {
         text-align: center;
         }
         p {
@@ -12,63 +12,54 @@
         th, td {
         text-align: center;
         }
-
     </style>
   <meta charset="utf-8">
-  <title>MIMINO georgian khachapuri</title>
-  <div stryle="text-align: center">
+  <link rel="stylesheet" href="{{ STATIC_URL }}css/style.css">
+</head>
+<body>
+  <div id="print-area">
     <h1>MIMINO georgian khachapuri</h1>
-    <p>--------------------------------------------------------------------------------------------------------------------------------</p>
-    <p>דרך יפו 110,חיפה</p>
+    <p>---------------------------------</p>
+    <p>שד׳ בן גוריון 15, חיפה</p>
     <p>טלפון: 04-8113399</p>
     <p>ע.מ: 515695377</p>
     <p>שם לקוח: לקוח כללי</p>
-    <p>--------------------------------------------------------------------------------------------------------------------------------</p>
-  </div>  
-  <link rel="stylesheet" href="{{ STATIC_URL }}css/style.css">
+    <p>---------------------------------</p>
   
-</head>
-<body>
+    <h3>שולחן: {{ order.table.table_id }}</h3>
+    <table>
+      <tbody>
+        {% for order_item in order.order_items.all %}
+          {% if forloop.first %}
+          </tbody>
+        </table>
+        <table>
+          <thead>
+            <tr>
+              <th>מחיר</th>
+              <th>כמות</th>
+              <th>מוצר</th>
+            </tr>
+          </thead>
+          <tbody>
+          {% endif %}
+          <tr>
+            <td>{{ order_item.product.product_price }}₪</td>
+            <td>{{ order_item.quantity }}</td>
+            <td>{{ order_item.product_id|get_product_name_heb }}</td>
+          </tr>
+          {% if forloop.last %}
+        </tbody>
+      </table>
+      {% endif %}
+    {% endfor %}
+      <h3>סה"כ: {{ total_price }}₪ </h3>
+      <h4> לא כולל שירות</h4>
+      <h4> Services not included </h4>
+      <h4> Не включая обслуживание </h4>
+      <h4>תודה רבה </h4>
+      <p>נשמח לראות אתכם שוב</p>
+    </div>
+  </body>
+  </html>
   
-
-  <h3>שולחן: {{ order.table.table_id }}</h3>
-  
-  <h4>פריטי הזמנה:</h4>
-  <table>
-    <thead>
-      <tr>
-        <th>מחיר</th>
-        <th>כמות</th>
-        <th>מוצר</th>
-      </tr>
-    </thead>
-    <tbody>
-      {% for order_item in order.order_items.all %}
-        <tr>
-          <td>{{ order_item.product.product_price }}₪</td>
-          <td>{{ order_item.quantity }}</td>
-          <td>{{ order_item.product_id|get_product_name_heb }}</td>
-        </tr>
-      {% endfor %}
-    </tbody>
-  </table>
-  <style>
-    table {
-      width: 100%;
-      
-    }
-    
-    th, td {
-      padding: 8px;
-      text-align: right;
-      
-    }
-    </style>
-    
-
-  <p>סה"כ: {{ total_price }}₪ </p>
-  <p style="font-size: 12px; "> לא כולל שירות</p>
-  <p>תודה רבה, תבואו שוב</p>
-  <!--<p>אמצעי תשלום: order.created_at{{ payment_method }}</p>-->
-</body>
-</html>

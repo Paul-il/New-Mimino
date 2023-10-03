@@ -14,6 +14,7 @@ body {
     padding: 10px 20px;
     border-radius: 5px;
     text-decoration: none;
+    
   }
   
   .btn-primary:hover {
@@ -35,6 +36,7 @@ body {
     padding: 10px 20px;
     border-radius: 5px;
     margin-right: 20px;
+    
   }
   
   .btn1 {
@@ -71,4 +73,20 @@ label {
 .form-control {
   font-size: 16px;
   height: 40px;
+}
+.error-message {
+  color: white;
+}
+
+.event-day a.ui-state-default {
+  background-color: green;
+}
+
+
+#selected-users-list div {
+  display: inline-block;
+  padding: 5px 10px;
+  margin: 5px;
+  border: 1px solid #ccc;
+  border-radius: 5px;
 }

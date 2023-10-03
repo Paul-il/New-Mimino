@@ -19,3 +19,4 @@ def login_page_view(request):
 def logout_view(request):
     logout(request)
     return redirect('login')
+

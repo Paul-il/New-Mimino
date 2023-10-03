@@ -4,10 +4,17 @@ from django.db.models import Count
 from django.urls import reverse
 from django.utils.html import format_html
 from django.db import models
+from django.db.models import Count, Sum, F
+from django.db.models.functions import TruncDay, TruncWeek, TruncMonth
+from django.contrib.auth.models import User
+from django.utils import timezone
+from datetime import timedelta
 
-from .models.tables import Table, Booking
+
+from .models.tables import Table, Booking, Tip, TipDistribution,Room
 from .models.orders import Order, OrderItem
 from .models.product import Product
+
 
 
 class ActiveOrderFilter(admin.SimpleListFilter):
@@ -54,8 +61,8 @@ class BookingAdmin(admin.ModelAdmin):
 
 @admin.register(Product)
 class ProductAdmin(admin.ModelAdmin):
-    list_display = ['id', 'product_name_rus', 'product_name_heb', 'product_price', 'category', 'quantity', 'created_at']
-    list_filter = ['category']
+    list_display = ['id', 'product_name_rus', 'product_name_heb', 'product_price', 'category', 'quantity', 'created_at', 'printer']
+    list_filter = ['category', 'printer']
     
     def get_product_names(self, obj):
         return f"{obj.product_name} ({obj.product_name_in_hebrew})"
@@ -69,7 +76,43 @@ class OrderItemAdmin(admin.ModelAdmin):
     
 @admin.register(Order)
 class OrderAdmin(admin.ModelAdmin):
-    list_display = ('id', 'table', 'created_at', 'updated_at', 'is_completed')
-    
-  
+    list_display = ('created_by','id', 'table', 'created_at', 'total_sum')
+    list_filter = ['is_completed', 'created_at', 'created_by']
 
+    
+    def products_list(self, obj):
+        return ", ".join([f"{item.product.product_name_rus} x{item.quantity}" for item in obj.order_items.all()])
+    products_list.short_description = 'Продукты'
+
+class TipDistributionInline(admin.TabularInline):
+    model = TipDistribution
+    extra = 0
+
+@admin.register(Tip)
+class TipAdmin(admin.ModelAdmin):
+    list_display = ['id', 'amount', 'date', 'distributed_to']
+
+    inlines = [TipDistributionInline]
+
+    def distributed_to(self, obj):
+        users = [tip_dist.user for tip_dist in obj.tipdistribution_set.all()]
+        links = [format_html('<a href="{}">{}</a>', reverse("admin:auth_user_change", args=[user.id]), user.first_name) for user in users]
+        return format_html(", ".join(links))
+    
+    distributed_to.short_description = "Официанты"
+
+@admin.register(TipDistribution)
+class TipDistributionAdmin(admin.ModelAdmin):
+    list_display = ['id', 'tip', 'user', 'amount']
+    list_filter = ['user']
+
+class TableInline(admin.StackedInline):
+    model = Table
+    extra = 1
+    fields = ['table_id', 'capacity']
+
+
+@admin.register(Room)
+class RoomAdmin(admin.ModelAdmin):
+    list_display = ('name',)
+    inlines = [TableInline]

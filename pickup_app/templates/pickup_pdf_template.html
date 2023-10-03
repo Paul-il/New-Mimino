@@ -3,7 +3,7 @@
 <html dir="rtl">
 <head>
     <style>
-        h1 {
+        h1,h2,h3,h4 {
         text-align: center;
         }
         p {
@@ -12,46 +12,49 @@
         th, td {
         text-align: center;
         }
-
     </style>
   <meta charset="utf-8">
-  <title>MIMINO georgian khachapuri</title>
   <div stryle="text-align: center">
+    <div id="print-area">
     <h1>MIMINO georgian khachapuri</h1>
-    <p>--------------------------------------------------------------------------------------------------------------------------------</p>
-    <p>דרך יפו 110,חיפה</p>
+    <p>---------------------------------</p>
+    <p>שד׳ בן גוריון 15, חיפה</p>
     <p>טלפון: 04-8113399</p>
     <p>ע.מ: 515695377</p>
     <p>שם לקוח: לקוח כללי</p>
-    <p>--------------------------------------------------------------------------------------------------------------------------------</p>
+    <p>---------------------------------</p>
   </div>  
   <link rel="stylesheet" href="{{ STATIC_URL }}css/style.css">
   
 </head>
 <body>
-  
-
   <h3>מס טלפון: {{ order }}</h3>
-  
-  <h4>פריטי הזמנה:</h4>
   <table>
-    <thead>
-      <tr>
-        <th>מחיר</th>
-        <th>כמות</th>
-        <th>מוצר</th>
-      </tr>
-    </thead>
     <tbody>
       {% for item in cart_items %}
+        {% if forloop.first %}
+        </tbody>
+      </table>
+      <table>
+        <thead>
+          <tr>
+            <th>מחיר</th>
+            <th>כמות</th>
+            <th>מוצר</th>
+          </tr>
+        </thead>
+        <tbody>
+        {% endif %}
         <tr>
           <td>{{ item.product.product_price }}₪</td>
           <td>{{ item.quantity }}</td>
           <td>{{ item.product_id|get_product_name_heb }}</td>
         </tr>
-      {% endfor %}
-    </tbody>
-  </table>
+        {% if forloop.last %}
+      </tbody>
+    </table>
+    {% endif %}
+  {% endfor %}
   <style>
     table {
       width: 100%;
@@ -64,11 +67,8 @@
       
     }
     </style>
-    
-
-  <p>סה"כ: {{ total_price }}₪ </p>
-  <p style="font-size: 12px; "> לא כולל שירות</p>
-  <p>תודה רבה, תבואו שוב</p>
-  <!--<p>אמצעי תשלום: order.created_at{{ payment_method }}</p>-->
+  <h3>סה"כ: {{ total_price }}₪ </h3>
+  <p>תודה על ההזמנה </p>
+</div>
 </body>
 </html>

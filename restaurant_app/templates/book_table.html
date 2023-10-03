@@ -7,22 +7,22 @@
   <div class="container">
     <a href="{% url 'tables' %}" class="btn btn-primary">Назад к столам.</a>
     <h1 style="color: white; font-size: 32px;">Забронировать стол</h1>
-    {% if errors %}
-      <div class="alert alert-danger">
-        {% for error in errors %}
-          <p>{{ error }}</p>
-        {% endfor %}
-      </div>
-    {% endif %}
+
     <form method="post">
       {% csrf_token %}
       {{ form.as_p }}
+      <style>
+        .errorlist {
+          color: white;
+        }
+      </style>
       <input type="hidden" name="table" value="{{ table.id }}">
       <input type="hidden" name="user" value="{{ request.user.pk }}">
-      
       <div class="text-center">
         <button type="submit" class="btn btn-primary">Забронировать</button>
       </div>
     </form>    
+ 
+   
   </div>
 {% endblock %}

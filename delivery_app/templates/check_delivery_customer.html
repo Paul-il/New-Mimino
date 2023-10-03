@@ -15,56 +15,37 @@
       </div>      
         <div class="form-group">
           <label for="name" style="color: white;">Имя</label>
-          <input type="text" id="name" name="name" class="form-control form-control-lg"  value="{{ customer.name }}" readonly>
+          <input type="text" id="name" name="name" class="form-control form-control-lg"  value="{{ customer.name }}" required>
         </div>
         <div class="form-group">
-          <label for="city" style="color: white;">Город</label>
-          <input type="text" id="city" name="city" class="form-control form-control-lg"  value="{{ customer.city }}" readonly>
+          <label for="{{ form.city.id_for_label }}" style="color: white;">Город</label>
+          {{ form.city }}
         </div>
         <div class="form-group">
           <label for="street" style="color: white;">Улица</label>
-          <input type="text" id="street" name="street" class="form-control form-control-lg"  value="{{ customer.street }}" readonly>
+          <input type="text" id="street" name="street" class="form-control form-control-lg"  value="{{ customer.street }}" required>
         </div>
       </div>
       <div class="col-md-6">
         <div class="form-group">
           <label for="house_number" style="color: white;">Номер дома</label>
-          <input type="text" id="house_number" name="house_number" class="form-control form-control-lg"  value="{{ customer.house_number }}" readonly>
+          <input type="text" id="house_number" name="house_number" class="form-control form-control-lg"  value="{{ customer.house_number }}" required>
         </div>
         <div class="form-group">
           <label for="floor" style="color: white;">Этаж</label>
-          <input type="text" id="floor" name="floor" class="form-control form-control-lg" value="{{ customer.floor }}" readonly>
+          <input type="text" id="floor" name="floor" class="form-control form-control-lg" value="{{ customer.floor }}" required>
         </div>
         <div class="form-group">
           <label for="apartment_number" style="color: white;">Номер квартиры</label>
-          <input type="text" id="apartment_number" name="apartment_number" class="form-control form-control-lg" value="{{ customer.apartment_number }}" readonly>
+          <input type="text" id="apartment_number" name="apartment_number" class="form-control form-control-lg" value="{{ customer.apartment_number }}" required>
         </div>
         <div class="form-group">
-          <label for="intercom_code" style="color: white;">Код домофона(Если есть таковой)</label>
-          <input type="text" id="intercom_code" name="intercom_code" class="form-control form-control-lg" value="{{ customer.intercom_code }}" readonly>
+          <label for="intercom_code" style="color: white;">Коментарии</label>
+          <input type="text" id="intercom_code" name="intercom_code" class="form-control form-control-lg" value="{{ customer.intercom_code }}">
         </div>
       </div>
-    </div>
-    <button type="submit" class="btn btn-primary">Подтвердить Заказчика.</button>
+      <button type="submit" formaction="{% url 'delivery_app:save_delivery_customer_changes' delivery_phone_number=delivery_phone_number %}" name="submit_button" value="save_changes" class="btn btn-primary">Сохранить изменения</button>
+      <button type="submit" name="submit_button" value="confirm" class="btn btn-primary">Подтвердить Заказчика.</button>
+  </div>
   </form>
-{% endblock %}
-{% block script %}
-
-<script>
-  // после подтверждения заказчика, переходим на страницу меню
-  document.querySelector('#check_delivery_customer_form').addEventListener('submit', (event) => {
-    event.preventDefault();
-    fetch(event.target.action, {
-      method: event.target.method,
-      body: new FormData(event.target),
-      headers: {
-        'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]').value
-      }
-    }).then(() => {
-      window.location.href = "{% url 'delivery_menu' %}";
-    });
-  });
-</script>
-
-
-{% endblock %}
+{%endblock %}

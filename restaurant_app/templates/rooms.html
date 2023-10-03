@@ -1,0 +1,28 @@
+{% extends "base.html" %}
+
+{% block title %}Rooms{% endblock %}
+
+{% block content %}
+  <div class="row">
+    {% for room in rooms %}
+    <div class="col-md-3 mb-3">
+      <div class="card rounded-lg">
+        <div class="card-body">
+          <h5 class="card-title"><a href="{% url 'room_detail' room_id=room.id %}">{{ room.name }}</a></h5>
+          <ul>
+            {% for waiter_name, table_order_pairs in room.waiters.items %}
+                <li>{{ waiter_name }}
+                    <ul>
+                        {% for table_id, order_id in table_order_pairs %}
+                            <li><a href="{% url 'order_detail' order_id=order_id %}">Стол №{{ table_id }}</a></li>
+                        {% endfor %}
+                    </ul>
+                </li>
+            {% endfor %}
+          </ul>
+        </div>
+      </div>
+    </div>
+    {% endfor %}
+  </div>
+{% endblock %}

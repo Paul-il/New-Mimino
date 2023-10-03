@@ -1,0 +1,62 @@
+{% extends "base.html" %}
+{% load static %}
+{% load custom_tags %}
+{% block title %}Order Statistics{% endblock %}
+
+{% block content %}
+<div class="container my-5">
+    <h1 class="mb-4" style="color: white;">Статистика Продаж</h1>
+    {% if start_date and end_date %}
+    <p style="color: white; font-size: 15px;">
+        Статистика вычислена за период с {{ start_date }} по {{ end_date }}
+    </p>
+    <p style="color: white; font-size: 15px;">
+        Общая сумма продаж: ₪{{ total_sales_value|floatformat:2 }}
+    </p>
+    {% else %}
+        <p style="color: white; font-size: 15px;">Нет данных для отображения статистики.</p>
+    {% endif %}
+
+    
+    <!-- Form for category selection -->
+    <form method="get">
+        <select name="category" onchange="this.form.submit()">
+            <option value="">Все категории</option>
+            {% for category, display_name in product_categories %}
+            <option value="{{ category }}" {% if selected_category == category %}selected{% endif %}>{{ display_name }}</option>
+            {% endfor %}
+        </select>        
+    </form>
+
+    <table id="orderStatisticsTableByProduct" class="table table-striped">
+        <thead>
+            <tr>
+                <th scope="col" style="color: white; font-size: 15px;">Имя Продукта</th>
+                <th scope="col" style="color: white; font-size: 15px;">Количество</th>
+                <th scope="col" style="color: white; font-size: 15px;">Сумма (₪)</th> <!-- Moved the symbol here -->
+                <th scope="col" style="color: white; font-size: 15px;">Процент от общих продаж</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for stats in product_statistics %}
+                <tr>
+                    <td>{{ stats.product__product_name_rus }}</td>
+                    <td>{{ stats.total_quantity }}</td>
+                    <td>{{ stats.total_price }}</td> <!-- Removed the symbol from here -->
+                    <td>{{ stats.percentage|floatformat:2 }}%</td>
+                </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</div>
+<script>
+    $(document).ready(function () {
+        var table = $('#orderStatisticsTableByProduct').DataTable({
+            "order": [[2, 'desc']],  // Default sorting on the "Сумма" column
+            "columnDefs": [
+                { "type": "num", "targets": 2 } // Specify that the third column is numeric
+            ]
+        });
+    });
+</script>
+{% endblock %}

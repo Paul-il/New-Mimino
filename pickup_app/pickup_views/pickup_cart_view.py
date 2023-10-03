@@ -1,49 +1,28 @@
 from django.shortcuts import render, redirect
 from django.contrib.auth.decorators import login_required
 from django.http import JsonResponse, HttpResponseBadRequest
-from django.shortcuts import get_object_or_404
+from django.shortcuts import get_object_or_404, get_list_or_404
 from django.db.models import Sum, F
 from django.contrib import messages
 from ..forms import ProductQuantityForm
 from ..models import PickupOrder, Cart, CartItem, OrderItem
 from restaurant_app.models.product import Product
+from pickup_app.pickup_views.pickup_menu_view import handle_add_to_cart
+from datetime import datetime, timezone
+from django.urls import reverse
 
 @login_required
-def pickup_add_to_cart_view(request, phone_number, product_id):
-    # Получаем объект заказа по номеру телефона
-    pickup_order = get_object_or_404(PickupOrder, phone=phone_number)
-    
-    # Получаем объект продукта по id
-    product = get_object_or_404(Product, id=product_id)
-    
-    # Получаем объект корзины для указанного номера телефона
-    cart = Cart.objects.filter(pickup_order=pickup_order).first()
-    if cart is None:
-        # Если корзина не существует, создаем ее
-        cart = Cart.objects.create(pickup_order=pickup_order)
-    
-    product_quantity_form = ProductQuantityForm(request.POST)
-    if product_quantity_form.is_valid():
-        # Получаем количество товара из формы
-        quantity = product_quantity_form.cleaned_data['quantity']
-        
-        # Проверяем, есть ли уже такой продукт в корзине
-        cart_item = CartItem.objects.filter(cart=cart, product=product).first()
-        if cart_item is None:
-            # Если продукта еще нет в корзине, создаем новый объект CartItem
-            cart_item = CartItem.objects.create(cart=cart, product=product, quantity=quantity)
-        else:
-            # Иначе, увеличиваем количество товара в CartItem на количество из формы
-            cart_item.quantity += quantity
-            cart_item.save()
-    messages.success(request, f"{quantity} {product.product_name_rus} добавлено в корзину!")
-    return redirect('pickup_app:pickup_menu', phone_number=phone_number, category=product.category)
+def pickup_add_to_cart_view(request, phone_number, category, product_id):
+    pickup_orders = get_list_or_404(PickupOrder, phone=phone_number)
+    pickup_order = pickup_orders[0]
+    handle_add_to_cart(request, phone_number, pickup_order, category)
+    return redirect(reverse('pickup_app:pickup_menu', kwargs={'phone_number': phone_number, 'category': category}))
 
 def pickup_empty_cart_view(request, phone_number):
     return render(request, 'pickup_empty_cart.html', {"phone_number":phone_number})
 
 @login_required
-def pickup_cart_view(request, phone_number):
+def pickup_cart_view(request, phone_number, category=None):
     # Получаем объект заказа по номеру телефона
     pickup_order = get_object_or_404(PickupOrder, phone=phone_number)
 
@@ -74,9 +53,6 @@ def pickup_cart_view(request, phone_number):
         'cart': cart,
     })
 
-
-
-
 @login_required
 def get_order_item_quantity_view(request, order_id, order_item_id):
     order_item = OrderItem.objects.get(order__id=order_id, id=order_item_id)
@@ -94,7 +70,7 @@ def pickup_increase_product_view(request, phone_number, product_id):
     cart_item.save()
 
     messages.success(request, f"{product.product_name_rus} на один стало больше.")
-    return redirect('pickup_app:pickup_cart', phone_number=phone_number)
+    return redirect('pickup_app:pickup_cart', phone_number=phone_number, category=None)
 
 @login_required
 def pickup_decrease_product_view(request, phone_number, product_id):
@@ -116,7 +92,7 @@ def pickup_decrease_product_view(request, phone_number, product_id):
     # Редиректим обратно на страницу корзины
 
     messages.success(request, f"{product.product_name_rus} на один стало меньше.")
-    return redirect('pickup_app:pickup_cart', phone_number=phone_number)
+    return redirect('pickup_app:pickup_cart', phone_number=phone_number , category=None)
 
 @login_required
 def pickup_remove_product_view(request, phone_number, product_id):
@@ -126,7 +102,7 @@ def pickup_remove_product_view(request, phone_number, product_id):
     cart_item = get_object_or_404(CartItem, cart=cart, product_id=product_id)
     cart_item.delete()
     messages.success(request, f"{product.product_name_rus} Был удалён из корзины!")
-    return redirect('pickup_app:pickup_cart', phone_number=phone_number)
+    return redirect('pickup_app:pickup_cart', phone_number=phone_number, category=None)
 
 @login_required
 def pickup_total_price_view(cart_items):
@@ -134,3 +110,15 @@ def pickup_total_price_view(cart_items):
     for item in cart_items:
         total_price += item.product.product_price * item.quantity
     return total_price
+
+@login_required
+def pay_order(request, id):
+    pickup_order = get_object_or_404(PickupOrder, id=id)
+    pickup_order.status = 'completed'
+    pickup_order.save()
+
+    # Очистка корзины
+    cart = Cart.objects.get(pickup_order=pickup_order)
+    cart.cartitem_set.all().delete()
+
+    return redirect('pickup_app:pickup_cart', phone_number=pickup_order.phone, category='')

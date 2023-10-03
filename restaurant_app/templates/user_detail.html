@@ -1,0 +1,87 @@
+{% extends "base.html" %}
+{% load static %}
+{% load custom_tags %}
+
+{% block additional_css %}
+    <link rel="stylesheet" href="{% static 'css/jquery-ui.min.css' %}">
+    <link rel="stylesheet" href="https://cdn.datatables.net/1.10.25/css/dataTables.bootstrap4.min.css">
+{% endblock %}
+
+{% block additional_js %}
+    <script src="https://code.jquery.com/jquery-3.5.1.js"></script>
+    <script src="https://code.jquery.com/ui/1.12.1/jquery-ui.js"></script>
+    <script src="https://cdn.datatables.net/1.10.25/js/jquery.dataTables.min.js"></script>
+    <script src="https://cdn.datatables.net/1.10.25/js/dataTables.bootstrap4.min.js"></script>
+{% endblock %}
+
+{% block title %}Детали официанта - {{ user.first_name }}{% endblock %}
+
+{% block content %}
+<div class="container my-5">
+    <h1 class="mb-4" style="color: white;">Детали официанта - {{ user.first_name }}</h1>
+    <div class="row">
+        <div class="col-md-6">
+            <h2 class="mb-4" style="color: white;">Общая информация</h2>
+            <p style="color: white;">Закрытые Столы: {{ total_closed_tables }}</p>
+            <p style="color: white;">Сумма Заказов: {{ total_order_amount }}</p>
+            <p style="color: white;">Чаевые за все время: {{ total_tips_all_time }}</p>
+            <p style="color: white;">Соотношение (за все время): {{ tip_ratio_all_time }}%</p>
+        </div>
+        <div class="col-md-6">
+            <div id="datepicker"></div>
+        </div>
+    </div>
+
+    <h2 class="mb-4" style="color: white;">Детали за разные периоды времени</h2>
+    <table id="userDetailTable" class="table table-striped">
+        <thead>
+            <tr>
+                <th scope="col" style="color: white; font-size: 15px;">Период</th>
+                <th scope="col" style="color: white; font-size: 15px;">Сумма Денег Закрытых Столы</th>
+                <th scope="col" style="color: white; font-size: 15px;">Чаевые</th>
+                <th scope="col" style="color: white; font-size: 15px;">Соотношение</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for period_name, period_stats in stats.items %}
+                <tr>
+                    <td>{{ period_name }}</td>
+                    <td>{{ period_stats.total_order_amount }}</td>
+                    <td>{{ period_stats.total_tips }}</td>
+                    <td>{{ period_stats.tip_ratio }}%</td>
+                </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</div>
+<script>
+    $(document).ready(function () {
+        var table = $('#userDetailTable').DataTable();
+        var events = {{ events|safe }};  // предположим, что 'events' это JSON строка, содержащая данные о событиях
+
+        console.log(events);
+
+        $("#datepicker").datepicker({
+            dateFormat: 'yy-mm-dd',  // Добавьте эту строку для изменения формата даты на 'yyyy-mm-dd'.
+            beforeShowDay: function(date) {
+                var dateString = jQuery.datepicker.formatDate('yy-mm-dd', date);
+                return [events.hasOwnProperty(dateString), {className: 'event-day', title: 'События в этот день'}];
+            },
+            onSelect: function(dateText) {
+                console.log(dateText);
+                console.log(events);
+                if (events.hasOwnProperty(dateText)) {
+                    var event = events[dateText];
+                    var message = 'Дата: ' + dateText + '\n';
+                    message += 'Сумма Денег Закрытых Столы: ' + event.total_order_amount + '\n';
+                    message += 'Чаевые: ' + event.total_tips + '\n';
+                    // добавьте больше полей здесь, если они доступны в объекте события
+                    alert(message);
+                } else {
+                    alert('Нет данных о событиях для этой даты.');
+                }
+            }
+        });
+    });
+</script>
+{% endblock %}

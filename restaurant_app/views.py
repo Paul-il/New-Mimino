@@ -12,11 +12,6 @@ from django.shortcuts import get_object_or_404
 from django.contrib import messages
 from django.utils import timezone
 
-
-
-
-########################################################################################
-
 @login_required
 def book_table_view(request, table_id):
     table = get_object_or_404(Table, table_id=table_id)
@@ -58,23 +53,12 @@ def guests_here_view(request, booking_id):
         form = GuestsHereForm(instance=booking, initial={'are_guests_here': booking.are_guests_here})
     return render(request, 'guests_here.html', {'form': form, 'booking': booking})
 
-
+@login_required
 def start_order_view(request, order_id):
     order = get_object_or_404(Order, id=order_id)
     order.order_time = timezone.now()  # Update order_time field to current time
     order.save()
     return redirect('order_detail', order_id=order_id)
-
-
-
-
-
-
-
-
-
-
-############################ ADD_DELETE ##################################
 
 
 

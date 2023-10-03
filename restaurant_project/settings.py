@@ -9,7 +9,7 @@ https://docs.djangoproject.com/en/4.1/topics/settings/
 For the full list of settings and their values, see
 https://docs.djangoproject.com/en/4.1/ref/settings/
 """
-
+import os
 from pathlib import Path
 from datetime import timedelta
 
@@ -26,7 +26,30 @@ SECRET_KEY = 'django-insecure-l#mt3(j6lln3-z+c=kg-57)exqckh4gurzjob@11qg8*^0cwlr
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = True
 
-ALLOWED_HOSTS = []
+ALLOWED_HOSTS = ['https://mimino.app','127.0.0.1','34.134.12.206','192.168.1.12','10.0.0.39']
+
+CSRF_TRUSTED_ORIGINS = [
+    'https://mimino.app',
+    'http://127.0.0.1',
+    'http://34.134.12.206',
+    'http://192.168.1.12',
+]
+
+
+"""SECURE_SSL_REDIRECT = False
+SESSION_COOKIE_SECURE = True
+CSRF_COOKIE_SECURE = True
+"""
+
+CORS_ORIGIN_ALLOW_ALL = True
+CORS_ALLOW_ALL_ORIGINS = True
+
+CORS_ORIGIN_WHITELIST = [
+    'https://mimino.app',
+    'http://localhost:31337',
+    'http://127.0.0.1:31337',
+    'http://192.168.1.12:31337',
+]
 
 
 # Application definition
@@ -38,10 +61,14 @@ INSTALLED_APPS = [
     'django.contrib.sessions',
     'django.contrib.messages',
     'django.contrib.staticfiles',
+    'django_user_agents',
     'restaurant_app',
     'delivery_app',
     'pickup_app',
     'xhtml2pdf',
+    'corsheaders',
+    'order_statistics',
+    'sales',
 
 ]
 
@@ -54,6 +81,8 @@ MIDDLEWARE = [
     'django.contrib.auth.middleware.AuthenticationMiddleware',
     'django.contrib.messages.middleware.MessageMiddleware',
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
+    'corsheaders.middleware.CorsMiddleware',
+    'django_user_agents.middleware.UserAgentMiddleware',
 ]
 
 ROOT_URLCONF = 'restaurant_project.urls'
@@ -69,6 +98,8 @@ TEMPLATES = [
                 'django.template.context_processors.request',
                 'django.contrib.auth.context_processors.auth',
                 'django.contrib.messages.context_processors.messages',
+                'restaurant_app.context_processors.tips_and_goal',
+                'restaurant_app.booking_context.booking_exists',
             ],
         },
     },
@@ -112,8 +143,7 @@ AUTH_PASSWORD_VALIDATORS = [
 
 LANGUAGE_CODE = 'en-us'
 
-TIME_ZONE = 'UTC'
-
+TIME_ZONE = 'Asia/Jerusalem'
 USE_I18N = True
 
 USE_TZ = True
@@ -123,10 +153,15 @@ USE_TZ = True
 # https://docs.djangoproject.com/en/4.1/howto/static-files/
 
 STATIC_URL = '/static/'
-STATICFILES_DIRS = [    BASE_DIR / 'restaurant_app/static',]
+STATICFILES_DIRS = [os.path.join(BASE_DIR, 'restaurant_app/static'),]
 
 
+STATIC_ROOT = '/var/www/mimino/static/'
 
+MEDIA_URL = '/media/'
+MEDIA_ROOT = os.path.join(BASE_DIR, 'media')
+
+ORDERS_FILES_DIR = os.path.join(MEDIA_ROOT, 'orders_files')
 
 # Default primary key field type
 # https://docs.djangoproject.com/en/4.1/ref/settings/#default-auto-field
@@ -143,5 +178,26 @@ CELERY_BEAT_SCHEDULE = {
     'check_reserved_tables': {
         'task': 'tables.tasks.check_reserved_tables',
         'schedule': timedelta(minutes=1),
+    },
+}
+
+
+LOGGING = {
+    'version': 1,
+    'disable_existing_loggers': False,
+    'handlers': {
+        'file': {
+            'level': 'DEBUG',
+            'class': 'logging.FileHandler',
+            'filename': 'debug.log',
+            'encoding': 'utf-8',  # Specify the encoding here
+        },
+    },
+    'loggers': {
+        'django': {
+            'handlers': ['file'],
+            'level': 'DEBUG',
+            'propagate': True,
+        },
     },
 }

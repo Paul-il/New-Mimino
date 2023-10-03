@@ -5,12 +5,15 @@ from restaurant_app.models.product import Product
 
 def pickup_search_products_view(request, phone_number):
     query = request.GET.get('q', '')
-    product_items = Product.objects.filter(Q(product_name_rus__icontains=query))
+    products = Product.objects.filter(product_name_rus__icontains=query)
     product_quantity_form = ProductQuantityForm()
+    category = request.GET.get('category', 'category')
     context = {
         'query': query,
-        'products': product_items,
+        'products': products,
+        'phone_number': phone_number,
         'product_quantity_form': product_quantity_form,
-        'phone_number': phone_number
+        'category': category,  # Pass category to the context with a default value.
     }
     return render(request, 'pickup_search_results.html', context)
+

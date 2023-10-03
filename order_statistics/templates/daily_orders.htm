@@ -1,0 +1,11 @@
+{% extends "base.html" %}
+{% load static %}
+
+{% block content %}
+
+{% for item in data %}
+    <p>Date: {{ item.date }}</p>
+    <p>Order count: {{ item.order_count }}</p>
+{% endfor %}
+
+(% endblock %)

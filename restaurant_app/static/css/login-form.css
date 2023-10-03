@@ -76,3 +76,14 @@ input[type="password"] {
   padding: 5px;
   font-size: 14px;
 }
+
+button.btn-guest-disable{
+  background-color: #1a73e8;
+  color: #fff;
+  border: none;
+  border-radius: 5px;
+  padding: 10px 20px;
+}
+button.btn-guest-disable:hover {
+  background-color: #bd0000;
+}

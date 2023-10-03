@@ -1,0 +1,23 @@
+{% extends "base.html" %}
+
+{% block content %}
+  <h1 style="color: white; text-align: center;">Статистика продаж</h1>
+  <table>
+    <tr>
+      <th style="color: white; font-size: 15px; text-align: center;" >Товар</th>
+      <th style="color: white; font-size: 15px; text-align: center;" >Продажи</th>
+      <th style="color: white; font-size: 15px; text-align: center;" >Процент продаж</th>
+    </tr>
+    {% for sale in sales %}
+      <tr>
+        <td style="color: white; font-size: 15px; text-align: center;">{{ sale.order_item__product__product_name_rus }}</td>
+        <td style="color: white; font-size: 15px; text-align: center;">{{ sale.sales_count }}</td>
+        <td style="color: white; font-size: 15px; text-align: center;">{{ sale.sales_percentage|floatformat:2 }}%</td>
+      </tr>
+    {% empty %}
+      <tr>
+        <td colspan="3" style="color: white; font-size: 15px; text-align: center;">Пока нет продаж</td>
+      </tr>
+    {% endfor %}
+  </table>
+{% endblock %}

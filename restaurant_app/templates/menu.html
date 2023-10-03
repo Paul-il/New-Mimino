@@ -12,7 +12,7 @@
         {% if table.orders.last %}
         <a href="{% url 'order_detail' order_id=table.orders.last.id%}" type="submit" class="btn btn-primary d-inline-block mr-3">Корзина</a>
         {% endif %}
-        <a href="{% url 'tables' %}" type="submit" class="btn btn-primary d-inline-block">Столы</a>
+        <a href="{% url 'room_detail' room_id=table.room.id %}" type="submit" class="btn btn-primary d-inline-block">Комната</a>
     </div>
     
 
@@ -27,26 +27,27 @@
             </li>
             {% endfor %}
         </ul>
-
     <div class="row">
         {% for product in products %}
         <div class="col-md-3 mb-3">
             <div class="card">
-                <img src="{{ product.product_img.url }}" class="card-img-top" alt="{{ product.product_name }}">
                 <div class="card-body">
-                    <h5 class="card-title">{{ product.product_name_rus }}</h5>
+                    <h5 class="card-title" id="product_name">{{ product.product_name_rus }}</h5>
                     <p class="card-text">{{ product.product_price }}₪</p>
                     <form action="{% if table %}{% url 'add_to_cart' table_id=table.table_id %}{% endif %}" method="post">
                         {% csrf_token %}
                         <input type="hidden" name="product_id" value="{{ product.id }}">
+                        <input type="hidden" name="category" value="{{ category }}">
                         {{ product_quantity_form.as_p }}
-                        {% if table.active_orders.exists %}
-                        <input type="hidden" name="order_pk" value="{{ table.active_orders.first.pk }}">
+                        {% if has_active_orders %}
+                        <input type="hidden" name="order_pk" value="{{ active_order_pk }}">
+
                         {% endif %}
-                    
-                        <button type="submit" class="btn btn-primary">Добавить в корзину</button>
-                    </form>
-                    
+                        <button type="submit" class="btn btn-primary" {% if not product.is_available %}disabled{% endif %}>Добавить в корзину</button>
+                        {% if not product.is_available %}
+                            <p>Продукт закончился</p>
+                        {% endif %}
+                    </form>                                           
                 </div>
             </div>
         </div>
@@ -54,3 +55,14 @@
     </div>
 </div>
 {% endblock %}
+
+<script>
+function updateProductName(event, originalProductName, productNameWithPurre) {
+  const productTitle = document.getElementById('product_name');
+  if (event.target.checked) {
+    productTitle.textContent = productNameWithPurre;
+  } else {
+    productTitle.textContent = originalProductName;
+  }
+}
+</script>

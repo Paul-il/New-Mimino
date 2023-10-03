@@ -8,7 +8,7 @@ class DeliveryForm(forms.Form):
     delivery_phone_number = forms.CharField(label='Номер телефона', validators=[RegexValidator(regex=r'^\d{10}$', message='Номер телефона должен содержать ровно 10 цифр')])
 
 class DeliveryCustomerForm(forms.ModelForm):
-    city = forms.ChoiceField(choices=[('חיפה', 'Хайфа'), ('נשר', ('Нэшер')), ('טירת כרמל', 'Тира'), ('כפר גלים', 'Кфар Галим'),('קריית חיים', 'Кирият Хаим'), ('קריית אתא', 'Кирият Ата'), ('קריית ביאליק', 'Кирият Биалик'), ('קריית ים', ('Кирият Ям'))], widget=forms.Select(attrs={'class': 'form-control', 'required': True}))
+    city = forms.ChoiceField(choices=[('חיפה', 'Хайфа'), ('נשר', ('Нэшер')), ('טירת כרמל', 'Тира'), ('כפר גלים', 'Кфар Галим'),('קריית חיים', 'Кирият Хаим'), ('קריית אתא', 'Кирият Ата'), ('קריית ביאליק', 'Кирият Биалик'), ('קריית מוצקין', 'Кирият Моцкин'), ('קריית ים', ('Кирият Ям'))], widget=forms.Select(attrs={'class': 'form-control', 'required': True}))
 
     class Meta:
         model = DeliveryCustomer
@@ -24,7 +24,7 @@ class DeliveryCustomerForm(forms.ModelForm):
         }
 
 class ProductQuantityForm(forms.Form):
-    quantity = forms.IntegerField(min_value=1, max_value=100, initial=1, widget=forms.NumberInput(attrs={
+    quantity = forms.IntegerField(min_value=1, max_value=10000, initial=1, widget=forms.NumberInput(attrs={
         'class': 'form-control',
         'style': 'width: 100px; display: inline-block;'
     }))
