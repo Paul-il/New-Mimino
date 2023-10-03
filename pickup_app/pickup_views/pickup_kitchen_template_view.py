@@ -2,6 +2,7 @@ from django.shortcuts import render, get_object_or_404
 from django.http import JsonResponse
 from pickup_app.models import PickupOrder, CartItem
 from django.template.loader import render_to_string
+from django.utils import timezone
 from bs4 import BeautifulSoup
 
 def remove_empty_lines_and_spaces(text):
@@ -67,7 +68,8 @@ def print_kitchen(request):
 
     new_items_found = False
     for printer, items in grouped_items.items():
-        text_to_print = "\n\n\nНа Вынос\n____________________________\n"
+        current_time = timezone.localtime().strftime('%H:%M')
+        text_to_print = f"\n\n\nВремя печати: {current_time}\nНа Вынос\n____________________________\n"
         for item in items:
             text_to_print += f"{item.product.product_name_rus}\t{item.quantity - item.printed_quantity}\n"
         
