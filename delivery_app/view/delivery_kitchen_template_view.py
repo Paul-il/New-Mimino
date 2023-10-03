@@ -5,95 +5,75 @@ from django.template.loader import render_to_string
 from django.utils import timezone
 from bs4 import BeautifulSoup
 
-def remove_empty_lines_and_spaces(text):
-    lines = text.split('\n')
-    cleaned_lines = [line.strip() for line in lines if line.strip()]
-    cleaned_text = '\n'.join(cleaned_lines)
-    return cleaned_text
-
-def convert_html_to_text(cart_items):
-    html = render_to_string('delivery_kitchen_template.html', {'cart_items': cart_items})
-    soup = BeautifulSoup(html, 'html.parser')
-    text = soup.get_text()
-    return text
-
-def delivery_kitchen_view(request, phone_number, order_id):
-    order = get_object_or_404(DeliveryOrder, delivery_phone=phone_number, id=order_id)
-    cart_items = DeliveryCart.objects.filter(cart__delivery_order=order)
-
-    context = {'order': order, 'cart_items': cart_items, }
-    return render(request, 'delivery_kitchen_template.html', context)
-
 import cups
 import tempfile
 import os
 
+TIME_FORMAT = '%H:%M'
+
+def remove_empty_lines_and_spaces(text):
+    return '\n'.join([line.strip() for line in text.split('\n') if line.strip()])
+
+
+def convert_html_to_text(cart_items):
+    html = render_to_string('delivery_kitchen_template.html', {'cart_items': cart_items})
+    return BeautifulSoup(html, 'html.parser').get_text()
+
+
+def delivery_kitchen_view(request, phone_number, order_id):
+    order = get_object_or_404(DeliveryOrder, delivery_phone=phone_number, id=order_id)
+    cart_items = DeliveryCart.objects.filter(cart__delivery_order=order)
+    return render(request, 'delivery_kitchen_template.html', {'order': order, 'cart_items': cart_items})
+
+
 def print_with_cups(text_to_print, printer_name):
     conn = cups.Connection()
     printers = conn.getPrinters()
-
-    if printer_name not in printers:
-        printer_name = list(printers.keys())[0]  # если выбранный принтер не найден, используем первый доступный
-
-    # Сохраняем текст во временный файл
-    with tempfile.NamedTemporaryFile(delete=False) as temp_file:
-        temp_file.write(text_to_print.encode('utf-8'))
+    printer_name = printers.get(printer_name) or list(printers.keys())[0]
+    
+    with tempfile.NamedTemporaryFile(delete=False, mode='w') as temp_file:
+        temp_file.write(text_to_print)
         temp_file_path = temp_file.name
 
-    # Печатаем содержимое временного файла
     conn.printFile(printer_name, temp_file_path, title="Printing from Django", options={})
-    
-    # Удаляем временный файл
     os.unlink(temp_file_path)
 
+
 def sort_items(item):
-    if item.product.category == "salads":
-        return 0
-    else:
-        return 1
+    return 0 if item.product.category == "salads" else 1
+
+
+def group_items_by_printer(sorted_cart_items):
+    return {item.product.printer: item for item in sorted_cart_items if item.quantity - item.printed_quantity > 0}
+
 
 def print_kitchen(request):
     phone_number = request.GET.get('phone_number')
     order_id = request.GET.get('order_id')
-    order = get_object_or_404(DeliveryOrder, customer__delivery_phone_number=phone_number, id=order_id)
-    cart_items = DeliveryCartItem.objects.filter(delivery_order=order)
-    sorted_cart_items = sorted(cart_items, key=sort_items)
 
-    # Группируем продукты по принтерам
-    grouped_items = {}
-    for item in sorted_cart_items:
-        new_quantity = item.quantity - item.printed_quantity
-        if new_quantity <= 0:
-            continue
-        printer = item.product.printer
-        if printer not in grouped_items:
-            grouped_items[printer] = []
-        grouped_items[printer].append(item)
+    if not phone_number or not order_id:
+        return JsonResponse({'status': 'error', 'message': 'Необходимые параметры отсутствуют.'})
 
-    new_items_found = False
-    for printer, items in grouped_items.items():
-        current_time = timezone.localtime().strftime('%H:%M')
-        text_to_print = f"\n\n\nВремя печати: {current_time}\nНа Вынос\n____________________________\n"
-        for item in items:
-            text_to_print += f"{item.product.product_name_rus}\t{item.quantity - item.printed_quantity}\n"
-        
-        # Отправляем текст на печать
-        print_with_cups(text_to_print, printer_name=printer)
-        new_items_found = True
+    try:
+        order = get_object_or_404(DeliveryOrder, customer__delivery_phone_number=phone_number, id=order_id)
+        cart_items = DeliveryCartItem.objects.filter(delivery_order=order)
+        grouped_items = group_items_by_printer(sorted(cart_items, key=sort_items))
 
-        # Обновляем количество напечатанных товаров
-        for item in items:
-            item.printed_quantity = item.quantity
-            item.save()
+        items_to_update = []
+        new_items_found = False
+        for printer, items in grouped_items.items():
+            text_to_print = f"\n\n\nВремя печати: {timezone.localtime().strftime(TIME_FORMAT)}\nНа Вынос\n____________________________\n"
+            text_to_print += '\n'.join([f"{item.product.product_name_rus}\t{item.quantity - item.printed_quantity}" for item in items])
 
-    if new_items_found:
-        return JsonResponse({'status': 'success', 'message': 'Заказ был отправлен на кухню.'})
-    else:
-        return JsonResponse({'status': 'warning', 'message': 'Нет новых товаров для печати.'})
+            print_with_cups(text_to_print, printer_name=printer)
+            items_to_update.extend(items)
+            new_items_found = True
 
+        if items_to_update:
+            DeliveryCartItem.objects.bulk_update(items_to_update, ['printed_quantity'])
 
+        return JsonResponse({'status': 'success' if new_items_found else 'warning', 'message': 'Заказ был отправлен на кухню.' if new_items_found else 'Нет новых товаров для печати.'})
 
-
-
-
+    except Exception as e:
+        return JsonResponse({'status': 'error', 'message': f'Произошла ошибка: {str(e)}.'})
 
