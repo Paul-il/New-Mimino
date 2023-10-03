@@ -31,7 +31,7 @@ def print_with_cups(text_to_print, printer_name):
     printers = conn.getPrinters()
     printer_name = printers.get(printer_name) or list(printers.keys())[0]
     
-    with tempfile.NamedTemporaryFile(delete=False, mode='w') as temp_file:
+    with tempfile.NamedTemporaryFile(delete=False, mode='w', encoding='utf-8') as temp_file:
         temp_file.write(text_to_print)
         temp_file_path = temp_file.name
 
