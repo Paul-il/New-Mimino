@@ -12,61 +12,40 @@
         th, td {
         text-align: center;
         }
+        table {
+            width: 100%;
+        }
+        th, td {
+            padding: 8px;
+        }
     </style>
   <meta charset="utf-8">
-  <div stryle="text-align: center">
-    <div id="print-area">
-  <link rel="stylesheet" href="{{ STATIC_URL }}css/style.css">
-  
 </head>
 <body>
-  <h3>доставка</h3>
-  <table>
-    <tbody>
-      {% for item in cart_items %}
-        {% with allowed_categories="salads,meat_dishes" %}
-          {% if item.product.category in allowed_categories %}
-            {% with restricted_salads="Лобио,Аджапсандал" %}
-              {% with restricted_salads_list=restricted_salads|split:"," %}
-                {% if item.product.category != "salads" or item.product.name not in restricted_salads_list %}
-                  {% if forloop.first %}
-                    </tbody>
-                  </table>
-                  <table>
-                    <thead>
-                      <tr>
-                        <th>Количество</th>
-                        <th>Продукт</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                  {% endif %}
-                  <tr>
-                    <td>{{ item.quantity }}</td>
-                    <td>{{ item.product_id|get_product_name_rus }}</td>
-                  </tr>
-                  {% if forloop.last %}
-                    </tbody>
-                  </table>
-                  {% endif %}
-                {% endif %}
-              {% endwith %}
-            {% endwith %}
-          {% endif %}
+  <div id="print-area">
+    <h3>доставка</h3>
+    <table>
+      <thead>
+        <tr>
+          <th>Количество</th>
+          <th>Продукт</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for item in cart_items %}
+        {% with allowed_categories="salads,meat_dishes" restricted_salads="Лобио,Аджапсандал" %}
+        {% with restricted_salads_list=restricted_salads|split:"," %}
+        {% if item.product.category in allowed_categories and item.product.name not in restricted_salads_list %}
+        <tr>
+          <td>{{ item.quantity }}</td>
+          <td>{{ item.product_id|get_product_name_rus }}</td>
+        </tr>
+        {% endif %}
         {% endwith %}
-      {% endfor %}
-  <style>
-    table {
-      width: 100%;
-      
-    }
-    
-    th, td {
-      padding: 8px;
-      text-align: right;
-      
-    }
-    </style>
-</div>
+        {% endwith %}
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
 </body>
 </html>
