@@ -7,6 +7,7 @@ from django.contrib.auth.decorators import login_required
 from django.conf.urls import handler404
 
 from restaurant_app.views_folder.tip_view import tip_view, check_tips
+from restaurant_app.views_folder.order_summary import order_summary
 from restaurant_app.views_folder.close_table_view import close_table_view
 from restaurant_app.views_folder.room_view import rooms_view, room_detail_view
 from restaurant_app.views_folder.recommend_view import recommend_view
@@ -96,6 +97,7 @@ urlpatterns = [
     path('user_summary/', user_summary, name='user_summary'),
     path('user_summary/<int:user_id>/', user_detail, name='user_detail'),
 
+    path('order_summary/', order_summary, name='order_summary'),
 
     path('manage_products/', manage_products, name='manage_products'),
     path('recommendations/<int:order_id>/', recommend_view, name='recommendations'),

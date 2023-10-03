@@ -1,0 +1,41 @@
+{% extends "base.html" %}
+{% load static %}
+{% load custom_tags %}
+{% block title %}Сводка Заказов{% endblock %}
+
+{% block content %}
+<div class="container my-5">
+    <h1 class="mb-4" style="color: white;">Сводка Заказов на Сегодня</h1>
+    <table id="orderSummaryTable" class="table table-striped">
+        <thead>
+            <tr>
+                <th scope="col" style="color: white; font-size: 15px;">Тип Заказа</th>
+                <th scope="col" style="color: white; font-size: 15px;">Количество</th>
+                <th scope="col" style="color: white; font-size: 15px;">Общая Сумма</th>
+            </tr>
+        </thead>
+        <tbody>
+            <tr>
+                <td>Заказы в Ресторане</td>
+                <td>{{ total_orders_today }}</td>
+                <td>{{ total_orders_sum }}</td>
+            </tr>
+            <tr>
+                <td>Пикап Заказы</td>
+                <td>{{ total_pickup_orders_today }}</td>
+                <td>{{ total_pickup_orders_sum }}</td>
+            </tr>
+            <tr>
+                <td>Заказы на Доставку</td>
+                <td>{{ total_delivery_orders_today }}</td>
+                <td>{{ total_delivery_orders_sum }}</td>
+            </tr>
+        </tbody>
+    </table>
+</div>
+<script>
+    $(document).ready(function () {
+        var table = $('#orderSummaryTable').DataTable();
+    });
+</script>
+{% endblock %}
