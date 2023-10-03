@@ -40,9 +40,8 @@ def delivery_summary(request):
     )['total'] or 0
 
     our_courier_cash_orders_total = delivery_orders.filter(payment_method='cash').exclude(courier__name="solo").aggregate(total=Sum('total_amount'))['total'] or 0
-    our_courier_cash_orders_discounted_total = delivery_orders.filter(payment_method='cash').exclude(courier__name="solo").aggregate(
-        total=Sum(F('total_amount') - F('discount'))
-    )['total'] or 0
+    our_courier_cash_orders_discounted_total = our_courier_cash_orders_total - delivery_orders.filter(payment_method='cash').exclude(courier__name="solo").aggregate(total=Sum('discount'))['total']
+
     all_orders_total = delivery_orders.aggregate(total=Sum('total_amount'))['total'] or 0
 
 
