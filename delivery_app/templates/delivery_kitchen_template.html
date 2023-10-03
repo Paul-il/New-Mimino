@@ -40,22 +40,11 @@
           <td>{{ item.quantity }}</td>
           <td>{{ item.product_id|get_product_name_rus }}</td>
         </tr>
-        {% if forloop.last %}
-        </tbody>
-        <table>
-          <thead>
-            <tr>
-              <th>Количество</th>
-              <th>Продукт</th>
-            </tr>
-          </thead>
-          <tbody>
-        {% endif %}
         {% endif %}
         {% endwith %}
         {% endwith %}
         {% endfor %}
-        </tbody>
+      </tbody>
     </table>
   </div>
 </body>
