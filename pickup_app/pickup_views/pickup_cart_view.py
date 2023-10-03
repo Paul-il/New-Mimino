@@ -114,11 +114,21 @@ def pickup_total_price_view(cart_items):
 @login_required
 def pay_order(request, id):
     pickup_order = get_object_or_404(PickupOrder, id=id)
+    
+    # Вычисляем общую сумму заказа
+    total_price = 0
+    cart = Cart.objects.get(pickup_order=pickup_order)
+    for item in cart.cart_items.all():
+        total_price += item.product.product_price * item.quantity
+        
+    # Обновляем total_amount для pickup_order
+    pickup_order.total_amount = total_price
+
     pickup_order.status = 'completed'
     pickup_order.save()
 
     # Очистка корзины
-    cart = Cart.objects.get(pickup_order=pickup_order)
     cart.cartitem_set.all().delete()
 
     return redirect('pickup_app:pickup_cart', phone_number=pickup_order.phone, category='')
+

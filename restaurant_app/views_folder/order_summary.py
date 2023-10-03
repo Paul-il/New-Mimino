@@ -12,10 +12,12 @@ def order_summary(request):
     total_orders_sum = sum(order.total_sum() for order in Order.objects.filter(created_at__range=(today_start, today_end)))
 
     total_pickup_orders_today = PickupOrder.objects.filter(date_created__range=(today_start, today_end)).count()
-    total_pickup_orders_sum = sum(cart.get_total() for cart in Cart.objects.filter(pickup_order__date_created__range=(today_start, today_end)))
+    # Используем поле total_amount для PickupOrder
+    total_pickup_orders_sum = sum(order.total_amount for order in PickupOrder.objects.filter(date_created__range=(today_start, today_end)))
 
     total_delivery_orders_today = DeliveryOrder.objects.filter(created_at__range=(today_start, today_end)).count()
-    total_delivery_orders_sum = sum(cart.get_total() for cart in DeliveryCart.objects.filter(delivery_order__created_at__range=(today_start, today_end)))
+    # Используем поле total_amount для DeliveryOrder
+    total_delivery_orders_sum = sum(order.total_amount for order in DeliveryOrder.objects.filter(created_at__range=(today_start, today_end)))
 
     context = {
         'total_orders_today': total_orders_today,
@@ -27,3 +29,4 @@ def order_summary(request):
     }
 
     return render(request, 'order_summary.html', context)
+
