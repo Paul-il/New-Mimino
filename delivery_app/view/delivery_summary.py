@@ -33,24 +33,23 @@ def delivery_summary(request):
         )
     ).filter(order_date=selected_date)
     
-    all_orders_total = delivery_orders.aggregate(total=Sum('total_amount'))['total'] or 0
-
     solo_orders_total = delivery_orders.filter(courier__name="solo").aggregate(total=Sum('total_amount'))['total'] or 0
-
+    
     our_courier_cash_orders_total = delivery_orders.filter(payment_method='cash').exclude(courier__name="solo").aggregate(total=Sum('total_amount'))['total'] or 0
-
-    our_courier_total = delivery_orders.exclude(courier__name="solo").aggregate(total=Sum('total_amount'))['total'] or 0
-    our_courier_discount_value = delivery_orders.exclude(courier__name="solo").aggregate(total=Sum('discount'))['total'] or 0
-    our_courier_total_after_discount = our_courier_total - our_courier_discount_value
+    our_courier_discount = delivery_orders.exclude(courier__name="solo").aggregate(total=Sum('discount'))['total'] or 0
+    our_courier_amount_due = our_courier_cash_orders_total - our_courier_discount
+    
+    all_orders_total = delivery_orders.aggregate(total=Sum('total_amount'))['total'] or 0
 
     context = {
         'delivery_orders': delivery_orders,
         'all_orders_total': all_orders_total,
-        'solo_orders_total': solo_orders_total,
+        'solo_cash_orders_total': solo_orders_total,
         'our_courier_cash_orders_total': our_courier_cash_orders_total,
-        'our_courier_total_after_discount': our_courier_total_after_discount,
+        'our_courier_cash_orders_discounted_total': our_courier_amount_due,
         'selected_date': selected_date
     }
+    
     return render(request, 'delivery_summary.html', context)
 
 
