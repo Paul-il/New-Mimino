@@ -4,13 +4,13 @@
 <head>
     <style>
         h1,h2,h3,h4 {
-        text-align: center;
+            text-align: center;
         }
         p {
-        text-align: center;
+            text-align: center;
         }
         th, td {
-        text-align: center;
+            text-align: center;
         }
     </style>
     <meta charset="utf-8">
@@ -28,20 +28,10 @@
             </thead>
             <tbody>
                 {% for item in cart_items %}
-                    {% with allowed_categories="salads,meat_dishes" %}
-                        {% if item.product.category in allowed_categories %}
-                            {% with restricted_salads="Лобио,Аджапсандал" %}
-                                {% with restricted_salads_list=restricted_salads|split:"," %}
-                                    {% if item.product.category != "salads" or item.product.name not in restricted_salads_list %}
-                                        <tr>
-                                            <td>{{ item.quantity }}</td>
-                                            <td>{{ item.product_id|get_product_name_rus }}</td>
-                                        </tr>
-                                    {% endif %}
-                                {% endwith %}
-                            {% endwith %}
-                        {% endif %}
-                    {% endwith %}
+                    <tr>
+                        <td>{{ item.quantity }}</td>
+                        <td>{{ item.product_id|get_product_name_rus }}</td>
+                    </tr>
                 {% endfor %}
             </tbody>
         </table>

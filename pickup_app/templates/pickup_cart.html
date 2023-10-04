@@ -80,11 +80,16 @@
             </label>
         </div>
         {% csrf_token %}
-        <button type="submit" id="pay-button" name="pay-button" value="aaa" class="btn2 btn-primary2 mr-3">Счет Оплачен.</button>
-    </form>
-
-    <button type="button" id="print-kitchen" name="print-kitchen" class="btn-primary2">Подтвердить Заказ.</button>
-    <button type="button" id="print-bill" name="print-bill" class="btn-primary2" value="Распечатать Счет." onclick="printInvoice('{{ pickup_order.phone }}', '{{ pickup_order.id }}')">Распечатать Счет.</button>
+        <div class="d-flex justify-content-between">
+          <form action="{% url 'some_url' %}" method="post" class="d-inline-block">
+              {% csrf_token %}
+              <button type="submit" id="pay-button" name="pay-button" value="aaa" class="btn2 btn-primary2 mr-3">Счет Оплачен.</button>
+          </form>
+      
+          <button type="button" id="print-kitchen" name="print-kitchen" class="btn-primary2 mr-3">Подтвердить Заказ.</button>
+          <button type="button" id="print-bill" name="print-bill" class="btn-primary2" value="Распечатать Счет." onclick="printInvoice('{{ pickup_order.phone }}', '{{ pickup_order.id }}')">Распечатать Счет.</button>
+      </div>
+      
 
 </div>
 

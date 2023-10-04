@@ -13,11 +13,11 @@ def order_summary(request):
 
     total_pickup_orders_today = PickupOrder.objects.filter(date_created__range=(today_start, today_end)).count()
     # Используем поле total_amount для PickupOrder
-    total_pickup_orders_sum = sum(order.total_amount for order in PickupOrder.objects.filter(date_created__range=(today_start, today_end)))
+    total_pickup_orders_sum = sum(order.total_amount if order.total_amount is not None else 0 for order in PickupOrder.objects.filter(date_created__range=(today_start, today_end)))
 
     total_delivery_orders_today = DeliveryOrder.objects.filter(created_at__range=(today_start, today_end)).count()
     # Используем поле total_amount для DeliveryOrder
-    total_delivery_orders_sum = sum(order.total_amount for order in DeliveryOrder.objects.filter(created_at__range=(today_start, today_end)))
+    total_delivery_orders_sum = sum(order.total_amount if order.total_amount is not None else 0 for order in DeliveryOrder.objects.filter(created_at__range=(today_start, today_end)))
 
     context = {
         'total_orders_today': total_orders_today,

@@ -35,15 +35,18 @@ def delivery_summary(request):
     ).filter(order_date=selected_date)
     
     solo_cash_orders_total = delivery_orders.filter(payment_method='cash', courier__name="solo").aggregate(total=Sum('total_amount'))['total'] or 0
-    solo_cash_orders_discounted_total = delivery_orders.filter(payment_method='cash', courier__name="solo").aggregate(
+    solo_cash_orders_discounted_value = delivery_orders.filter(payment_method='cash', courier__name="solo").aggregate(
         total=Sum(F('total_amount') - F('discount'))
-    )['total'] or 0
+    )['total']
+    solo_cash_orders_discounted_total = solo_cash_orders_discounted_value if solo_cash_orders_discounted_value is not None else 0
 
     our_courier_cash_orders_total = delivery_orders.filter(payment_method='cash').exclude(courier__name="solo").aggregate(total=Sum('total_amount'))['total'] or 0
-    our_courier_cash_orders_discounted_total = our_courier_cash_orders_total - delivery_orders.filter(payment_method='cash').exclude(courier__name="solo").aggregate(total=Sum('discount'))['total']
+    our_courier_cash_orders_discount_value = delivery_orders.filter(payment_method='cash').exclude(courier__name="solo").aggregate(total=Sum('discount'))['total']
+    our_courier_cash_orders_discount = our_courier_cash_orders_discount_value if our_courier_cash_orders_discount_value is not None else 0
+
+    our_courier_cash_orders_discounted_total = our_courier_cash_orders_total - our_courier_cash_orders_discount
 
     all_orders_total = delivery_orders.aggregate(total=Sum('total_amount'))['total'] or 0
-
 
     context = {
         'delivery_orders': delivery_orders,
