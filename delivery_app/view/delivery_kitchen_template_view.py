@@ -94,7 +94,7 @@ def print_kitchen(request):
         order = get_object_or_404(DeliveryOrder, customer__delivery_phone_number=phone_number, id=order_id)
         sorted_cart_items = get_sorted_delivery_cart_items(order)
         current_time = timezone.localtime().strftime('%H:%M')
-        title = f"\n\n\nВремя печати: {current_time}\nТелефон: {order.customer.delivery_phone_number}\n____________________________\n"
+        title = f"\n\n\nВремя печати: {current_time}\nДоставка\n____________________________\n"
         grouped_items = group_items_by_printer(sorted_cart_items)
         print_items_str = request.GET.get('print_items', 'True')
         print_items = print_items_str.lower() == 'true'
