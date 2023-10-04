@@ -21,8 +21,9 @@ def convert_html_to_text(cart_items):
 
 
 def delivery_kitchen_view(request, phone_number, order_id):
-    order = get_object_or_404(DeliveryOrder, delivery_phone=phone_number, id=order_id)
-    cart_items = DeliveryCart.objects.filter(cart__delivery_order=order)
+    order = get_object_or_404(DeliveryOrder, customer__delivery_phone_number=phone_number, id=order_id)
+    cart = get_object_or_404(DeliveryCart, delivery_order=order)
+    cart_items = cart.delivery_cart_items.all()
     return render(request, 'delivery_kitchen_template.html', {'order': order, 'cart_items': cart_items})
 
 
