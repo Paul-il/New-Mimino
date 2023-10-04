@@ -40,11 +40,11 @@ def delivery_summary(request):
     )['total']
     solo_cash_orders_discounted_total = solo_cash_orders_discounted_value if solo_cash_orders_discounted_value is not None else 0
 
-    our_courier_orders_total = delivery_orders.exclude(courier__name="solo").aggregate(total=Sum('total_amount'))['total'] or 0
-    our_courier_orders_discount_value = delivery_orders.exclude(courier__name="solo").aggregate(total=Sum('discount'))['total']
-    our_courier_orders_discount = our_courier_orders_discount_value if our_courier_orders_discount_value is not None else 0
+    our_courier_cash_orders_total = delivery_orders.filter(payment_method='cash').exclude(courier__name="solo").aggregate(total=Sum('total_amount'))['total'] or 0
+    our_courier_cash_orders_discount_value = delivery_orders.filter(payment_method='cash').exclude(courier__name="solo").aggregate(total=Sum('discount'))['total']
+    our_courier_cash_orders_discount = our_courier_cash_orders_discount_value if our_courier_cash_orders_discount_value is not None else 0
 
-    our_courier_orders_discounted_total = our_courier_orders_total - our_courier_orders_discount
+    our_courier_cash_orders_discounted_total = our_courier_cash_orders_total - our_courier_cash_orders_discount
 
     all_orders_total = delivery_orders.aggregate(total=Sum('total_amount'))['total'] or 0
 
@@ -53,8 +53,9 @@ def delivery_summary(request):
         'all_orders_total': all_orders_total,
         'solo_cash_orders_total': solo_cash_orders_total,
         'solo_cash_orders_discounted_total': solo_cash_orders_discounted_total,
-        'our_courier_orders_total': our_courier_orders_total,
-        'our_courier_orders_discounted_total': our_courier_orders_discounted_total,
+        'our_courier_cash_orders_total': our_courier_cash_orders_total,
+        'our_courier_cash_orders_discounted_total': our_courier_cash_orders_discounted_total,
         'selected_date': selected_date  # передаем выбранную дату в контекст
     }
     return render(request, 'delivery_summary.html', context)
+
