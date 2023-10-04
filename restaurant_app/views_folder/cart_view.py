@@ -60,13 +60,15 @@ def increase_product_in_order_view(request, order_id, order_item_id):
 def decrease_product_from_order_view(request, order_id, order_item_id):
     order_item = get_object_or_404(OrderItem, id=order_item_id)
     if order_item.quantity <= 1:
-        order_item.delete()
-        if not Order.objects.filter(id=order_id, order_items__isnull=True).exists():
+        if OrderItem.objects.filter(order_id=order_id).count() == 1:  # если в заказе только один элемент
             Order.objects.get(id=order_id).delete()
             return redirect('rooms')
+        else:
+            order_item.delete()
     else:
         order_item.quantity = F('quantity') - 1
         order_item.save()
+
 
     messages.success(request, f"{order_item.product.product_name_rus} Убрали из корзины.")
     return redirect('order_detail', order_id)

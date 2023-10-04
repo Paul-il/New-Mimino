@@ -13,7 +13,7 @@ class CartInline(admin.TabularInline):
 
 class PickupOrderAdmin(admin.ModelAdmin):
     inlines = [CartInline]
-    list_display = ('phone', 'name', 'date_created', 'is_completed', 'get_orders_count')
+    list_display = ('phone', 'name', 'date_created', 'is_completed', 'get_orders_count', 'get_cart_total')
     list_filter = ('is_completed',)
     readonly_fields = ('get_order_items_display', 'get_cart_items_display', 'get_cart_total')
 
@@ -26,7 +26,10 @@ class PickupOrderAdmin(admin.ModelAdmin):
         items = []
         carts = obj.carts.all()
         for cart in carts:
-            items.extend([f"{cart_item.product} ({cart_item.quantity})" for cart_item in cart.cart_items.all()])
+            for cart_item in cart.cart_items.all():
+                product_price = cart_item.product.product_price
+                total_price_for_item = product_price * cart_item.quantity
+                items.append(f"{cart_item.product} ({cart_item.quantity}) - {total_price_for_item}₪")
         return "\n".join(items)
     get_cart_items_display.short_description = 'Cart Items'
 
@@ -34,23 +37,28 @@ class PickupOrderAdmin(admin.ModelAdmin):
         total = 0
         carts = obj.carts.all()
         for cart in carts:
-            total += cart.total_price
+            for cart_item in cart.cart_items.all():
+                product_price = cart_item.product.product_price
+                total_price_for_item = product_price * cart_item.quantity
+                total += total_price_for_item
         return total
 
     get_cart_total.short_description = 'Total'
+
 
     def get_orders_count(self, obj):
         return PickupOrder.objects.filter(phone=obj.phone).count()
 
     get_orders_count.short_description = 'Orders Count'
 
-class CartAdmin(admin.ModelAdmin):
+
+"""class CartAdmin(admin.ModelAdmin):
     inlines = [CartItemInline]
     list_display = ('pickup_order', 'created_at', 'total_price')
 
 class CartItemAdmin(admin.ModelAdmin):
-    list_display = ('cart', 'product', 'quantity')
+    list_display = ('cart', 'product', 'quantity')"""
 
 admin.site.register(PickupOrder, PickupOrderAdmin)
-admin.site.register(Cart, CartAdmin)
-admin.site.register(CartItem, CartItemAdmin)
+"""admin.site.register(Cart, CartAdmin)
+admin.site.register(CartItem, CartItemAdmin)"""
