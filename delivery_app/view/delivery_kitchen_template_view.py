@@ -45,7 +45,13 @@ def sort_items(item):
 
 
 def group_items_by_printer(sorted_cart_items):
-    return {item.product.printer: item for item in sorted_cart_items if item.quantity - item.printed_quantity > 0}
+    grouped = {}
+    for item in sorted_cart_items:
+        if item.product.printer not in grouped:
+            grouped[item.product.printer] = []
+        grouped[item.product.printer].append(item)
+    return grouped
+
 
 
 def print_kitchen(request):
