@@ -3,14 +3,16 @@
 {% block title %}Создать заказ на самовывоз{% endblock %}
 
 {% block content %}
-<h1 class="mb-4" style="color: white;">Создать заказ на самовывоз</h1>
+<h1 class="mb-4" style="color: rgb(246, 9, 9);">Создать заказ на самовывоз</h1>
 <form method="POST" action="{% url 'pickup_app:pickup_create' %}">
     {% csrf_token %}
     <input type="hidden" name="phone_number" value="{{ phone_number }}">
-    
-    <div style="color:white; max-width: 300px;">
-        {{ form.as_p }}
-    </div> 
+    <div class="form-group">
+        {% for field in form %}
+        <label for="{{ field.id_for_label }}" style="color: rgb(246, 9, 9);">{{ field.label }}</label>
+        {{ field }}
+        {% endfor %}
+    </div>
 
     <button type="submit" class="btn btn-primary">Создать заказ</button>
 </form>

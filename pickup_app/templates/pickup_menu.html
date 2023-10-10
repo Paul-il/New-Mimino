@@ -37,7 +37,7 @@
                     <p class="card-text">{{ product.product_price }}₪</p>
                     <form action="{% url 'pickup_app:pickup_add_to_cart' phone_number=phone_number product_id=product.id category=category %}" method="POST">
                         {% csrf_token %}
-                        {{ product_quantity_form.as_p }}
+                        {{ product_quantity_form.quantity }}
                         <input type="hidden" name="product_id" value="{{ product.id }}">
                         <button type="submit" class="btn btn-primary" {% if not product.is_available %}disabled{% endif %}>Добавить в корзину</button>
                         {% if not product.is_available %}

@@ -52,13 +52,13 @@ class PickupOrderAdmin(admin.ModelAdmin):
     get_orders_count.short_description = 'Orders Count'
 
 
-"""class CartAdmin(admin.ModelAdmin):
+class CartAdmin(admin.ModelAdmin):
     inlines = [CartItemInline]
     list_display = ('pickup_order', 'created_at', 'total_price')
 
 class CartItemAdmin(admin.ModelAdmin):
-    list_display = ('cart', 'product', 'quantity')"""
+    list_display = ('cart', 'product', 'quantity')
 
 admin.site.register(PickupOrder, PickupOrderAdmin)
-"""admin.site.register(Cart, CartAdmin)
-admin.site.register(CartItem, CartItemAdmin)"""
+admin.site.register(Cart, CartAdmin)
+admin.site.register(CartItem, CartItemAdmin)

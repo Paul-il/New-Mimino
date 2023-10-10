@@ -4,20 +4,23 @@
 
 {% block content %}
 
-  <div class="login-form">
+<div class="login-form">
     <h1>Добро Пожаловать.</h1>
+    {% if error %}
+    <p class="error-message">{{ error }}</p>
+    {% endif %}
     <form method="POST" id="login-form">
-      {% csrf_token %}
-      <div class="form-group">
-        <label for="username">Имя Пользователя:</label>
-        <input type="text" id="username" name="username" class="form-control" required>
-      </div>
-      <div class="form-group">
-        <label for="password">Пароль:</label>
-        <input type="password" id="password" name="password" class="form-control" required>
-      </div>
-      <button type="submit" class="btn btn-primary btn-block">Login</button>
+        {% csrf_token %}
+        <div class="form-group input-container">
+            <input type="text" id="username" name="username" class="form-control" required>
+            <label for="username">Имя Пользователя:</label>
+        </div>
+        <div class="form-group input-container">
+            <input type="password" id="password" name="password" class="form-control" required>
+            <label for="password">Пароль:</label>
+        </div>
+        <button type="submit" class="btn btn-primary btn-block">Login</button>
     </form>
-  </div>
+</div>
 
 {% endblock %}

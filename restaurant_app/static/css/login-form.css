@@ -2,9 +2,54 @@
   max-width: 600px;
   margin: 0 auto;
   padding: 20px;
-  background-color: #fff;
+  background-color: rgba(255, 255, 255, 0.5);
   border-radius: 5px;
   box-shadow: 0 0 5px rgba(0, 0, 0, 0.1);
+}
+
+.input-container {
+  position: relative;
+  margin: 40px 0;
+
+}
+
+.form-control {
+  position: relative;
+  border: none;
+  font-size: 1rem;
+  border-bottom: 2px solid #fff;
+  padding: 10px;
+  background: transparent;
+  color: #fff;
+  width: 100%;
+}
+
+.input-container label {
+  position: absolute;
+  top: 50%;
+  left: 5px;
+  font-size: 1.2rem;
+  transform: translateY(-50%);
+  transition: all 0.5s ease-in-out;
+  pointer-events: none;
+}
+
+.input-container label:hover,
+label[for="username"],
+label[for="password"] {
+  color: black;
+}
+
+.form-control:focus,
+.form-control:valid {
+  border-bottom: 2px solid #1a73e8;
+}
+
+.form-control:focus + label,
+.form-control:valid + label {
+  top: -5px;
+  font-size: 0.8rem;
+  color: #000000;
 }
 
 h1 {
@@ -12,30 +57,6 @@ h1 {
   text-align: center;
   margin-top: 50px;
   margin-bottom: 30px;
-}
-
-.form-group {
-  margin-bottom: 20px;
-}
-
-label {
-  display: block;
-  margin-bottom: 10px;
-}
-
-input.form-control {
-  width: 100%;
-  padding: 10px;
-  font-size: 16px;
-  border: 1px solid #ddd;
-  border-radius: 5px;
-  box-sizing: border-box;
-  transition: border-color 0.3s ease;
-}
-
-input.form-control:focus {
-  outline: none;
-  border-color: #1a73e8;
 }
 
 button.btn {
@@ -69,6 +90,7 @@ button.btn-danger {
 button.btn-danger:hover {
   background-color: #0d47a1;
 }
+
 /* Adjust input fields */
 input[type="text"],
 input[type="password"] {
@@ -77,13 +99,19 @@ input[type="password"] {
   font-size: 14px;
 }
 
-button.btn-guest-disable{
+button.btn-guest-disable {
   background-color: #1a73e8;
   color: #fff;
   border: none;
   border-radius: 5px;
   padding: 10px 20px;
 }
+
 button.btn-guest-disable:hover {
   background-color: #bd0000;
+}
+
+.error-message {
+  font-size: 1.5rem;  /* Или любой другой размер, который вам нравится */
+  color: red;
 }

@@ -37,7 +37,7 @@
                     <form action="{% url 'delivery_app:delivery_add_to_cart' delivery_phone_number=delivery_phone_number category=category %}" method="POST">
                         {% csrf_token %}
                         <input type="hidden" name="product_id" value="{{ product.id }}">
-                        {{ product_quantity_form.as_p }}
+                        {{ product_quantity_form.quantity }}
                         <button type="submit" class="btn btn-primary" {% if not product.is_available %}disabled{% endif %}>Добавить в корзину</button>
                         {% if not product.is_available %}
                             <p>Продукт закончился</p>

@@ -18,7 +18,6 @@ CATEGORIES = {
     'grill_meat': 'Мясо на огне',
     'garnish': 'Гарниры',
     'dessert': 'Десерты',
-    'sales': 'Акции',
     'soft_drinks': 'Легкие напитки',
     'beer': 'Пиво',
     'wine' :'Вино',

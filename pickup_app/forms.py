@@ -7,17 +7,23 @@ class PickupForm(forms.ModelForm):
     def __init__(self, *args, **kwargs):
         super(PickupForm, self).__init__(*args, **kwargs)
         self.fields['name'].required = False
-        self.fields['phone'].widget.attrs['style'] = 'width: 300px;'
-        self.fields['name'].widget.attrs['style'] = 'width: 300px;'
+        
+        # Устанавливаем стили для полей
+        for field in self.fields.values():
+            field.widget.attrs['class'] = 'form-control form-control-lg'
+            field.widget.attrs['style'] = 'width: 300px;'
+        
+        # Дополнительные стили для конкретных полей
+        self.fields['phone'].widget.attrs['style'] += 'width: 300px;'
+        self.fields['name'].widget.attrs['style'] += 'width: 300px;'
 
     class Meta:
         model = PickupOrder
         fields = ['phone', 'name']
         labels = {
-            'phone': 'Номер телефона',
-            'name': 'Имя',
+            'phone': 'Номер телефона:',
+            'name': 'Имя:',
         }
-
 
 class OrderItemForm(forms.ModelForm):
     class Meta:
