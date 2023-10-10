@@ -21,11 +21,11 @@
                 <ul class="nav nav-tabs mb-4">
             {% endif %}
             <li class="nav-item">
-                <a href="{% url 'delivery_app:delivery_menu' delivery_phone_number=delivery_phone_number category=key %}" class="nav-link{% if category == key %} active{% endif %}">{{ value }}</a>
+                <a href="{% url 'delivery_app:delivery_menu' delivery_phone_number=delivery_phone_number category=key %}" class="nav-link delivery-nav-link{% if category == key %} active{% endif %}">{{ value }}</a>
+
             </li>
         {% endfor %}
-    </ul>
-    
+    </ul>    
 
     <div id="products-container" class="row" hx-target="#products-container">
         {% for product in products %}

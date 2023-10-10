@@ -27,7 +27,8 @@
                     <ul class="nav nav-tabs mb-4">
                 {% endif %}
                 <li class="nav-item">
-                    <a href="{% url 'menu' table_id=table.table_id category=key %}?{% if order_id %}&order_id={{ table.table_id }}&category={{ key }}{% endif %}" class="nav-link{% if category == key %} active{% endif %}">{{ value }}</a>
+                    <a href="{% url 'menu' table_id=table.table_id category=key %}?{% if order_id %}&order_id={{ table.table_id }}&category={{ key }}{% endif %}" class="nav-link menu-nav-link{% if category == key %} active{% endif %}">{{ value }}</a>
+
                 </li>
             {% endfor %}
         </ul>

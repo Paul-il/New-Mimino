@@ -128,3 +128,26 @@ label {
   box-shadow: none;    /* убирает тень (если она используется, например, в Bootstrap) */
 }
 
+.delivery-nav-link {
+  color: rgb(231, 235, 5);
+}
+
+.delivery-nav-link:hover {
+  color: rgb(250, 255, 10);  /* или другой цвет при наведении */
+}
+
+.delivery-nav-link.active {
+  color: rgb(50, 50, 50);  /* Цвет активной ссылки */
+}
+
+.pickup-nav-link, .menu-nav-link {
+  color: rgb(231, 235, 5);
+}
+
+.pickup-nav-link:hover, .menu-nav-link:hover {
+  color: rgb(250, 255, 10);  /* или другой цвет при наведении */
+}
+
+.pickup-nav-link.active, .menu-nav-link.active {
+  color: rgb(50, 50, 50);  /* Цвет активной ссылки */
+}

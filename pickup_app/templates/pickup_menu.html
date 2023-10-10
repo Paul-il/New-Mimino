@@ -22,7 +22,8 @@
                 <ul class="nav nav-tabs mb-4">
             {% endif %}
             <li class="nav-item">
-                <a href="{% url 'pickup_app:pickup_menu' phone_number=phone_number category=key %}" class="nav-link{% if category == key %} active{% endif %}">{{ value }}</a>
+                <a href="{% url 'pickup_app:pickup_menu' phone_number=phone_number category=key %}" class="nav-link pickup-nav-link{% if category == key %} active{% endif %}">{{ value }}</a>
+
             </li>
         {% endfor %}
     </ul>    
