@@ -15,19 +15,16 @@ CATEGORIES = {
     'grill_meat': 'Мясо на огне',
     'garnish': 'Гарниры',
     'dessert': 'Десерты',
-    'sales': 'Акции',
+    'soft_drinks': 'Легкие напитки',
+    'beer': 'Пиво',
+    'wine' :'Вино',
+    'vodka': 'Водка',
+    'cognac': 'Коньяк',
+    'whisky': 'Виски',
+    'dessert_drinks': 'Горячие напитки',
+    'mishloha':'Мишлоха',
 }
-TAT_CATEGORIES = {
 
-        'soft_drinks': 'Легкие напитки',
-        'beer': 'Пиво',
-        'wine' :'Вино',
-        'vodka': 'Водка',
-        'cognac': 'Коньяк',
-        'whisky': 'Виски',
-        'dessert_drinks': 'Горячие напитки',
-        'mishloha':'Мишлоха',
-}
 
 def delivery_menu_view(request, delivery_phone_number, category):
     delivery_customer = get_object_or_404(DeliveryCustomer, delivery_phone_number=delivery_phone_number)
@@ -41,7 +38,7 @@ def delivery_menu_view(request, delivery_phone_number, category):
         'products': products,
         'product_quantity_form': product_quantity_form,
         'CATEGORIES': CATEGORIES,
-        'TAT_CATEGORIES': TAT_CATEGORIES,
+
     }
 
     if request.method == 'POST':

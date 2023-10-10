@@ -17,18 +17,13 @@ CATEGORIES = {
     'garnish':'Гарниры',
     'drinks':'Напитки',
     'dessert':'Десерты',
-    'sales':'Акции',
-}
-
-TAT_CATEGORIES = {
-
-        'soft_drinks': 'Легкие напитки',
-        'beer': 'Пиво',
-        'wine' :'Вино',
-        'vodka': 'Водка',
-        'cognac': 'Коньяк',
-        'whisky': 'Виски',
-        'dessert_drinks': 'Горячие напитки'
+    'soft_drinks': 'Легкие напитки',
+    'beer': 'Пиво',
+    'wine' :'Вино',
+    'vodka': 'Водка',
+    'cognac': 'Коньяк',
+    'whisky': 'Виски',
+    'dessert_drinks': 'Горячие напитки'
 }
 
 @login_required
@@ -48,7 +43,7 @@ def pickup_menu_view(request, phone_number, category):
         'pickup_order': pickup_order,
         'product_quantity_form': product_quantity_form,
         'CATEGORIES': CATEGORIES,
-        'TAT_CATEGORIES':TAT_CATEGORIES,
+
     }
 
 
