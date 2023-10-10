@@ -33,10 +33,21 @@
             {% endif %}
           {% endif %}
           {% if table.active_order %}
-            <p class="card-text">Имя Официанта: {{ table.created_by_name }}</p>
-            <p class="card-text">Время начала заказа: {{ table.orders.last.created_at|time:"H:i" }}</p>
-            <p class="card-text">Сумма заказа: {{ table.active_order_total }}</p>
-          {% endif %}
+              <p class="card-text">
+                  <span style="color: white;">Официант:</span> 
+                  <span style="background-color: blue; color: white; padding: 5px; border-radius: 5px;">{{ table.created_by_name }}</span>
+              </p>
+              <p class="card-text">
+                  <span style="color: white;">Время начала заказа:</span> 
+                  <span style="color: red;">{{ table.orders.last.created_at|time:"H:i" }}</span>
+              </p>
+              <p class="card-text">
+                  <span style="color: white;">Сумма заказа:</span> 
+                  <span style="color: rgb(231, 235, 5);">{{ table.active_order_total }}</span>
+              </p>
+          {% endif %}    
+
+
         </div>
       </div>
     </div>
