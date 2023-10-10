@@ -11,15 +11,17 @@
           <h5 class="card-title"><a href="{% url 'room_detail' room_id=room.id %}" class="btn">{{ room.name }}</a></h5>
           <ul>
             {% for waiter_name, table_order_pairs in room.waiters.items %}
-                <li>{{ waiter_name }}
+                <li><span style="color: white;">Официант:</span> 
+                    <span style="background-color: blue; color: white; padding: 5px; border-radius: 5px;">{{ waiter_name }}</span>
                     <ul>
                         {% for table_id, order_id in table_order_pairs %}
-                            <li><a href="{% url 'order_detail' order_id=order_id %}">Стол №{{ table_id }}</a></li>
+                            <li><a href="{% url 'order_detail' order_id=order_id %}" style="color: rgb(231, 235, 5);">Стол №{{ table_id }}</a></li>
                         {% endfor %}
                     </ul>
                 </li>
             {% endfor %}
-          </ul>
+        </ul>     
+
         </div>
       </div>
     </div>
