@@ -45,7 +45,8 @@ def add_product_to_order(product_id, quantity, active_order, table, user, reques
         messages.success(request, f"{quantity} {order_item.product.product_name_rus} добавлено в корзину.")
     else:
         new_order = Order.objects.create(table=table, created_by=user, table_number=table.table_id)
-        OrderItem.objects.create(order=new_order, product=product, quantity=quantity)
+        order_item = OrderItem.objects.create(order=new_order, product=product, quantity=quantity)  # Save the created order item to the variable
+        messages.success(request, f"{quantity} {order_item.product.product_name_rus} добавлено в корзину.")
 
 
 def increase_product_in_order_view(request, order_id, order_item_id):

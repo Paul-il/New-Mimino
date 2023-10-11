@@ -1,6 +1,7 @@
 from django.contrib.auth.decorators import login_required
 from django.shortcuts import get_object_or_404, redirect, render
 from django.urls import reverse
+from django.contrib import messages
 
 from ..forms import ProductQuantityForm, OrderItemForm
 from ..models.orders import Order, OrderItem
@@ -62,9 +63,11 @@ def menu_view(request, table_id, category):
             # Add the product to the existing active order
             order_item, _ = OrderItem.objects.get_or_create(order=active_order, product=product)
             if quantity is not None:
-                order_item.quantity += int(quantity)
+                order_item.quantity = int(quantity)
 
             order_item.save()
+            messages.success(request, f"{quantity} {order_item.product.product_name_rus} добавлено в корзину.")
+
 
         else:
             # Create a new active order and add the product to it
@@ -73,6 +76,7 @@ def menu_view(request, table_id, category):
             if quantity is not None:
                 order_item.quantity = int(quantity)
             order_item.save()
+            messages.success(request, f"{quantity} {order_item.product.product_name_rus} добавлено в корзину.")
 
 
         # Set the context variable for the active order after the update
