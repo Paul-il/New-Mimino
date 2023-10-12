@@ -19,14 +19,21 @@ def order_summary(request):
     # Используем поле total_amount для DeliveryOrder
     total_delivery_orders_sum = sum(order.total_amount if order.total_amount is not None else 0 for order in DeliveryOrder.objects.filter(created_at__range=(today_start, today_end)))
 
+    total_all_orders_sum = total_orders_sum + total_pickup_orders_sum + total_delivery_orders_sum
+    total_all_orders_today = total_orders_today + total_pickup_orders_today + total_delivery_orders_today
+
+
     context = {
-        'total_orders_today': total_orders_today,
-        'total_orders_sum': total_orders_sum,
-        'total_pickup_orders_today': total_pickup_orders_today,
-        'total_pickup_orders_sum': total_pickup_orders_sum,
-        'total_delivery_orders_today': total_delivery_orders_today,
-        'total_delivery_orders_sum': total_delivery_orders_sum
-    }
+    'total_orders_today': total_orders_today,
+    'total_orders_sum': total_orders_sum,
+    'total_pickup_orders_today': total_pickup_orders_today,
+    'total_pickup_orders_sum': total_pickup_orders_sum,
+    'total_delivery_orders_today': total_delivery_orders_today,
+    'total_delivery_orders_sum': total_delivery_orders_sum,
+    'total_all_orders_sum': total_all_orders_sum,
+    'total_all_orders_today': total_all_orders_today  # добавьте эту строку
+}
+
 
     return render(request, 'order_summary.html', context)
 
