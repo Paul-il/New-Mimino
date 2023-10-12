@@ -66,27 +66,27 @@
     <p style="color: white;">Общая сумма: {{ cart|pickup_total_price }}₪</p>
 
     <label class="form-group d-flex" style="color: rgb(238, 4, 4); font-size: 26px;">Метод Оплаты:</label>
-    <form id="payment-form" method="post" action="{% url 'pickup_app:pickup_generate_pdf' phone_number=pickup_order.phone order_id=pickup_order.id %}">
-        <div class="form-check">
-            <input class="form-check-input" type="radio" name="payment_method" id="cash" value="מזומן">
-            <label class="form-check-label mr-3" for="cash" style="color: rgb(238, 4, 4);">
-                Наличные
-            </label>
-        </div>
-        <div class="form-check">
-            <input class="form-check-input" type="radio" name="payment_method" id="credit_card" value="כרטיס אשראי">
-            <label class="form-check-label mr-3" for="credit_card" style="color: rgb(238, 4, 4);">
-                Кредитная карта
-            </label>
-        </div>
-        {% csrf_token %}
-        <div class="d-flex justify-content-between">
-              {% csrf_token %}
-              <button type="submit" id="pay-button" name="pay-button" value="aaa" class="btn2 btn-primary2 mr-3">Счет Оплачен.</button>
-      
-          <button type="button" id="print-kitchen" name="print-kitchen" class="btn-primary2 mr-3">Подтвердить Заказ.</button>
-          <button type="button" id="print-bill" name="print-bill" class="btn-primary2" value="Распечатать Счет." onclick="printInvoice('{{ pickup_order.phone }}', '{{ pickup_order.id }}')">Распечатать Счет.</button>
-      </div>
+<form id="payment-form" method="post" action="{% url 'pickup_app:pickup_generate_pdf' phone_number=pickup_order.phone order_id=pickup_order.id %}">
+    <div class="form-check">
+        <input class="form-check-input" type="radio" name="payment_method" id="cash" value="מזומן">
+        <label class="form-check-label mr-3" for="cash" style="color: rgb(238, 4, 4);">
+            Наличные
+        </label>
+    </div>
+    <div class="form-check">
+        <input class="form-check-input" type="radio" name="payment_method" id="credit_card" value="כרטיס אשראי">
+        <label class="form-check-label mr-3" for="credit_card" style="color: rgb(238, 4, 4);">
+            Кредитная карта
+        </label>
+    </div>
+    {% csrf_token %}
+    <div class="d-flex justify-content-between">
+        <button type="submit" id="pay-button" name="pay-button" value="aaa" class="btn2 btn-primary2 mr-3">Счет Оплачен.</button>
+        <button type="button" id="print-kitchen" name="print-kitchen" class="btn-primary2 mr-3">Подтвердить Заказ.</button>
+        <button type="button" id="print-bill" name="print-bill" class="btn-primary2" value="Распечатать Счет." onclick="printInvoice('{{ pickup_order.phone }}', '{{ pickup_order.id }}')">Распечатать Счет.</button>
+    </div>
+</form>
+
       
 
 </div>

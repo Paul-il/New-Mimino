@@ -13,12 +13,14 @@ class CartInline(admin.TabularInline):
 
 class PickupOrderAdmin(admin.ModelAdmin):
     inlines = [CartInline]
-    list_display = ('phone', 'name', 'date_created', 'is_completed', 'get_orders_count', 'get_cart_total')
-    list_filter = ('is_completed',)
-    readonly_fields = ('get_order_items_display', 'get_cart_items_display', 'get_cart_total')
+    list_display = ('phone', 'name', 'date_created', 'is_completed', 'status', 'total_amount', 'get_orders_count', 'get_cart_total')
+    list_filter = ('is_completed', 'status')
+    search_fields = ('phone', 'name', 'status')
+    readonly_fields = ('get_order_items_display', 'get_cart_items_display', 'get_cart_total', 'date_created', 'date_updated')
+    list_editable = ('status',)  # позволяет редактировать статус прямо из списка
 
     def get_order_items_display(self, obj):
-        items = obj.get_order_items()
+        items = obj.orderitem_set.all()  # используйте orderitem_set для доступа к связанным элементам заказа
         return "\n".join([f"{item.product} ({item.quantity})" for item in items])
     get_order_items_display.short_description = 'Order Items'
 
@@ -42,13 +44,10 @@ class PickupOrderAdmin(admin.ModelAdmin):
                 total_price_for_item = product_price * cart_item.quantity
                 total += total_price_for_item
         return total
-
     get_cart_total.short_description = 'Total'
-
 
     def get_orders_count(self, obj):
         return PickupOrder.objects.filter(phone=obj.phone).count()
-
     get_orders_count.short_description = 'Orders Count'
 
 

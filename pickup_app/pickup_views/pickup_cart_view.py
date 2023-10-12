@@ -4,11 +4,9 @@ from django.http import JsonResponse, HttpResponseBadRequest
 from django.shortcuts import get_object_or_404, get_list_or_404
 from django.db.models import Sum, F
 from django.contrib import messages
-from ..forms import ProductQuantityForm
 from ..models import PickupOrder, Cart, CartItem, OrderItem
 from restaurant_app.models.product import Product
 from pickup_app.pickup_views.pickup_menu_view import handle_add_to_cart
-from datetime import datetime, timezone
 from django.urls import reverse
 
 @login_required
@@ -128,7 +126,7 @@ def pay_order(request, id):
     pickup_order.save()
 
     # Очистка корзины
-    cart.cartitem_set.all().delete()
+    #cart.cartitem_set.all().delete()
 
     return redirect('pickup_app:pickup_cart', phone_number=pickup_order.phone, category='')
 

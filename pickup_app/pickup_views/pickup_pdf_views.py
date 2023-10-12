@@ -1,6 +1,6 @@
 from django.template.loader import get_template
 from weasyprint.fonts import FontConfiguration
-from django.http import HttpResponse, JsonResponse, HttpResponseRedirect
+from django.http import HttpResponse, JsonResponse
 from django.contrib.auth.decorators import login_required
 from django.shortcuts import get_object_or_404, redirect
 from django.urls import reverse
@@ -9,8 +9,7 @@ from io import BytesIO
 from weasyprint import HTML
 import os
 import traceback
-
-from ..models import PickupOrder
+from ..models import PickupOrder, Cart
 
 @login_required
 def pickup_generate_pdf_view(request, phone_number, order_id):
@@ -52,7 +51,7 @@ def pickup_generate_pdf_view(request, phone_number, order_id):
 
         # Save the PDF to a file with a unique filename
         today = datetime.now().strftime('%Y-%m-%d')
-        base_directory = os.path.join('pdfs', today, 'Pickup')  # Added 'Pickup' subdirectory
+        base_directory = os.path.join('pdfs', today, 'Pickup')
         os.makedirs(base_directory, exist_ok=True)
 
         if payment_method == 'מזומן':
@@ -69,20 +68,24 @@ def pickup_generate_pdf_view(request, phone_number, order_id):
         with open(filepath, 'wb') as f:
             f.write(pdf_file.read())
 
-        # Delete Order if the bill was paid
+        # Check if the bill was paid
         if pay_button_value:
+            # Update the order
+            order.total_amount = total_price
             order.is_completed = True
+            order.status = 'completed'
             order.save()
 
-            # Удаление элементов из корзины
-            for cart in order.carts.all():
-                cart.cart_items.all().delete()
+            # Clear the cart
+            cart = Cart.objects.get(pickup_order=order)
+            cart.cart_items.all().delete()
 
-            return redirect('ask_where') 
-
-        return JsonResponse({'Bill': "Printed."})
+            # Redirect to the desired page
+            return redirect(reverse('ask_where'))
+        else:
+            return JsonResponse({'message': "PDF успешно создан!"})
 
     except Exception as e:
         traceback.print_exc()
-        error_message = f"An error occurred while generating the PDF: {str(e)}"
+        error_message = f"Произошла ошибка при создании PDF или обработке заказа: {str(e)}"
         return HttpResponse(error_message, content_type='text/plain', status=500)
