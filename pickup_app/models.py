@@ -1,5 +1,6 @@
 from django.db import models
 from django.utils import timezone
+from django.db.models import Sum
 
 from restaurant_app.models.product import Product
 
@@ -11,7 +12,7 @@ class PickupOrder(models.Model):
     date_updated = models.DateTimeField(auto_now=True, editable=False)
     is_completed = models.BooleanField(default=False)
     total_amount = models.DecimalField(max_digits=10, decimal_places=2, null=True, blank=True)
-
+    
     NEW = 'new'
     PROCESSING = 'processing'
     COMPLETED = 'completed'
@@ -29,6 +30,10 @@ class PickupOrder(models.Model):
 
     def __str__(self):
         return f"{self.phone} ({self.name})"
+    
+    def previous_orders_total(self):
+        total = PickupOrder.objects.filter(phone=self.phone, date_created__lt=self.date_created).aggregate(Sum('total_amount'))['total_amount__sum'] or 0
+        return total
 
 class Cart(models.Model):
     pickup_order = models.ForeignKey(PickupOrder, on_delete=models.CASCADE, related_name='carts')

@@ -18,6 +18,8 @@ class PickupOrderAdmin(admin.ModelAdmin):
     search_fields = ('phone', 'name', 'status')
     readonly_fields = ('get_order_items_display', 'get_cart_items_display', 'get_cart_total', 'date_created', 'date_updated')
     list_editable = ('status',)  # позволяет редактировать статус прямо из списка
+    readonly_fields = ('get_order_items_display', 'get_cart_items_display', 'get_cart_total', 'date_created', 'date_updated', 'previous_orders_total_display')
+
 
     def get_order_items_display(self, obj):
         items = obj.orderitem_set.all()  # используйте orderitem_set для доступа к связанным элементам заказа
@@ -34,6 +36,10 @@ class PickupOrderAdmin(admin.ModelAdmin):
                 items.append(f"{cart_item.product} ({cart_item.quantity}) - {total_price_for_item}₪")
         return "\n".join(items)
     get_cart_items_display.short_description = 'Cart Items'
+
+    def previous_orders_total_display(self, obj):
+        return f"{obj.previous_orders_total():,.2f}"
+    previous_orders_total_display.short_description = "Сумма предыдущих заказов"
 
     def get_cart_total(self, obj):
         total = 0
