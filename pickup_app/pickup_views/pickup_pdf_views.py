@@ -15,7 +15,9 @@ from ..models import PickupOrder, Cart
 def pickup_generate_pdf_view(request, phone_number, order_id):
     try:
         # Get order data from database
-        order = get_object_or_404(PickupOrder, phone=phone_number)
+        order = PickupOrder.objects.filter(phone=phone_number).order_by('-date_created').first()
+        if not order:
+            raise Exception("Заказ не найден")
 
         # Get payment method from request data
         payment_method = request.POST.get('payment_method')
