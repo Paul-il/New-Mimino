@@ -85,7 +85,10 @@ def sort_items(item):
 
 
 def get_sorted_cart_items(order):
-    cart_items = OrderItem.objects.filter(order=order)
+    if isinstance(order, WaiterOrder):
+        cart_items = order.waiter_order_items.all()
+    else:
+        cart_items = OrderItem.objects.filter(order=order)
     return sorted(cart_items, key=sort_items)
 
 
