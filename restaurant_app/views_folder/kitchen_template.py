@@ -189,4 +189,5 @@ def print_kitchen_for_waiter(request):
     except cups.IPPError as e:
         return JsonResponse({'status': 'error', 'message': f"Ошибка при печати: {e}"})
     except Exception as e:
-        return JsonResponse({'status': 'error', 'message': 'Произошла неизвестная ошибка.'})
+    return JsonResponse({'status': 'error', 'message': f'Произошла неизвестная ошибка: {str(e)}'})
+
