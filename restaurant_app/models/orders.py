@@ -52,6 +52,7 @@ class Order(models.Model):
 class WaiterOrder(models.Model):
     user = models.ForeignKey(User, on_delete=models.CASCADE, related_name='waiter_orders')
     created_by = models.ForeignKey(User, on_delete=models.SET_NULL, null=True, related_name='created_waiter_orders')
+    last_printed_comments = models.TextField(blank=True, null=True)
     created_at = models.DateTimeField(auto_now_add=True)
     is_completed = models.BooleanField(default=False)
 
