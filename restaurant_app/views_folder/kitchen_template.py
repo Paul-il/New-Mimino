@@ -85,10 +85,7 @@ def sort_items(item):
 
 
 def get_sorted_cart_items(order):
-    if isinstance(order, WaiterOrder):
-        cart_items = order.waiter_order_items.all()
-    else:
-        cart_items = OrderItem.objects.filter(order=order)
+    cart_items = OrderItem.objects.filter(order=order)
     return sorted(cart_items, key=sort_items)
 
 
@@ -158,6 +155,11 @@ def print_kitchen(request):
         return JsonResponse({'status': 'error', 'message': 'Произошла неизвестная ошибка.'})
 
 
+def get_sorted_waiter_cart_items(waiter_order):
+    cart_items = waiter_order.waiter_order_items.all()
+    return sorted(cart_items, key=sort_items)
+
+
 def print_kitchen_for_waiter(request):
     try:
         print("КУШАТЬ")
@@ -165,7 +167,7 @@ def print_kitchen_for_waiter(request):
         new_comments = request.GET.get('comments', '')
         waiter_order = get_object_or_404(WaiterOrder, id=waiter_order_id)
         
-        sorted_cart_items = get_sorted_cart_items(waiter_order)
+        sorted_cart_items = get_sorted_waiter_cart_items(waiter_order)
         
         current_time = timezone.localtime().strftime('%H:%M')
         title = f"\n\n\nВремя печати: {current_time}\n(Для официанта): {waiter_order.created_by.first_name} \n____________________________\n"
