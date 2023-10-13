@@ -14,9 +14,9 @@ from restaurant_app.views_folder.recommend_view import recommend_view
 from restaurant_app.views_folder.manage_products_view import manage_products
 from restaurant_app.views_folder.book_table_view import guests_not_arrived_view
 from restaurant_app.views_folder.user_summary_view import user_summary, user_detail
-from restaurant_app.views_folder.menu_view import menu_view
+from restaurant_app.views_folder.menu_view import menu_view, menu_for_waiter_view
 from restaurant_app.views_folder.pdf_view import generate_pdf_view
-from restaurant_app.views_folder.kitchen_template import kitchen_template_view, print_kitchen
+from restaurant_app.views_folder.kitchen_template import kitchen_template_view, print_kitchen, print_kitchen_for_waiter
 from restaurant_app.views_folder.order_statistics_view import OrderStatisticsView
 from restaurant_app.views_folder.pdf_template_view import pdf_template_view
 from restaurant_app.views_folder.ask_where_views import ask_where_view
@@ -27,7 +27,8 @@ from restaurant_app.views_folder.cart_view import (
     add_to_cart_view, order_detail_view, increase_product_in_order_view,
     decrease_product_from_order_view, get_order_item_quantity_view,
     delete_product_from_order_view, pay_order_view,
-    empty_order_detail_view,
+    empty_order_detail_view, waiter_cart_view, add_product_to_waiter_order,
+    delete_product_from_waiter_order_view,
 )
 
 
@@ -69,7 +70,11 @@ urlpatterns = [
     path('guests_not_arrived/<int:booking_id>/', guests_not_arrived_view, name='guests_not_arrived'),
     path('menu/<str:table_id>/<str:category>/', menu_view, name='menu'),
 
-    
+    path('menu_for_waiter/<str:category>/', menu_for_waiter_view, name='menu_for_waiter'),
+    path('waiter_cart/', waiter_cart_view, name='waiter_cart'),
+    path('add_product_to_waiter_order/', add_product_to_waiter_order, name='add_product_to_waiter_order'),
+    path('delete_product_from_waiter_order/<int:waiter_order_id>/<int:order_item_id>/', delete_product_from_waiter_order_view, name='delete_product_from_waiter_order'),
+    path('print_kitchen_for_waiter/', print_kitchen_for_waiter, name='print_kitchen_for_waiter'),
 
     path('table_order/<int:table_id>/', table_order_view, name='table_order'),
     path('order_detail/<int:order_id>/', order_detail_view, name='order_detail'),

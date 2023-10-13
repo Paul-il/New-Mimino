@@ -7,7 +7,7 @@ from django.contrib.auth.models import User
 
 class Order(models.Model):
     table = models.ForeignKey(Table, on_delete=models.CASCADE, related_name='orders')
-    created_by = models.ForeignKey(User, on_delete=models.CASCADE, related_name='orders')
+    created_by = models.ForeignKey(User, on_delete=models.SET_NULL, null=True, related_name="created_orders")
     created_at = models.DateTimeField(default=timezone.now)
     updated_at = models.DateTimeField(auto_now=True)
     is_completed = models.BooleanField(default=False)
@@ -15,6 +15,7 @@ class Order(models.Model):
     last_printed_comments = models.TextField(null=True, blank=True)
     table_number = models.IntegerField()
     total_price = models.DecimalField(max_digits=10, decimal_places=2, null=True, blank=True)
+    
 
     def tips_provided(self):
         return self.tips.exists()
@@ -48,8 +49,16 @@ class Order(models.Model):
     def __str__(self):
         return f"Order {self.pk} ({self.table})"
 
+class WaiterOrder(models.Model):
+    user = models.ForeignKey(User, on_delete=models.CASCADE, related_name='waiter_orders')
+    created_by = models.ForeignKey(User, on_delete=models.SET_NULL, null=True, related_name='created_waiter_orders')
+    created_at = models.DateTimeField(auto_now_add=True)
+    is_completed = models.BooleanField(default=False)
+
+    
 class OrderItem(models.Model):
-    order = models.ForeignKey(Order, on_delete=models.CASCADE, related_name='order_items')
+    order = models.ForeignKey(Order, on_delete=models.CASCADE, related_name='order_items', null=True, blank=True)
+    waiter_order = models.ForeignKey(WaiterOrder, on_delete=models.CASCADE, related_name='waiter_order_items', null=True, blank=True)
     product = models.ForeignKey(Product, on_delete=models.CASCADE, related_name='order_items')
     quantity = models.PositiveIntegerField(_('quantity'), default=1)
     phone_number = models.CharField(max_length=10)
@@ -63,3 +72,4 @@ class OrderItem(models.Model):
     def remove_zero_quantity_products(cls):
         cls.objects.filter(quantity=0).delete()
     
+

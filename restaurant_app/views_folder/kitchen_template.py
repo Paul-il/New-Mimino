@@ -1,6 +1,6 @@
 from django.core.exceptions import ObjectDoesNotExist
 from django.shortcuts import get_object_or_404
-from restaurant_app.models.orders import Order, OrderItem
+from restaurant_app.models.orders import Order, OrderItem, WaiterOrder
 from django.http import HttpResponse, JsonResponse
 from django.template.loader import render_to_string
 from django.utils import timezone
@@ -154,3 +154,39 @@ def print_kitchen(request):
     except Exception as e:
         return JsonResponse({'status': 'error', 'message': 'Произошла неизвестная ошибка.'})
 
+
+def print_kitchen_for_waiter(request):
+    try:
+        print("КУШАТЬ")
+        waiter_order_id = request.GET.get('waiter_order_id')
+        new_comments = request.GET.get('comments', '')
+        waiter_order = get_object_or_404(WaiterOrder, id=waiter_order_id)
+        
+        sorted_cart_items = get_sorted_cart_items(waiter_order)
+        
+        current_time = timezone.localtime().strftime('%H:%M')
+        title = f"\n\n\nВремя печати: {current_time}\n(Для официанта): {waiter_order.created_by.first_name} \n____________________________\n"
+        
+        grouped_items = group_items_by_printer(sorted_cart_items)
+        
+        print_items_str = request.GET.get('print_items', 'True')
+        print_items = print_items_str.lower() == 'true'
+
+        print_items_for_printers(grouped_items, waiter_order_id, title, new_comments, waiter_order, print_items)
+        
+        update_order_comments(waiter_order, new_comments)
+
+        # Удаление активного заказа после печати
+        waiter_order.delete()
+
+        if grouped_items:
+            return JsonResponse({'status': 'success', 'message': 'Заказ был успешно подтвержден и отправлен на кухню.'})
+        else:
+            return JsonResponse({'status': 'warning', 'message': 'Нет новых товаров для печати.'})
+
+    except ObjectDoesNotExist:
+        return JsonResponse({'status': 'error', 'message': 'Заказ не найден.'})
+    except cups.IPPError as e:
+        return JsonResponse({'status': 'error', 'message': f"Ошибка при печати: {e}"})
+    except Exception as e:
+        return JsonResponse({'status': 'error', 'message': 'Произошла неизвестная ошибка.'})

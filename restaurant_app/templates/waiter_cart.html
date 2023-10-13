@@ -1,0 +1,85 @@
+{% extends "base.html" %}
+{% load custom_tags %}
+{% load static %}
+
+{% block title %}Корзина официанта{% endblock %}
+<link rel="stylesheet" href="{{ STATIC_URL }}css/style.css">
+
+{% block content %}
+<div class="container">
+
+    <div class="my-4">
+        <a href="{% url 'menu_for_waiter' category='salads' %}" type="submit" class="btn btn-primary">Меню</a>
+    </div>
+
+    <h1 class="my-4" style="color: white;">Корзина официанта</h1>
+    <p style="color: white; font-size: 20px;">Официант: {{ user.first_name }}</p>
+    
+    <table class="table">
+        <thead>
+            <tr>
+                <th scope="col" style="color: white; font-size: 26px;">Название</th>
+                <th scope="col" style="color: white; font-size: 26px;">Количество</th>
+                <th scope="col" style="color: white; font-size: 26px;">Цена</th>
+                <th scope="col" style="color: white; font-size: 26px;">Действия</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% csrf_token %}
+            {% for order_item in active_order.waiter_order_items.all %}
+                <tr>
+                    <td style="color: rgb(231, 235, 5);">{{ order_item.product.product_name_rus }}</td>
+                    <td id="order-item-{{ order_item.id }}-quantity" style="color: white;" hx-get="{% url 'get_order_item_quantity' active_order.id order_item.id %}">{{ order_item.quantity|append_grams:order_item.product.product_name_rus }}</td>
+                    <td style="color: rgb(255, 255, 255);">{{ order_item.product.product_price }}₪</td>
+                    <td class="product-quantity">
+                        <div class="btn-group" role="group">
+                            <form method="POST" action="{% url 'delete_product_from_order' active_order.id order_item.id %}">
+                                {% csrf_token %}
+                                <input type="hidden" name="csrfmiddlewaretoken" value="{{ csrf_token }}">
+                                <input type="hidden" name="product_id" value="{{ order_item.product.id }}">
+                            </form>
+                            <form method="post" action="{% url 'delete_product_from_waiter_order' waiter_order_id=active_order.id order_item_id=order_item.id %}">
+                                {% csrf_token %}
+                                <button type="submit" class="btn1 btn-danger btn-sm">Удалить</button>
+                            </form>                            
+                        </div>
+                    </td>
+                </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+    
+    <p style="color: white;">Общая сумма: <span id="total-price">{{ total_price }}</span>₪</p>
+    <p style="color: white;">Время заказа: {{ active_order.created_at }}</p>
+
+    <div class="mb-3">
+        <label for="kitchen-comments" class="form-label" style="color: white;">Комментарии для кухни:</label>
+        <textarea class="form-control" id="kitchen-comments" rows="3">{{ active_order.comments|default:'' }}</textarea>
+    </div>
+
+    <div class="d-flex justify-content-between">
+        <button type="button" id="waiter-print-kitchen" name="waiter-print-kitchen" class="btn-primary2" data-waiter-order-id="{{ active_order.id }}">Подтвердить Заказ.</button>
+    </div>
+    
+    <script src="https://unpkg.com/htmx.org/dist/htmx.min.js"></script>
+    <script src="{% static 'scripts/order_detail.js' %}"></script>
+    
+    <script>
+        document.getElementById("waiter-print-kitchen").addEventListener("click", function() {
+            let waiterOrderId = this.getAttribute('data-waiter-order-id');
+            fetch(`/print_kitchen_for_waiter/?waiter_order_id=${waiterOrderId}`)
+            .then(response => response.json())
+            .then(data => {
+                if (data.status === 'success') {
+                    alert(data.message);
+                    // Здесь можно добавить перенаправление на другую страницу или обновить текущую страницу, например:
+                    // window.location.href = "/path_to_redirect/";
+                } else {
+                    alert(data.message);
+                }
+            });
+        });
+    </script>      
+    
+</div>
+{% endblock %}

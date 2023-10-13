@@ -54,8 +54,10 @@
                           {{ user.first_name }}
                       </a>
                       <div class="dropdown-menu" aria-labelledby="user-dropdown">
-                          <a id="logout-button" class="dropdown-item" href="#">Выход из системы</a>
-                      </div>
+                        <a class="dropdown-item" href="{% url 'menu_for_waiter' category='salads' %}">Хочу кушать</a>
+                        <a id="logout-button" class="dropdown-item" href="#">Выход из системы</a>
+                    </div>
+                    
                   </li>
               </ul>
           </ul>

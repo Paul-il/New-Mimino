@@ -1,0 +1,71 @@
+{% extends "base.html" %}
+
+{% block title %}Меню{% endblock %}
+
+{% load static %}
+<script src="https://unpkg.com/htmx.org/dist/htmx.min.js"></script>
+
+{% block content %}
+<div class="container">
+
+    <div class="my-4">
+        {% if user.user_orders.last %}
+        <a href="{% url 'order_detail' order_id=user.user_orders.last.id %}" type="submit" class="btn btn-primary d-inline-block mr-3">Корзина</a>
+        {% endif %}
+        <a href="{% url 'waiter_cart' %}" class="btn btn-primary d-inline-block mr-3">Корзина официанта</a>
+    </div>
+
+    <h1 class="my-4" style="color: white;">Меню</h1>
+    <section>
+        {% include 'search.html' %}
+    </section>
+    <ul class="nav nav-tabs mb-4">
+        {% for key, value in CATEGORIES.items %}
+            {% if key == "soft_drinks" %}
+                </ul>
+                <ul class="nav nav-tabs mb-4">
+            {% endif %}
+            <li class="nav-item">
+                <a href="{% url 'menu_for_waiter' category=key %}" class="nav-link menu-nav-link{% if category == key %} active{% endif %}">{{ value }}</a>
+            </li>
+        {% endfor %}
+    </ul>
+
+    <div class="row">
+        {% for product in products %}
+        <div class="col-md-3 mb-3">
+            <div class="card">
+                <div class="card-body">
+                    <h5 class="card-title" id="product_name">{{ product.product_name_rus }}</h5>
+                    <p class="card-text">{{ product.product_price }}₪</p>
+                    <form method="post" action="{% url 'add_product_to_waiter_order' %}">
+                        {% csrf_token %}
+                        <input type="hidden" name="product_id" value="{{ product.id }}">
+                        <input type="hidden" name="category" value="{{ category }}">
+                        {{ product_quantity_form.quantity }}
+                        {% if has_active_orders %}
+                        <input type="hidden" name="order_pk" value="{{ active_order_pk }}">
+                        {% endif %}
+                        <button type="submit" class="btn btn-primary" {% if not product.is_available %}disabled{% endif %}>Добавить в корзину</button>
+                        {% if not product.is_available %}
+                            <p>Продукт закончился</p>
+                        {% endif %}
+                    </form>                                           
+                </div>
+            </div>
+        </div>
+        {% endfor %}
+    </div>
+</div>
+{% endblock %}
+
+<script>
+function updateProductName(event, originalProductName, productNameWithPurre) {
+    const productTitle = document.getElementById('product_name');
+    if (event.target.checked) {
+        productTitle.textContent = productNameWithPurre;
+    } else {
+        productTitle.textContent = originalProductName;
+    }
+}
+</script>
