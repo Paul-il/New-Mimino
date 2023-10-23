@@ -4,11 +4,6 @@ from restaurant_app.models.orders import Order
 from pickup_app.models import PickupOrder, Cart
 from delivery_app.models import DeliveryOrder, DeliveryCart
 
-from django.shortcuts import render
-from datetime import datetime, timezone
-from restaurant_app.models.orders import Order
-from pickup_app.models import PickupOrder, Cart
-from delivery_app.models import DeliveryOrder, DeliveryCart
 
 def order_summary(request):
     # Получите дату из запроса или используйте текущую дату
