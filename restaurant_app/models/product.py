@@ -49,6 +49,7 @@ class Product(models.Model):
     quantity = models.PositiveIntegerField(default=1)
     delivery_price = models.DecimalField(max_digits=8, decimal_places=2, null=True, blank=True)
     is_available = models.BooleanField(default=True)
+    preparation_time = models.PositiveIntegerField(default=0, verbose_name='Время приготовления (в минутах)',blank=True)
 
     def __str__(self):
         return f"{self.product_name_rus} ({self.product_price}₪)"

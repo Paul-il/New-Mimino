@@ -76,7 +76,15 @@ def get_order_item_quantity_view(request, order_id, order_item_id):
 @login_required
 def pickup_increase_product_view(request, phone_number, product_id):
     product = get_object_or_404(Product, id=product_id)
-    pickup_order = get_object_or_404(PickupOrder, phone=phone_number)
+    
+    # Изменение здесь: получаем последний PickupOrder для данного номера телефона
+    pickup_order = PickupOrder.objects.filter(phone=phone_number).order_by('-date_created').first()
+
+    # Проверяем, что заказ был найден
+    if not pickup_order:
+        messages.error(request, "Заказ не найден.")
+        return redirect('pickup_app:pickup_empty_cart', phone_number=phone_number)
+
     cart = Cart.objects.get(pickup_order=pickup_order)
     cart_item = get_object_or_404(CartItem, cart=cart, product_id=product_id)
     
@@ -85,6 +93,7 @@ def pickup_increase_product_view(request, phone_number, product_id):
 
     messages.success(request, f"{product.product_name_rus} на один стало больше.")
     return redirect('pickup_app:pickup_cart', phone_number=phone_number, category=None)
+
 
 @login_required
 def pickup_decrease_product_view(request, phone_number, product_id):
