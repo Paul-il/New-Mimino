@@ -6,18 +6,17 @@ def login_page_view(request):
     context = {}  # Создаем словарь контекста для передачи данных в шаблон
 
     if request.method == 'POST':
-        username = request.POST.get('username')
-        password = request.POST.get('password')
+        username = request.POST.get('username', '')
+        password = request.POST.get('password', '')
         user = authenticate(request, username=username, password=password)
 
-        if user is not None:
+        if user:
             login(request, user)
             return redirect('ask_where')
         else:
             context['error'] = 'Invalid login credentials'  # Добавляем сообщение об ошибке в контекст
-            return render(request, 'index.html', context)
-    else:
-        return render(request, 'index.html', context)
+
+    return render(request, 'index.html', context)
 
 @login_required
 def logout_view(request):

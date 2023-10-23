@@ -7,30 +7,24 @@ from ..models.orders import Order
 from ..models.tables import Table, Room
 
 @login_required
-def tables_view(request, room_id):  # добавьте room_id как параметр
-    room = get_object_or_404(Room, id=room_id)  # получите комнату по id
-    tables = room.tables.all()  # получите все столы для этой комнаты
+def tables_view(request, room_id):
+    room = get_object_or_404(Room, id=room_id)
+    tables = room.tables.all().prefetch_related('orders')  # оптимизация запросов
 
     for table in tables:
         active_order = table.get_active_order()
         if active_order:
             table.active_order = True
-            active_order_items = active_order.order_items.annotate(total_price=F('quantity') * F('product__product_price'))
-            active_order_total = active_order_items.aggregate(Sum('total_price')).get('total_price__sum') or 0
-            created_by_name = active_order.created_by.first_name  # получаем имя пользователя, создавшего заказ
+            table.active_order_items, table.active_order_total, table.created_by_name = get_order_details(active_order)
         else:
             table.active_order = False
-            active_order_items = None
-            active_order_total = 0
-            created_by_name = None  # если заказ не существует, то и пользователя не может быть
-
-        table.active_order_items = active_order_items
-        table.active_order_total = active_order_total
-        table.created_by_name = created_by_name  # добавляем имя пользователя в объект стола
+            table.active_order_items = None
+            table.active_order_total = 0
+            table.created_by_name = None
 
     context = {
         'tables': tables,
-        'room': room  # добавьте комнату в контекст
+        'room': room
     }
     return render(request, 'rooms.html', context)
 
@@ -38,34 +32,33 @@ def tables_view(request, room_id):  # добавьте room_id как парам
 def table_order_view(request, table_id):
     table = get_object_or_404(Table, table_id=table_id)
     active_order = table.get_active_order()
+
     if active_order is None:
-        order = Order(table=table, created_by=request.user, table_number=table.table_id)
-        order.save()
-    else:
-        order = active_order
+        active_order = Order.objects.create(table=table, created_by=request.user, table_number=table.table_id)
 
     if request.method == 'POST':
         form = OrderForm(request.POST)
         if form.is_valid():
             product_id = form.cleaned_data['product']
             quantity = form.cleaned_data['quantity']
-            order.add_to_cart(product_id, quantity)
-            order.save()
+            active_order.add_to_cart(product_id, quantity)
             return redirect('menu', table_id=table_id)
     else:
         form = OrderForm()
 
-    if active_order is not None:
-        active_order_items = active_order.order_items.annotate(total_price=F('quantity') * F('product__product_price'))
-        active_order_total = active_order_items.aggregate(Sum('total_price')).get('total_price__sum') or 0
-    else:
-        active_order_items = None
-        active_order_total = 0
+    active_order_items, active_order_total, _ = get_order_details(active_order) if active_order else (None, 0, None)
 
     return render(request, 'table_order.html', {
         'table': table,
         'form': form,
-        'active_order': order,
+        'active_order': active_order,
         'active_order_items': active_order_items,
         'active_order_total': active_order_total,
     })
+
+def get_order_details(order):
+    """Helper function to get order details."""
+    active_order_items = order.order_items.annotate(total_price=F('quantity') * F('product__product_price'))
+    active_order_total = active_order_items.aggregate(Sum('total_price')).get('total_price__sum') or 0
+    created_by_name = order.created_by.first_name
+    return active_order_items, active_order_total, created_by_name

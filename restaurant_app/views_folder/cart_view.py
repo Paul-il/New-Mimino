@@ -166,15 +166,13 @@ def add_to_waiter_cart_view(request):
         messages.error(request, "Выбран неверный продукт.")
         return redirect('menu_for_waiter', category=category)
 
-    # Просто передайте request в функцию add_product_to_waiter_order
-    add_product_to_waiter_order(request)
+    # Просто передайте product_id и quantity в функцию add_product_to_waiter_order
+    add_product_to_waiter_order(product_id, quantity, request)
 
     return redirect('menu_for_waiter', category=category)
 
 
-def add_product_to_waiter_order(request):
-    product_id = request.POST.get('product_id')
-    quantity = int(request.POST.get('quantity', 1))
+def add_product_to_waiter_order(product_id, quantity, request):
     user = request.user
     active_order = WaiterOrder.objects.filter(user=request.user, is_completed=False).first()
 

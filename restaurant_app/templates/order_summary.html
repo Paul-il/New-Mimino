@@ -13,6 +13,12 @@
                 <th scope="col" style="color: white; font-size: 15px;">Количество</th>
                 <th scope="col" style="color: white; font-size: 15px;">Общая Сумма</th>
             </tr>
+            <form method="GET" action="{% url 'order_summary' %}">
+                <label for="date">Выберите дату:</label>
+                <input type="date" id="date" name="date" required>
+                <input type="submit" value="Показать">
+            </form>
+            
         </thead>
         <tbody>
             <tr>
