@@ -49,17 +49,20 @@
                 <a class="nav-link" href="{% url 'user_detail' user.id %}">Чаевые: {{ tip_amount }}</a>
               </li>
               <ul class="navbar-nav ml-auto">
-                  <li class="nav-item dropdown">
-                      <a class="nav-link dropdown-toggle" href="#" id="user-dropdown" role="button" data-bs-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
-                          {{ user.first_name }}
-                      </a>
-                      <div class="dropdown-menu" aria-labelledby="user-dropdown">
-                        <a class="dropdown-item" href="{% url 'menu_for_waiter' category='salads' %}">Хочу кушать</a>
-                        <a id="logout-button" class="dropdown-item" href="#">Выход из системы</a>
-                    </div>
+                <li class="nav-item dropdown">
+                  <a class="nav-link dropdown-toggle" href="#" id="user-dropdown" role="button" data-bs-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
+                      {{ user.first_name }}
+                  </a>
+                  <div class="dropdown-menu" aria-labelledby="user-dropdown">
+                    <a class="dropdown-item" href="{% url 'menu_for_waiter' category='salads' %}">Хочу кушать</a>
+                    {% if user.is_superuser %}
+                      <a class="dropdown-item" href="{% url 'admin:index' %}">Админ-панель</a>
+                      <a class="dropdown-item" href="{% url 'order_summary' %}">Сводка заказов</a>
+                    {% endif %}
+                    <a id="logout-button" class="dropdown-item" href="#">Выход из системы</a>
+                </div>
+              </li>
                     
-                  </li>
-              </ul>
           </ul>
             {% endif %}
           </ul>

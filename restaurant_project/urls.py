@@ -11,7 +11,7 @@ from restaurant_app.views_folder.order_summary import order_summary
 from restaurant_app.views_folder.close_table_view import close_table_view
 from restaurant_app.views_folder.room_view import rooms_view, room_detail_view
 from restaurant_app.views_folder.recommend_view import recommend_view
-from restaurant_app.views_folder.manage_products_view import manage_products
+from restaurant_app.views_folder.manage_products_view import manage_products, toggle_product_availability
 from restaurant_app.views_folder.book_table_view import guests_not_arrived_view
 from restaurant_app.views_folder.user_summary_view import user_summary, user_detail
 from restaurant_app.views_folder.menu_view import menu_view, menu_for_waiter_view
@@ -105,6 +105,7 @@ urlpatterns = [
     path('order_summary/', order_summary, name='order_summary'),
 
     path('manage_products/', manage_products, name='manage_products'),
+    path('toggle_product/', toggle_product_availability, name='toggle_product_availability'),
     path('recommendations/<int:order_id>/', recommend_view, name='recommendations'),
 
 

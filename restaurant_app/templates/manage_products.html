@@ -1,5 +1,3 @@
-<!-- manage_products.html -->
-
 {% extends "base.html" %}
 
 {% block title %}Управление продуктами{% endblock %}
@@ -23,7 +21,7 @@
                         <tr>
                             <td>{{ product.product_name_rus }}</td>
                             <td>
-                                <form method="POST">
+                                <form method="POST" action="{% url 'toggle_product_availability' %}">
                                     {% csrf_token %}
                                     <input type="hidden" name="product_id" value="{{ product.id }}">
                                     <button type="submit" name="toggle" value="Disable">Отключить продукт</button>
@@ -49,7 +47,7 @@
                         <tr>
                             <td>{{ product.product_name_rus }}</td>
                             <td>
-                                <form method="POST">
+                                <form method="POST" action="{% url 'toggle_product_availability' %}">
                                     {% csrf_token %}
                                     <input type="hidden" name="product_id" value="{{ product.id }}">
                                     <button type="submit" name="toggle" value="Enable" {% if not unavailable_products %}disabled{% endif %}>Включить продукт</button>
@@ -102,12 +100,6 @@
 </script>
 
 <style>
-    .dataTables_filter input, .dataTables_info {
-        color: white;
-    }
-    .dataTables_paginate .paginate_button.current, .dataTables_paginate .paginate_button.current:hover {
-        color: white !important;
-    }
     .dataTables_filter input, .dataTables_info {
         color: white;
     }
