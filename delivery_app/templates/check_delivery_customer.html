@@ -3,55 +3,210 @@
 {% block title %}Подтвердить Заказчика.{% endblock %}
 
 {% block content %}
-  <link rel="stylesheet" href="{% static 'css/style.css' %}">
+<link rel="stylesheet" href="{% static 'css/style.css' %}">
+<div class="center-container">
   <h1 class="mb-4" style="color: white;">Подтвердить Заказчика.</h1>
-  <form method="post" action="{% url 'delivery_app:add_delivery_customer' delivery_phone_number=delivery_phone_number %}"  class="form-control-equal">
+  <form method="post" action="{% url 'delivery_app:add_delivery_customer' delivery_phone_number=delivery_phone_number delivery_type=delivery_type %}" class="form-control-equal">
     {% csrf_token %}
-    <div class="row">
-      <div class="col-md-6">
-        <div class="form-group">
-          <label for="delivery_phone_number" style="color: white;">Номер телефона:</label>
-          <input type="tel" id="delivery_phone_number" name="delivery_phone_number" class="form-control form-control-lg" value="{{ customer.delivery_phone_number }}" readonly>
-      </div>      
-        <div class="form-group">
-          <label for="name" style="color: white;">Имя:</label>
-          <input type="text" id="name" name="name" class="form-control form-control-lg"  value="{{ customer.name }}" required>
-        </div>
-        <div class="form-group">
-          <label for="{{ form.city.id_for_label }}" style="color: white;">Город:</label>
-          {{ form.city }}
-        </div>
-        <div class="form-group">
-          <label for="street" style="color: white;">Улица:</label>
-          <input type="text" id="street" name="street" class="form-control form-control-lg"  value="{{ customer.street }}" required>
-        </div>
-      </div>
-      <div class="col-md-6">
-        <div class="form-group">
-          <label for="house_number" style="color: white;">Номер дома:</label>
-          <input type="text" id="house_number" name="house_number" class="form-control form-control-lg"  value="{{ customer.house_number }}" required>
-        </div>
-        <div class="form-group">
-          <label for="floor" style="color: white;">Этаж:</label>
-          <input type="text" id="floor" name="floor" class="form-control form-control-lg" value="{{ customer.floor }}" required>
-        </div>
-        <div class="form-group">
-          <label for="apartment_number" style="color: white;">Номер квартиры:</label>
-          <input type="text" id="apartment_number" name="apartment_number" class="form-control form-control-lg" value="{{ customer.apartment_number }}" required>
-        </div>
-        <div class="form-group">
-          <label for="intercom_code" style="color: white;">Коментарии:</label>
-          <input type="text" id="intercom_code" name="intercom_code" class="form-control form-control-lg" value="{{ customer.intercom_code }}">
-        </div>
-      </div>
+    <input type="hidden" name="delivery_type" value="{{ delivery_type }}">
+    <div class="form-inner-container"> <!-- Использование внутреннего контейнера для центрирования -->
       <div class="row">
         <div class="col-md-6">
-            <button type="submit" formaction="{% url 'delivery_app:save_delivery_customer_changes' delivery_phone_number=delivery_phone_number %}" name="submit_button" value="save_changes" class="btn btn-primary">Сохранить изменения</button>
+          <div class="form-group">
+            <label for="delivery_phone_number" style="color: white;">Номер телефона:</label>
+            <input type="tel" id="delivery_phone_number" name="delivery_phone_number" class="form-control form-control-lg" value="{{ customer.delivery_phone_number }}" readonly>
+          </div>      
+          <div class="form-group">
+            <label for="name" style="color: white;">Имя:</label>
+            <input type="text" id="name" name="name" class="form-control form-control-lg"  value="{{ customer.name }}" required>
+          </div>
+          <div class="form-group">
+            <label for="{{ form.city.id_for_label }}" style="color: white;">Город:</label>
+            {{ form.city }}
+          </div>
+          <div class="form-group">
+            <label for="street" style="color: white;">Улица:</label>
+            <input type="text" id="street" name="street" class="form-control form-control-lg"  value="{{ customer.street }}" required>
+          </div>
         </div>
         <div class="col-md-6">
-            <button type="submit" name="submit_button" value="confirm" class="btn btn-primary">Подтвердить Заказчика.</button>
+          <div class="form-group">
+            <label for="house_number" style="color: white;">Номер дома:</label>
+            <input type="text" id="house_number" name="house_number" class="form-control form-control-lg"  value="{{ customer.house_number }}" required>
+          </div>
+          <div class="form-group">
+            <label for="floor" style="color: white;">Этаж:</label>
+            <input type="text" id="floor" name="floor" class="form-control form-control-lg" value="{{ customer.floor }}" required>
+          </div>
+          <div class="form-group">
+            <label for="apartment_number" style="color: white;">Номер квартиры:</label>
+            <input type="text" id="apartment_number" name="apartment_number" class="form-control form-control-lg" value="{{ customer.apartment_number }}" required>
+          </div>
+          <div class="form-group">
+            <label for="intercom_code" style="color: white;">Коментарии:</label>
+            <input type="text" id="intercom_code" name="intercom_code" class="form-control form-control-lg" value="{{ customer.intercom_code }}">
+          </div>
         </div>
-    </div>    
-  </div>
+      </div>
+    </div>
+    <div class="form-buttons-container"> <!-- Контейнер для кнопок для их центрирования -->
+      <div class="row">
+        <div class="col-md-6">
+          <button type="submit" formaction="{% url 'delivery_app:save_delivery_customer_changes' delivery_phone_number=delivery_phone_number delivery_type=delivery_type %}" name="submit_button" value="save_changes" class="btn btn-primary">Сохранить изменения</button>
+
+        </div>
+        <div class="col-md-6">
+            <button type="submit" name="submit_button" value="confirm" class="btn btn-primary">Подтвердить</button>
+        </div>
+      </div>    
+    </div>
   </form>
-{%endblock %}
+</div>
+
+  <!-- Ваш скрипт для автодополнения -->
+  <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jqueryui/1.12.1/jquery-ui.min.js"></script>
+  <script type="text/javascript">
+    $(document).ready(function() {
+        function loadStreetsHaifa() {
+            $.getJSON('{% static "street_names_haifa.json" %}', function(data) {
+                $('#street').autocomplete({
+                    source: data,
+                    minLength: 1
+                });
+            });
+        }
+    
+        function loadStreetsNesher() {
+            $.getJSON('{% static "street_names_nesher.json" %}', function(data) {
+                $('#street').autocomplete({
+                    source: data,
+                    minLength: 1
+                });
+            });
+        }
+    
+        function loadStreetsTira() {
+            $.getJSON('{% static "street_names_tira.json" %}', function(data) {
+                $('#street').autocomplete({
+                    source: data,
+                    minLength: 1
+                });
+            });
+        }
+    
+        function loadStreetsHaim() {
+            $.getJSON('{% static "street_names_haim.json" %}', function(data) {
+                $('#street').autocomplete({
+                    source: data,
+                    minLength: 1
+                });
+            });
+        }
+    
+        function loadStreetsAta() {
+            $.getJSON('{% static "street_names_ata.json" %}', function(data) {
+                $('#street').autocomplete({
+                    source: data,
+                    minLength: 1
+                });
+            });
+        }
+    
+        function loadStreetsBialik() {
+            $.getJSON('{% static "street_names_bialik.json" %}', function(data) {
+                $('#street').autocomplete({
+                    source: data,
+                    minLength: 1
+                });
+            });
+        }
+    
+        function loadStreetsMozkin() {
+            $.getJSON('{% static "street_names_mozkin.json" %}', function(data) {
+                $('#street').autocomplete({
+                    source: data,
+                    minLength: 1
+                });
+            });
+        }
+    
+        function loadStreetsYam() {
+            $.getJSON('{% static "street_names_yam.json" %}', function(data) {
+                $('#street').autocomplete({
+                    source: data,
+                    minLength: 1
+                });
+            });
+        }
+    
+        function disableAutocomplete() {
+            $('#street').autocomplete('disable');
+        }
+    
+        // Проверка при первоначальной загрузке
+        var selectedCity = $('#id_city').val();
+        switch(selectedCity) {
+            case 'חיפה':
+                loadStreetsHaifa();
+                break;
+            case 'נשר':
+                loadStreetsNesher();
+                break;
+            case 'טירת כרמל':
+                loadStreetsTira();
+                break;
+            case 'קריית חיים':
+                loadStreetsHaim();
+                break;
+            case 'קריית אתא':
+                loadStreetsAta();
+                break;
+            case 'קריית ביאליק':
+                loadStreetsBialik();
+                break;
+            case 'קריית מוצקין':
+                loadStreetsMozkin();
+                break;
+            case 'קריית ים':
+                loadStreetsYam();
+                break;
+            default:
+                disableAutocomplete();
+        }
+    
+        $('#id_city').change(function() {
+            selectedCity = $(this).val();
+            switch(selectedCity) {
+                case 'חיפה':
+                    loadStreetsHaifa();
+                    break;
+                case 'נשר':
+                    loadStreetsNesher();
+                    break;
+                case 'טירת כרמל':
+                    loadStreetsTira();
+                    break;
+                case 'קריית חיים':
+                    loadStreetsHaim();
+                    break;
+                case 'קריית אתא':
+                    loadStreetsAta();
+                    break;
+                case 'קריית ביאליק':
+                    loadStreetsBialik();
+                    break;
+                case 'קריית מוצקין':
+                    loadStreetsMozkin();
+                    break;
+                case 'קריית ים':
+                    loadStreetsYam();
+                    break;
+                default:
+                    disableAutocomplete();
+            }
+        });
+    });
+    </script>
+    
+{% endblock %}

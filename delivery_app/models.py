@@ -48,6 +48,8 @@ class DeliveryOrder(models.Model):
     updated_at = models.DateTimeField(auto_now=True)
     is_completed = models.BooleanField(default=False)
     total_amount = models.DecimalField(max_digits=10, decimal_places=2, null=True, blank=True)
+    delivery_date = models.DateField(null=True, blank=True)
+    delivery_time = models.TimeField(null=True, blank=True)
     payment_method = models.CharField(
         max_length=12,
         choices=PAYMENT_METHOD_CHOICES,
@@ -61,14 +63,15 @@ class DeliveryOrder(models.Model):
 
     def __str__(self):
         return f"{self.pk} - {self.customer.name} ({self.customer.delivery_phone_number})"
-    
+
+NAME_CHOICES = [
+    ('solo', 'Solo'),
+    ('our_courier', 'Стас'),
+    # Другие имена
+]    
     
 class Courier(models.Model):
-    COURIER_CHOICES = [
-        ('our_courier', 'Наш Курьер'),
-        ('solo', 'Соло'),
-    ]
-    name = models.CharField(max_length=50, choices=COURIER_CHOICES, unique=True)
+    name = models.CharField(max_length=50, choices=NAME_CHOICES)  
     delivery_address = models.TextField(blank=True, null=True)
     delivery_city = models.CharField(max_length=50, choices=CITY_CHOICES, blank=True, null=True)
     delivery_amount = models.DecimalField(max_digits=8, decimal_places=2, blank=True, null=True)

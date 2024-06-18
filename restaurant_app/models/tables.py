@@ -5,6 +5,7 @@ from django import forms
 
 class Room(models.Model):
     name = models.CharField(max_length=255)
+    max_capacity = models.IntegerField(null=True, blank=True)
     
     def __str__(self):
         return self.name
@@ -22,6 +23,7 @@ class Table(models.Model):
     are_guests_here = models.BooleanField(default=False)
     capacity = models.IntegerField()
     active_order = models.BooleanField(default=False)
+    is_available = models.BooleanField(default=True)  # Новый атрибут
 
     def get_active_order(self):
         from .orders import Order  # Импортируем модель Order внутри метода, чтобы избежать цикличного импорта
@@ -36,7 +38,6 @@ class Table(models.Model):
 
     class Meta:
         ordering = ['table_id']
-
 
 class Booking(models.Model):
     table = models.ForeignKey(Table, on_delete=models.CASCADE, related_name='bookings')
@@ -61,12 +62,11 @@ class GuestsHereForm(forms.ModelForm):
 
 class Tip(models.Model):
     amount = models.DecimalField(max_digits=6, decimal_places=2)
-    date = models.DateTimeField(auto_now_add=True)
-    order = models.ForeignKey('Order', on_delete=models.CASCADE, related_name='tips', null=True, blank=True)  # Используйте правильный app_label
+    date = models.DateTimeField(auto_now_add=True, db_index=True)  # Добавление индекса
+    order = models.ForeignKey('Order', on_delete=models.CASCADE, related_name='tips', null=True, blank=True)
 
     def __str__(self):
         return f"Total tip: {self.amount} on {self.date}"
-
 
 class TipDistribution(models.Model):
     tip = models.ForeignKey(Tip, on_delete=models.CASCADE)
@@ -75,9 +75,12 @@ class TipDistribution(models.Model):
 
     class Meta:
         unique_together = (('tip', 'user'),)
+        indexes = [
+            models.Index(fields=['user', 'amount'])  # Добавление индекса
+        ]
 
     def __str__(self):
-        return f"{self.user.username} gets {self.amount} from tip {self.tip.id}"
+        return f"{self.user.username} получает {self.amount} чаевых от чаевых {self.tip.id}"
 
     
 class UserProfile(models.Model):

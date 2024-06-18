@@ -5,7 +5,11 @@ from django.http import HttpResponse, JsonResponse
 from django.template.loader import render_to_string
 from django.utils import timezone
 from bs4 import BeautifulSoup
-import cups
+import sys
+
+if sys.platform != "win32":  # Проверяем, что ОС не Windows
+    import cups
+    
 import tempfile
 from django.conf import settings
 import os
@@ -108,4 +112,5 @@ def print_kitchen(request):
     except cups.IPPError as e:
         return JsonResponse({'status': 'error', 'message': f"Ошибка при печати: {e}"})
     except Exception as e:
-        return JsonResponse({'status': 'error', 'message': 'Произошла неизвестная ошибка.'})
+        return JsonResponse({'status': 'error', 'message': f'Произошла неизвестная ошибка: {e}'})
+

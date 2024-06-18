@@ -12,6 +12,8 @@ class PickupOrder(models.Model):
     date_updated = models.DateTimeField(auto_now=True, editable=False)
     is_completed = models.BooleanField(default=False)
     total_amount = models.DecimalField(max_digits=10, decimal_places=2, null=True, blank=True)
+    payment_method = models.CharField(max_length=20, blank=True, null=True)
+    cart_snapshot = models.TextField(blank=True, null=True)
     
     NEW = 'new'
     PROCESSING = 'processing'

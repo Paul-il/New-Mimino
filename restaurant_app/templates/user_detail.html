@@ -53,10 +53,50 @@
             {% endfor %}
         </tbody>
     </table>
+
+    <h2 class="mb-4" style="color: white;">Детали за сегодня</h2>
+    <div class="today-details" style="color: white;">
+        <p>Сумма Денег Закрытых Столы: {{ today_total_order_amount }}</p>
+        <p>Чаевые: {{ today_total_tips }}</p>
+        <p>Соотношение: {{ today_tip_ratio }}%</p>
+    </div>
 </div>
+
+<h2 class="mb-4" style="color: white;">Распределение чаевых</h2>
+<table id="tipDistributionTable" class="table table-striped">
+    <thead>
+        <tr>
+            <th scope="col" style="color: white; font-size: 15px;">Официант</th>
+            <th scope="col" style="color: white; font-size: 15px;">Сумма чаевых</th>
+            <th scope="col" style="color: white; font-size: 15px;">Дата</th>
+            <th scope="col" style="color: white; font-size: 15px;">Поделено с</th>
+        </tr>
+    </thead>
+    <tbody>
+        {% for tip in tips_with_sharing %}
+            <tr>
+                <td>{{ tip.user.username }}</td>
+                <td>{{ tip.amount }}</td>
+                <td>{{ tip.date|date:"F j, Y, g:i a" }}</td>
+                <td>
+                    {% if tip.shared_with != '-' %}
+                        {% for share in tip.shared_with %}
+                            {{ share.user.username }} ({{ share.amount }}), 
+                        {% endfor %}
+                    {% else %}
+                        -
+                    {% endif %}
+                </td>
+            </tr>
+        {% endfor %}
+    </tbody>
+</table>
+
 <script>
     $(document).ready(function () {
-        var table = $('#userDetailTable').DataTable();
+        $('#userDetailTable').DataTable();
+        $('#tipDistributionTable').DataTable();
+
         var events = {{ events|safe }};  // предположим, что 'events' это JSON строка, содержащая данные о событиях
 
         console.log(events);

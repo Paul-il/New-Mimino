@@ -5,6 +5,10 @@ from restaurant_app.models.product import Product
 
 register = template.Library()
 
+@register.filter
+def get_item(dictionary, key):
+    return dictionary.get(key)
+
 @register.filter(name='append_grams')
 def append_grams(value, arg):
     if arg in ["Замороженные Пельмени", "Замороженные Хинкали"]:

@@ -65,4 +65,8 @@ class DeliveryProductAdmin(admin.ModelAdmin):
 @admin.register(Courier)
 class CourierAdmin(admin.ModelAdmin):
     list_display = ('name', 'delivery_address', 'delivery_city', 'delivery_amount', 'payment_method')
+    list_editable = ('delivery_address', 'delivery_city', 'delivery_amount', 'payment_method')
+    list_display_links = ('name',)
     list_filter = ('delivery_city', 'payment_method')
+
+

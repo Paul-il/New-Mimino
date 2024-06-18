@@ -1,7 +1,8 @@
 body {
-    background-image: url('/static/img/background_image.jpg');
-    background-size: cover;
-  }
+  background-image: url('/static/img/background_image.jpg');
+  background-size: cover;
+}
+
   nav {
     background-color: white;
     color: black;
@@ -14,6 +15,7 @@ body {
     padding: 10px 20px;
     border-radius: 5px;
     text-decoration: none;
+    
   }
   
   .btn-primary:hover {
@@ -35,6 +37,7 @@ body {
     padding: 10px 20px;
     border-radius: 5px;
     margin-right: 20px;
+    
   }
   
   .btn1 {
@@ -60,6 +63,7 @@ input[type="text"] {
     min-width: 300px;
     border-radius: 0.25rem 0 0 0.25rem;
 }
+
 button {
     border-radius: 0 0.25rem 0.25rem 0;
 }
@@ -71,4 +75,79 @@ label {
 .form-control {
   font-size: 16px;
   height: 40px;
+}
+.error-message {
+  color: white;
+}
+
+.event-day a.ui-state-default {
+  background-color: green;
+}
+
+
+#selected-users-list div {
+  display: inline-block;
+  padding: 5px 10px;
+  margin: 5px;
+  border: 1px solid #ccc;
+  border-radius: 5px;
+}
+
+.card {
+  background-color: rgba(255, 255, 255, 0.5);  /* полупрозрачный белый */
+}
+.card-title a {
+  font-size: 1.5rem;  /* Увеличиваем размер шрифта до 2rem, можно настроить по своему усмотрению */
+}
+
+.card-body li a {
+  color: black; /* Церный цвет текста */
+  text-decoration: none; /* Убираем подчеркивание */
+}
+
+.card-body li a:hover {
+  color: grey; /* Цвет текста при наведении */
+  text-decoration: underline; /* Подчеркивание при наведении */
+}
+
+
+.btn {
+  background-color: rgba(255, 255, 255, 0.5);  /* 80% непрозрачный белый */
+  color: #000;  /* черный текст */
+  border: 1px solid rgba(204, 204, 204, 0.5);  /* полупрозрачная серая рамка */
+  transition: background-color 0.3s ease;  /* плавное изменение цвета фона при наведении */
+}
+
+.btn:hover {
+  background-color: rgba(245, 245, 245, 0.8);  /* 80% непрозрачный светло-серый при наведении */
+}
+
+.form-control:focus {
+  border-color: #ccc;  /* цвет границы при фокусе */
+  outline: none;       /* убирает стандартный контур браузера */
+  box-shadow: none;    /* убирает тень (если она используется, например, в Bootstrap) */
+}
+
+.delivery-nav-link {
+  color: rgb(231, 235, 5);
+}
+
+.delivery-nav-link:hover {
+  color: rgb(250, 255, 10);  /* или другой цвет при наведении */
+}
+
+.delivery-nav-link.active {
+  color: rgb(50, 50, 50);  /* Цвет активной ссылки */
+}
+
+.pickup-nav-link, .menu-nav-link {
+  color: rgb(231, 235, 5);
+}
+
+.pickup-nav-link:hover, .menu-nav-link:hover {
+  color: rgb(250, 255, 10);  /* или другой цвет при наведении */
+}
+
+.pickup-nav-link.active, .menu-nav-link.active {
+  color: rgb(50, 50, 50);  /* Цвет активной ссылки */
 }

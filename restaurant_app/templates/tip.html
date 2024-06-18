@@ -1,0 +1,66 @@
+{% extends "base.html" %}
+{% block content %}
+<h2>Добавление чаевых</h2>
+<form id="tip-form" method="post" action="{% url 'tip' table_id=table_id %}">
+    {% csrf_token %}
+    <div>
+        <label for="tip">Сумма чаевых:</label>
+        <input type="number" id="tip" name="tip" required>
+    </div>
+    <input type="hidden" id="table_id" name="table_id" value="{{ table_id }}"> <!-- Скрытое поле для ID стола -->
+    <button type="submit">Добавить чаевые</button>
+    <button type="button" id="split-tips">Разделить чаевые</button>
+
+    <div id="waiters" style="display:none;">
+        <label>Выберите официантов:</label>
+        {% for user in all_users %}
+            <div>
+                <input type="checkbox" name="user_ids[]" value="{{ user.id }}" id="user_{{ user.id }}">
+                <label for="user_{{ user.id }}">{{ user.first_name }}</label>
+            </div>
+        {% endfor %}
+    </div>
+</form>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    var splitTipsButton = document.getElementById('split-tips');
+    var waitersDiv = document.getElementById('waiters');
+
+    splitTipsButton.addEventListener('click', function() {
+        waitersDiv.style.display = waitersDiv.style.display === 'none' ? 'block' : 'none';
+    });
+
+    document.getElementById('tip-form').addEventListener('submit', function(event) {
+        event.preventDefault();
+        var form = event.target;
+        var formData = new FormData(form);
+
+        fetch(form.action, {
+            method: 'POST',
+            body: formData,
+            headers: {
+                'X-CSRFToken': form.querySelector('[name=csrfmiddlewaretoken]').value,
+            },
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.error) {
+                alert('Ошибка: ' + data.error);
+            } else {
+                var message = 'Чаевые добавлены следующим официантам:\n';
+                data.distributed_tips.forEach(function(tip) {
+                    message += tip.first_name + ': ' + tip.amount + '\n';
+                });
+                alert(message);
+                window.location.href = data.redirect_url;  // Перенаправление на /rooms/
+            }
+        })
+        .catch(error => {
+            console.error('Error:', error);
+            alert('Произошла ошибка. Попробуйте еще раз.');
+        });
+    });
+});
+</script>
+{% endblock %}

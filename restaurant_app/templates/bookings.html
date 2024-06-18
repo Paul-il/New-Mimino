@@ -1,58 +1,183 @@
-{% extends "base.html" %}
+  {% extends "base.html" %}
 
-{% block title %}Bookings{% endblock %}
-{% load static %}
-{% block content %}
-<table class="table">
-  <thead>
-    <tr>
-      <th style="color: white; font-size: 15px;">|Кто делал бронь| </th>
-      <th style="color: white; font-size: 15px;">|Номер стола|</th>
-      <th style="color: white; font-size: 15px;">|Дата бронирования|</th>
-      <th style="color: white; font-size: 15px;">|Время бронирования|</th>
-      <th style="color: white; font-size: 15px;">|Количество людей|</th>
-      <th style="color: white; font-size: 15px;">|Гости|</th>
-      <th style="color: white; font-size: 15px;">Описание</th>
-    </tr>
-  </thead>
-  <tbody>
-    {% for booking in bookings %}
-    {% if not booking.is_deleted %}
-        <tr>
-            <td style="color: white; font-size: 15px; text-align: center;">{{ booking.user.first_name }}</td>
-            <td style="color: white; font-size: 15px; text-align: center;">{{ booking.table.table_id }}</td>
-            <td style="color: white; font-size: 15px; text-align: center;">{{ booking.reserved_date }}</td>
-            <td style="color: white; font-size: 15px; text-align: center;">{{ booking.reserved_time|date:"H:i" }}</td>
-            <td style="color: white; font-size: 15px; text-align: center;">{{ booking.num_of_people }}</td>
-            <td>
-              <div class="d-inline-block">
+  {% block title %}Bookings{% endblock %}
+  {% load static %}
+  {% block content %}
+  <table class="table">
+    <thead>
+      <tr>
+        <th style="color: white; font-size: 15px;">|Кто делал бронь| </th>
+        <th style="color: white; font-size: 15px;">|Номер стола|</th>
+        <th style="color: white; font-size: 15px;">|Дата бронирования|</th>
+        <th style="color: white; font-size: 15px;">|Время бронирования|</th>
+        <th style="color: white; font-size: 15px;">|Количество людей|</th>
+        <th style="color: white; font-size: 15px;">|Гости|</th>
+        <th style="color: white; font-size: 15px;">Описание</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for booking in bookings %}
+      {% if not booking.is_deleted %}
+      <tr>
+          <td style="color: white; font-size: 15px; text-align: center;">{{ booking.user.first_name }}</td>
+          <td style="color: white; font-size: 15px; text-align: center;">{{ booking.table.table_id }}</td>
+          <td style="color: white; font-size: 15px; text-align: center;">{{ booking.reserved_date }}</td>
+          <td style="color: white; font-size: 15px; text-align: center;">{{ booking.reserved_time|date:"H:i" }}</td>
+          <td style="color: white; font-size: 15px; text-align: center;">{{ booking.num_of_people }}</td>
+          <td>
+              <button type="button" class="btn btn-primary" onclick="guestsArrived({{ booking.id }})">
+                  Пришли
+              </button>
+  
+              <button type="button" class="btn btn-primary" onclick="guestsNotArrived({{ booking.id }})">
+                Гости не пришли
+              </button>
+  
+              <button type="button" class="btn btn-primary" onclick="editBooking({{ booking.id }})">
+                Редактировать
+            </button>            
+  
+              <textarea id="comment-{{ booking.id }}" class="comment-box" style="display: none;" placeholder="Введите причину..."></textarea>
+              <button type="button" class="btn btn-primary" onclick="submitComment({{ booking.id }})" id="submit-button-{{ booking.id }}" style="display: none;">Отправить</button>
+          </td>
+          <td style="color: white; font-size: 15px;">{{ booking.description }}</td>
+      </tr>
+  {% endif %}
+  
+  {% endfor %}
+  <a href="{% url 'book_table' %}" class="btn btn-primary">Забронировать Столик.</a>
 
-                <!-- Форма для "Гости пришли" -->
-                <form method="POST" action="{% url 'guests_here' booking.id %}">
-                    {% csrf_token %}
-                    <input type="hidden" name="action" value="arrived">
-                    <button type="submit" class="btn btn-primary mr-2">
-                        Пришли
-                    </button>
-                </form>
-            
-                <!-- Форма для "Гости не пришли" -->
-                <form method="POST" action="{% url 'guests_not_arrived' booking.id %}">
-                    {% csrf_token %}
-                    <input type="hidden" name="action" value="not_arrived">
-                    <button type="submit" class="btn btn-primary">
-                        Гости не пришли
-                    </button>
-                </form>
-            
-            </div>                                 
-            </td>
-            <td style="color: white; font-size: 15px;">{{ booking.description }}</td>
-        </tr>
-    {% endif %}
-{% endfor %}
+    </tbody>
+  </table>
 
-  </tbody>
-</table>
+  <script>
+        function editBooking(bookingId) {
+        window.location.href = '/edit_booking/' + bookingId + '/';
+    }
+  </script>
 
-{% endblock %}
+  <script>
+    function showCommentBox(button) {
+        var form = button.closest('form');
+        form.querySelector('.comment-box').style.display = 'block';
+        form.querySelector('button[type="submit"]').style.display = 'block';
+        button.style.display = 'none';
+    }
+    </script>
+    <script>
+      function guestsArrived(bookingId) {
+        // Создаем объект FormData
+        var formData = new FormData();
+        formData.append('action', 'arrived');
+        formData.append('csrfmiddlewaretoken', getCookie('csrftoken'));
+
+        // Формируем URL с использованием bookingId
+        var url = '/guests_here/' + bookingId + '/';
+
+        // Отправляем запрос
+        fetch(url, {
+            method: 'POST',
+            body: formData
+        })
+        .then(response => {
+            if (response.ok) {
+              return response.text(); // или response.text() если ответ текстовый
+            }
+            throw new Error('Проблема с сетевым запросом');
+        })
+        .then(data => {
+          // Обработка данных, полученных от сервера
+
+          alert('Статус гостей обновлен успешно.'); // или другое уведомление пользователю
+          window.location.reload(); // Добавляем эту строку для обновления страницы
+      })
+
+        .catch(error => {
+            console.error('Проблема с обработкой запроса: ', error);
+            alert('Произошла ошибка при обновлении статуса гостей.'); // уведомление об ошибке
+        });
+    }
+
+// Функция для получения значения cookie
+function getCookie(name) {
+    let cookieValue = null;
+    if (document.cookie && document.cookie !== '') {
+        const cookies = document.cookie.split(';');
+        for (let i = 0; i < cookies.length; i++) {
+            const cookie = cookies[i].trim();
+            if (cookie.substring(0, name.length + 1) === (name + '=')) {
+                cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
+                break;
+            }
+        }
+    }
+    return cookieValue;
+}
+
+function guestsNotArrived(bookingId) {
+    // Показываем текстовое поле для комментария
+    var commentBox = document.getElementById('comment-' + bookingId);
+    if (commentBox) {
+        commentBox.style.display = 'block';
+    }
+
+    // Показываем кнопку "Отправить"
+    var submitButton = document.getElementById('submit-button-' + bookingId);
+    if (submitButton) {
+        submitButton.style.display = 'block';
+    }
+}
+
+
+function submitComment(bookingId) {
+    var comment = document.getElementById('comment-' + bookingId).value;
+
+    var formData = new FormData();
+    formData.append('action', 'not_arrived');
+    formData.append('comment', comment);
+    formData.append('csrfmiddlewaretoken', getCookie('csrftoken')); // Добавление CSRF-токена
+
+    var url = '/guests_not_arrived/' + bookingId + '/';
+
+    fetch(url, {
+        method: 'POST',
+        body: formData
+    }).then(response => {
+        // Обработка ответа от сервера
+        if (response.ok) {
+            alert('Информация о неприбытии гостей успешно отправлена.');
+        } else {
+            alert('Произошла ошибка при отправке информации.');
+        }
+    });
+}
+
+      
+function submitComment(bookingId) {
+    var comment = document.getElementById('comment-' + bookingId).value; // Используем уникальный идентификатор для комментария
+
+    var formData = new FormData();
+    formData.append('action', 'not_arrived');
+    formData.append('comment', comment);
+    formData.append('csrfmiddlewaretoken', getCookie('csrftoken')); // Добавление CSRF-токена
+
+    var url = '/guests_not_arrived/' + bookingId + '/'; // Формируем URL с использованием bookingId
+
+    fetch(url, {
+        method: 'POST',
+        body: formData
+    }).then(response => {
+        // Обработка ответа от сервера
+        if (response.ok) {
+            alert('Информация о неприбытии гостей успешно отправлена.');
+            window.location.reload();
+        } else {
+            alert('Произошла ошибка при отправке информации.');
+        }
+    });
+}
+
+      </script>
+    
+  {% endblock %}
+

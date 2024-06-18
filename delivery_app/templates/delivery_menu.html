@@ -5,7 +5,7 @@
 {% block content %}
 <div class="container">
     <div class="mt-4">
-        <a href="{% url 'delivery_app:delivery_cart' delivery_phone_number=delivery_phone_number %}"type="submit" class="btn btn-primary">Корзина</a>
+        <a href="{% url 'delivery_app:delivery_cart' delivery_phone_number=delivery_phone_number delivery_type=delivery_type %}" type="submit" class="btn btn-primary">Корзина</a>
     </div>
     
     <h1 class="my-4" style="color: white;">Меню на Доставку №: {{ delivery_phone_number }}</h1>
@@ -21,7 +21,7 @@
                 <ul class="nav nav-tabs mb-4">
             {% endif %}
             <li class="nav-item">
-                <a href="{% url 'delivery_app:delivery_menu' delivery_phone_number=delivery_phone_number category=key %}" class="nav-link delivery-nav-link{% if category == key %} active{% endif %}">{{ value }}</a>
+                <a href="{% url 'delivery_app:delivery_menu' delivery_phone_number=delivery_phone_number category=key delivery_type=delivery_type %}" class="nav-link delivery-nav-link{% if category == key %} active{% endif %}">{{ value }}</a>
 
             </li>
         {% endfor %}
@@ -34,7 +34,7 @@
                 <div class="card-body">
                     <h5 class="card-title">{{ product.product_name_rus }}</h5>
                     <p class="card-text">{{ product.product_price }}₪</p>
-                    <form action="{% url 'delivery_app:delivery_add_to_cart' delivery_phone_number=delivery_phone_number category=category %}" method="POST">
+                    <form action="{% url 'delivery_app:delivery_add_to_cart' delivery_phone_number=delivery_phone_number category=category delivery_type=delivery_type %}" method="POST">
                         {% csrf_token %}
                         <input type="hidden" name="product_id" value="{{ product.id }}">
                         {{ product_quantity_form.quantity }}
@@ -43,6 +43,7 @@
                             <p>Продукт закончился</p>
                         {% endif %}
                     </form>
+                    
                 </div>
             </div>
         </div>

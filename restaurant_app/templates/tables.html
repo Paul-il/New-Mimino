@@ -28,7 +28,6 @@
         {% else %}
             <img src="{% static 'img/empty_table.jpg' %}" class="card-img-top" alt="Стол {{ table.table_id }}">
             <a href="{% url 'menu' table_id=table.table_id category='salads' %}" class="btn btn-primary">Начать Заказ.</a>
-            <a href="{% url 'book_table' table_id=table.table_id %}" class="btn btn-primary" >Забронировать.</a>
         {% endif %}
 
         <div class="card-body">

@@ -4,8 +4,10 @@
 
 {% block content %}
 <link rel="stylesheet" href="{% static 'css/style.css' %}">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/jqueryui/1.12.1/jquery-ui.css" />
+<link rel="stylesheet" href="{% static 'css/style.css' %}">
   <h1 class="mb-4" style="color: white;">Новый Заказчик.</h1>
-  <form method="post" action="{% url 'delivery_app:add_delivery_customer' delivery_phone_number=delivery_phone_number %}" class="form-control-equal">
+  <form method="post" action="{% url 'delivery_app:add_delivery_customer' delivery_phone_number=delivery_phone_number delivery_type=delivery_type %}" class="form-control-equal">
     {% csrf_token %}
     <div class="row">
       <div class="col-md-6">
@@ -48,4 +50,151 @@
     </div>
     <button type="submit" class="btn btn-primary">Создать Заказчика.</button>
   </form>
+
+  <!-- Ваш скрипт для автодополнения -->
+<script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jqueryui/1.12.1/jquery-ui.min.js"></script>
+<script type="text/javascript">
+  $(document).ready(function() {
+      function loadStreetsHaifa() {
+          $.getJSON('{% static "street_names_haifa.json" %}', function(data) {
+              $('#street').autocomplete({
+                  source: data,
+                  minLength: 1
+              });
+          });
+      }
+  
+      function loadStreetsNesher() {
+          $.getJSON('{% static "street_names_nesher.json" %}', function(data) {
+              $('#street').autocomplete({
+                  source: data,
+                  minLength: 1
+              });
+          });
+      }
+  
+      function loadStreetsTira() {
+          $.getJSON('{% static "street_names_tira.json" %}', function(data) {
+              $('#street').autocomplete({
+                  source: data,
+                  minLength: 1
+              });
+          });
+      }
+  
+      function loadStreetsHaim() {
+          $.getJSON('{% static "street_names_haim.json" %}', function(data) {
+              $('#street').autocomplete({
+                  source: data,
+                  minLength: 1
+              });
+          });
+      }
+  
+      function loadStreetsAta() {
+          $.getJSON('{% static "street_names_ata.json" %}', function(data) {
+              $('#street').autocomplete({
+                  source: data,
+                  minLength: 1
+              });
+          });
+      }
+  
+      function loadStreetsBialik() {
+          $.getJSON('{% static "street_names_bialik.json" %}', function(data) {
+              $('#street').autocomplete({
+                  source: data,
+                  minLength: 1
+              });
+          });
+      }
+  
+      function loadStreetsMozkin() {
+          $.getJSON('{% static "street_names_mozkin.json" %}', function(data) {
+              $('#street').autocomplete({
+                  source: data,
+                  minLength: 1
+              });
+          });
+      }
+  
+      function loadStreetsYam() {
+          $.getJSON('{% static "street_names_yam.json" %}', function(data) {
+              $('#street').autocomplete({
+                  source: data,
+                  minLength: 1
+              });
+          });
+      }
+  
+      function disableAutocomplete() {
+          $('#street').autocomplete('disable');
+      }
+  
+      // Проверка при первоначальной загрузке
+      var selectedCity = $('#id_city').val();
+      switch(selectedCity) {
+          case 'חיפה':
+              loadStreetsHaifa();
+              break;
+          case 'נשר':
+              loadStreetsNesher();
+              break;
+          case 'טירת כרמל':
+              loadStreetsTira();
+              break;
+          case 'קריית חיים':
+              loadStreetsHaim();
+              break;
+          case 'קריית אתא':
+              loadStreetsAta();
+              break;
+          case 'קריית ביאליק':
+              loadStreetsBialik();
+              break;
+          case 'קריית מוצקין':
+              loadStreetsMozkin();
+              break;
+          case 'קריית ים':
+              loadStreetsYam();
+              break;
+          default:
+              disableAutocomplete();
+      }
+  
+      $('#id_city').change(function() {
+          selectedCity = $(this).val();
+          switch(selectedCity) {
+              case 'חיפה':
+                  loadStreetsHaifa();
+                  break;
+              case 'נשר':
+                  loadStreetsNesher();
+                  break;
+              case 'טירת כרמל':
+                  loadStreetsTira();
+                  break;
+              case 'קריית חיים':
+                  loadStreetsHaim();
+                  break;
+              case 'קריית אתא':
+                  loadStreetsAta();
+                  break;
+              case 'קריית ביאליק':
+                  loadStreetsBialik();
+                  break;
+              case 'קריית מוצקין':
+                  loadStreetsMozkin();
+                  break;
+              case 'קריית ים':
+                  loadStreetsYam();
+                  break;
+              default:
+                  disableAutocomplete();
+          }
+      });
+  });
+  </script>
+  
 {% endblock %}

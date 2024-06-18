@@ -15,7 +15,6 @@ CATEGORIES = {
     'meat_dishes': 'Мясные блюда',
     'grill_meat': 'Мясо на огне',
     'garnish':'Гарниры',
-    'drinks':'Напитки',
     'dessert':'Десерты',
     'soft_drinks': 'Легкие напитки',
     'beer': 'Пиво',
@@ -71,6 +70,7 @@ def handle_add_to_cart(request, phone_number, pickup_order, category):
         cart.save()
 
     cart_item, created = CartItem.objects.get_or_create(cart=cart, product=product)
+    product_name = cart_item.product.product_name_rus
 
     if not created:
         cart_item.quantity += quantity
@@ -79,7 +79,7 @@ def handle_add_to_cart(request, phone_number, pickup_order, category):
         cart_item.quantity = quantity
         cart_item.save()
 
-    messages.success(request, 'Продукт добавлен в корзину.')
+    messages.success(request, f"{product_name} был добавлен в корзину.")
     return redirect('pickup_app:pickup_cart', phone_number=phone_number, category=None)
 
 

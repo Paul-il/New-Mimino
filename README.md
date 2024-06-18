@@ -1,1 +1,1 @@
-# New-Mimino
+# Mimino

@@ -13,22 +13,40 @@ from django.contrib import messages
 from django.utils import timezone
 
 @login_required
-def book_table_view(request, table_id):
-    table = get_object_or_404(Table, table_id=table_id)
+def book_table_view(request):
     if request.method == 'POST':
         form = BookingForm(request.POST, request=request)
         if form.is_valid():
-            form.save()
-            return redirect('tables')
+            booking = form.save(commit=False)  # Создаем объект бронирования, но пока не сохраняем в базе данных
+            booking.user = request.user
+
+            # Теперь используем выбранный стол из очищенных данных формы
+            selected_table = form.cleaned_data.get('table')
+            if selected_table:
+                booking.table = selected_table  # Устанавливаем выбранный стол
+            else:
+                # Обработка случая, если подходящий стол не был найден (можно добавить сообщение об ошибке)
+                messages.error(request, 'Подходящий стол не найден.')
+                return render(request, 'book_table.html', {'form': form})
+
+            booking.save()  # Сохраняем объект бронирования в базе данных
+            # ... остальная логика ...
+            return redirect('ask_where')
     else:
         form = BookingForm(request=request)
-    return render(request, 'book_table.html', {'table': table, 'form': form})
+    
+    return render(request, 'book_table.html', {'form': form})
 
 
 
 @login_required
 def bookings_view(request):
-    bookings = Booking.objects.all()
+    # Получаем текущую дату
+    today = timezone.now().date()
+
+    # Получаем и сортируем бронирования начиная с ближайшей даты к текущей
+    bookings = Booking.objects.filter(reserved_date__gte=today, is_deleted=False).order_by('reserved_date', 'reserved_time')
+
     context = {'bookings': bookings}
     return render(request, 'bookings.html', context)
 

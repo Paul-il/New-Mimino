@@ -11,7 +11,7 @@
 
 
   <h1 class="my-4" style="color: white; font-size: 30px;">
-    для того чтоб добавить товар вернитесь <a href="{% url 'delivery_app:delivery_menu' delivery_phone_number=delivery_phone_number  category='salads' %}" type="submit" class="btn btn-primary">Меню</a>
+    для того чтоб добавить товар вернитесь <a href="{% url 'delivery_app:delivery_menu' delivery_phone_number=delivery_phone_number delivery_type=delivery_type category='salads' %}" type="submit" class="btn btn-primary">Меню</a>
   </h1>
 
 {% endblock %}

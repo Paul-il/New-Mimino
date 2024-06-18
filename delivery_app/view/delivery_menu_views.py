@@ -26,9 +26,9 @@ CATEGORIES = {
 }
 
 
-def delivery_menu_view(request, delivery_phone_number, category):
+def delivery_menu_view(request, delivery_phone_number, category, delivery_type):
     delivery_customer = get_object_or_404(DeliveryCustomer, delivery_phone_number=delivery_phone_number)
-    delivery_order = DeliveryOrder.objects.filter(customer=delivery_customer, is_completed=False).first()  # Так как filter() возвращает QuerySet, мы добавляем .first() чтобы получить первый объект
+    delivery_order = DeliveryOrder.objects.filter(customer=delivery_customer, is_completed=False).first()
     products = Product.objects.filter(category=category)
     product_quantity_form = ProductQuantityForm()
 
@@ -38,33 +38,29 @@ def delivery_menu_view(request, delivery_phone_number, category):
         'products': products,
         'product_quantity_form': product_quantity_form,
         'CATEGORIES': CATEGORIES,
-
+        'delivery_type': delivery_type,
     }
 
     if request.method == 'POST':
         product_id = request.POST.get('product_id')
-        
-        # Проверка наличия курьера в POST-данных
         courier = request.POST.get('courier')
         if courier:
             request.session['selected_courier'] = courier
-            return redirect('delivery_app:delivery_menu', delivery_phone_number=delivery_phone_number, category=category)
+            return redirect('delivery_app:delivery_menu', delivery_phone_number=delivery_phone_number, category=category, delivery_type=delivery_type)
 
         quantity = int(request.POST.get('quantity'))
         product = get_object_or_404(Product, id=product_id)
 
         cart, created = DeliveryCart.objects.get_or_create(delivery_order=delivery_order, customer=delivery_customer)
-
         cart_item, created = DeliveryCartItem.objects.get_or_create(cart=cart, product=product)
 
         if not created:
             cart_item.quantity += quantity
-            cart_item.save()
         else:
             cart_item.quantity = quantity
-            cart_item.save()
+        cart_item.save()
         
-        return redirect('delivery_app:delivery_cart', delivery_phone_number=delivery_phone_number)
+        return redirect('delivery_app:delivery_cart', delivery_phone_number=delivery_phone_number, delivery_type=delivery_type)
 
     return render(request, 'delivery_menu.html', context)
 

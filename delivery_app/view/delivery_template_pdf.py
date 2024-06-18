@@ -2,8 +2,8 @@ from django.shortcuts import render, get_object_or_404
 from ..models import DeliveryOrder, DeliveryCart
 from django.http import HttpResponseRedirect
 
-def delivery_pdf_template_view(request, phone_number, order_id):
-    order = get_object_or_404(DeliveryOrder, customer__delivery_phone_number=phone_number, id=order_id)
+def delivery_pdf_template_view(request, delivery_phone_number, order_id):
+    order = get_object_or_404(DeliveryOrder, customer__delivery_phone_number=delivery_phone_number, id=order_id)
     cart_items = DeliveryCart.objects.filter(delivery_order=order).prefetch_related('delivery_cart_items')
     total_price = sum(
         item.quantity * item.product.product_price

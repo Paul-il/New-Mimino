@@ -3,63 +3,50 @@
 <html dir="rtl">
 <head>
     <style>
-        h1,h2,h3,h4 {
-        text-align: center;
-        }
-        p {
-        text-align: center;
-        }
-        th, td {
-        text-align: center;
+        h1, h2, h3, h4, p, th, td {
+            text-align: center;
         }
     </style>
-  <meta charset="utf-8">
-  <link rel="stylesheet" href="{{ STATIC_URL }}css/style.css">
+    <meta charset="utf-8">
+    <link rel="stylesheet" href="{{ STATIC_URL }}css/style.css">
 </head>
 <body>
-  <div id="print-area">
-    <h1>MIMINO georgian khachapuri</h1>
-    <p>---------------------------------</p>
-    <p>שד׳ בן גוריון 15, חיפה</p>
-    <p>טלפון: 04-8113399</p>
-    <p>ע.מ: 515695377</p>
-    <p>שם לקוח: לקוח כללי</p>
-    <p>---------------------------------</p>
-  
-    <h3>שולחן: {{ order.table.table_id }}</h3>
-    <table>
-      <tbody>
-        {% for order_item in order.order_items.all %}
-          {% if forloop.first %}
-          </tbody>
-        </table>
+    <div id="print-area">
+        <h1>MIMINO georgian khachapuri</h1>
+        <p>---------------------------------</p>
+        <p>שד׳ בן גוריון 15, חיפה</p>
+        <p>טלפון: 04-8113399</p>
+        <p>ע.מ: 515695377</p>
+        <p>שם לקוח: לקוח כללי</p>
+        <p>הודפס בתאריך {% now "d/m/Y H:i:s" %}</p>
+        <p>---------------------------------</p>
+
+        <h3>שולחן: {{ order.table.table_id }}</h3>
         <table>
-          <thead>
-            <tr>
-              <th>מחיר</th>
-              <th>כמות</th>
-              <th>מוצר</th>
-            </tr>
-          </thead>
-          <tbody>
-          {% endif %}
-          <tr>
-            <td>{{ order_item.product.product_price }}₪</td>
-            <td>{{ order_item.quantity }}</td>
-            <td>{{ order_item.product_id|get_product_name_heb }}</td>
-          </tr>
-          {% if forloop.last %}
-        </tbody>
-      </table>
-      {% endif %}
-    {% endfor %}
-      <h3>סה"כ: {{ total_price }}₪ </h3>
-      <h4> לא כולל שירות</h4>
-      <h4> Services not included </h4>
-      <h4> Не включая обслуживание </h4>
-      <h4>תודה רבה </h4>
-      <p>נשמח לראות אתכם שוב</p>
+            <thead>
+                <tr>
+                    <th>כמות</th>
+                    <th>מוצר</th>
+                    <th>סה"כ</th> <!-- Общая сумма -->
+                </tr>
+            </thead>
+            <tbody>
+                {% for item in order_items %}
+                <tr>
+                    <td>{{ item.quantity }}</td>
+                    <td>{{ item.product_id|get_product_name_heb }}</td>
+                    <td>{{ item.total_price }}₪</td> <!-- Использование рассчитанной общей суммы -->
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+
+        <h3>סה"כ: {{ total_price }}₪ </h3>
+        <h4>לא כולל שירות</h4>
+        <h4>Services not included</h4>
+        <h4>Не включая обслуживание</h4>
+        <h4>תודה רבה</h4>
+        <p>נשמח לראות אתכם שוב</p>
     </div>
-  </body>
-  </html>
-  
+</body>
+</html>

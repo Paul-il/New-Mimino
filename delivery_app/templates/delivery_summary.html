@@ -5,9 +5,10 @@
 {% block content %}
 <div class="container">
     <h1 style="color: white;">Сводка по доставке</h1>
-    <h3 style="color: white;">Общая сумма всех заказов, оплаченных наличными: {{ all_orders_total }}₪</h3>
+    <h3 style="color: white;">Общая сумма всех заказов: {{ all_orders_total }}₪</h3>
 
-    
+    <a href="{% url 'delivery_app:future_orders' %}" class="btn btn-primary">Заказы на будущее</a>
+
     {% if solo_cash_orders_total > 0 %}
     <div style="color: red;">
         <h3>Общая сумма заказов, оплаченных наличными Соло: {{ solo_cash_orders_total }}₪</h3>
@@ -15,9 +16,10 @@
     {% endif %}
     
     {% if our_courier_cash_orders_total > 0 %}
-    <h3 style="color: white;">Общая сумма заказов, оплаченных наличными Наш Курьер: {{ our_courier_cash_orders_total }}₪</h3>
-    <h3 style="color: white;">Сумма которую должен нам вернуть Наш Курьер: {{ our_courier_cash_orders_discounted_total }}₪</h3>
+    <h3 style="color: white;">Общая сумма заказов, оплаченных наличными Стасу: {{ our_courier_cash_orders_total }}₪</h3>
+    <h3 style="color: white;">Сумма которую должен нам вернуть Стас: {{ our_courier_cash_orders_after_discount }}₪</h3>
     {% endif %}
+
 
 
 
@@ -32,6 +34,7 @@
     <table class="table">
         <thead>
             <tr>
+                <th style="color: white;">№</th>
                 <th style="color: white;">Имя курьера</th>
                 <th style="color: white;">Город доставки</th>
                 <th style="color: white;">Адрес доставки</th>
@@ -44,17 +47,32 @@
         <tbody>
             {% for order in delivery_orders %}
             <tr>
+                <td style="color: white;">{{ forloop.counter }}</td>
                 <td style="color: white;">{{ order.courier.get_name_display }}</td>
                 <td style="color: white;">{{ order.customer.get_city_display }}</td>
                 <td style="color: white;">{{ order.customer.street }} {{ order.customer.house_number }}</td>
                 <td style="color: white;">{{ order.customer.delivery_phone_number }}</td>
                 <td style="color: white;">{{ order.total_amount }}</td>
                 <td style="color: white;">{{ order.get_payment_method_display }}</td>
-                <td style="color: white;">{{ order.created_at|date:"H:i" }}</td>
+                <td style="color: white;">{{ order.delivery_date }} {{ order.delivery_time|date:"H:i" }}</td>
             </tr>
             {% endfor %}
         </tbody>        
     </table>
+    
 
 </div>
+
+<div class="city-orders-summary">
+    <h3 style="color: white;">Заказы по городам:</h3>
+    <ul>
+        {% for city, data in city_order_counts %}
+        <li style="color: white;">
+            {{ city }}: {{ data.total_orders }}, сумма = {{ data.total_discount_amount }}
+        </li>
+        {% endfor %}
+    </ul>
+</div>
+
+
 {% endblock %}

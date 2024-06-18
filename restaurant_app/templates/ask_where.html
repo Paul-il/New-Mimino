@@ -6,7 +6,7 @@
   <div class="container text-center my-6">
     <div class="btn-group btn-group-lg">
       <a href="{% url 'rooms' %}" class="btn btn-primary mx-3">Комнаты</a>
-      <a href="{% url 'delivery_app:check_delivery_number' %}" class="btn btn-primary mx-3">Доставка</a>
+      <a href="{% url 'delivery_app:check_delivery_number' 'now' %}" class="btn btn-primary mx-3">Доставка</a>
       <a href="{% url 'pickup_app:pickup_create' %}" class="btn btn-primary mx-3">Самовывоз</a>
     </div>
   </div>

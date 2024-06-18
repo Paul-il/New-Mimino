@@ -4,17 +4,17 @@ from ..forms import DeliveryForm
 from ..models import DeliveryCustomer
 
 @login_required
-def delivery_view(request):
+def delivery_view(request, delivery_type):
     if request.method == 'POST':
         form = DeliveryForm(request.POST)
         if form.is_valid():
             delivery_phone_number = form.cleaned_data['delivery_phone_number']
             if DeliveryCustomer.objects.filter(delivery_phone_number=delivery_phone_number).exists():
-                # перенаправляем пользователя на страницу check_delivery_customer.html
-                return redirect(reverse('delivery_app:check_delivery_customer', args=[delivery_phone_number]))
+                # Перенаправляем пользователя на страницу проверки клиента с типом доставки
+                return redirect(reverse('delivery_app:check_delivery_customer', args=[delivery_phone_number, delivery_type]))
             else:
-                # перенаправляем пользователя на страницу add_delivery_customer.html
-                return redirect(reverse('delivery_app:add_delivery_customer', args=[delivery_phone_number]))
+                # Перенаправляем пользователя на страницу добавления клиента с типом доставки
+                return redirect(reverse('delivery_app:add_delivery_customer', args=[delivery_phone_number, delivery_type]))
     else:
         form = DeliveryForm()
-    return render(request, 'check_delivery_number.html', {'form': form})
+    return render(request, 'check_delivery_number.html', {'form': form, 'delivery_type': delivery_type})

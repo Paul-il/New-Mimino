@@ -1,0 +1,28 @@
+{% extends "base.html" %}
+{% load static %}
+
+{% block content %}
+<div class="container">
+    <h1>Заказ на будущее</h1>
+
+    {% if select_order_form %}
+    <form method="post">
+        {% csrf_token %}
+        {{ select_order_form.as_p }}
+        <button type="submit" name="select_order" class="btn btn-primary">Загрузить Заказ</button>
+    </form>
+    
+</div>
+{% endif %}
+
+{% if date_time_form %}
+    <form method="post">
+        {% csrf_token %}
+        {{ date_time_form.as_p }}
+        <button type="submit" name="delivery_date_time" class="btn btn-primary">Подтвердить время доставки</button>
+    </form>
+{% endif %}
+
+</div>
+{% endblock %}
+

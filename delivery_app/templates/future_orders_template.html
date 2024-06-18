@@ -1,0 +1,40 @@
+{% extends "base.html" %}
+
+{% block title %}Будущие заказы{% endblock %}
+
+{% block content %}
+<div class="container">
+    <h1 style="color: white;">Будущие заказы</h1>
+    
+    <!-- Опционально: Фильтрация или другие элементы управления -->
+
+    <table class="table">
+        <thead>
+            <tr>
+                <th style="color: white;">№</th>
+                <th style="color: white;">Имя курьера</th>
+                <th style="color: white;">Город доставки</th>
+                <th style="color: white;">Адрес доставки</th>
+                <th style="color: white;">Номер телефона</th>
+                <th style="color: white;">Сумма заказа</th>
+                <th style="color: white;">Метод оплаты</th>
+                <th style="color: white;">Время заказа</th>
+            </tr>
+        </thead>        
+        <tbody>
+            {% for order in future_orders %}
+            <tr>
+                <td style="color: white;">{{ forloop.counter }}</td>
+                <td style="color: white;">{{ order.courier.get_name_display }}</td>
+                <td style="color: white;">{{ order.customer.get_city_display }}</td>
+                <td style="color: white;">{{ order.customer.street }} {{ order.customer.house_number }}</td>
+                <td style="color: white;">{{ order.customer.delivery_phone_number }}</td>
+                <td style="color: white;">{{ order.total_amount }}</td>
+                <td style="color: white;">{{ order.get_payment_method_display }}</td>
+                <td style="color: white;">{{ order.delivery_date }} {{ order.delivery_time }}</td>
+            </tr>
+            {% endfor %}
+        </tbody>        
+    </table>
+</div>
+{% endblock %}

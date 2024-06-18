@@ -41,6 +41,26 @@ SESSION_COOKIE_SECURE = True
 CSRF_COOKIE_SECURE = True
 """
 
+# Для разработки
+CHANNEL_LAYERS = {
+    'default': {
+        'BACKEND': 'channels.layers.InMemoryChannelLayer',
+    },
+}
+
+"""
+# Для производства
+CHANNEL_LAYERS = {
+    'default': {
+        'BACKEND': 'channels_redis.core.RedisChannelLayer',
+        'CONFIG': {
+            "hosts": [('127.0.0.1', 6379)],
+        },
+    },
+}
+
+"""
+
 CORS_ORIGIN_ALLOW_ALL = True
 CORS_ALLOW_ALL_ORIGINS = True
 
@@ -69,6 +89,7 @@ INSTALLED_APPS = [
     'corsheaders',
     'order_statistics',
     'sales',
+    'expenses',
 
 ]
 
@@ -122,6 +143,8 @@ DATABASES = {
 # Password validation
 # https://docs.djangoproject.com/en/4.1/ref/settings/#auth-password-validators
 
+OPERATIONAL_PASSWORD = 'A123456a'
+
 AUTH_PASSWORD_VALIDATORS = [
     {
         'NAME': 'django.contrib.auth.password_validation.UserAttributeSimilarityValidator',
@@ -156,7 +179,7 @@ STATIC_URL = '/static/'
 STATICFILES_DIRS = [os.path.join(BASE_DIR, 'restaurant_app/static'),]
 
 
-STATIC_ROOT = '/var/www/mimino/static/'
+STATIC_ROOT = os.path.join(BASE_DIR, 'staticfiles')
 
 MEDIA_URL = '/media/'
 MEDIA_ROOT = os.path.join(BASE_DIR, 'media')
@@ -182,7 +205,7 @@ CELERY_BEAT_SCHEDULE = {
 }
 
 
-LOGGING = {
+"""LOGGING = {
     'version': 1,
     'disable_existing_loggers': False,
     'handlers': {
@@ -201,3 +224,4 @@ LOGGING = {
         },
     },
 }
+"""

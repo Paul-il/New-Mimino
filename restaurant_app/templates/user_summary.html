@@ -1,6 +1,7 @@
 {% extends "base.html" %}
 {% load static %}
 {% load custom_tags %}
+
 {% block title %}Чаевые Официантов{% endblock %}
 
 {% block content %}
@@ -10,8 +11,8 @@
         <thead>
             <tr>
                 <th scope="col" style="color: white; font-size: 15px;">Официант</th>
-                <th scope="col" style="color: white; font-size: 15px;">Сумма Заказов</th>
-                <th scope="col" style="color: white; font-size: 15px;">Чаевые</th>
+                <th scope="col" style="color: white; font-size: 15px;">Чаевые за месяц</th>
+                <th scope="col" style="color: white; font-size: 15px;">Чаевые за Сегодня</th>
             </tr>
         </thead>
         <tbody>
@@ -19,8 +20,8 @@
                 <tr>
                     <!-- Ссылка на страницу статистики официанта -->
                     <td><a href="{% url 'user_detail' summary.user.id %}">{{ summary.user.first_name }}</a></td>
-                    <td>{{ summary.total_order_amount }}</td>
-                    <td>{{ summary.total_tips_all_time }}</td>
+                    <td>{{ summary.current_month_tips }}</td>
+                    <td>{{ summary.today_total_tips }}</td>
                 </tr>
             {% endfor %}
         </tbody>
@@ -28,7 +29,7 @@
 </div>
 <script>
     $(document).ready(function () {
-        var table = $('#userSummaryTable').DataTable();
+        $('#userSummaryTable').DataTable();
     });
 </script>
 {% endblock %}

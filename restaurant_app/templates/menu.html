@@ -10,16 +10,18 @@
 
         <div class="my-4">
             {% if table.orders.last %}
-            <a href="{% url 'order_detail' order_id=table.orders.last.id%}" type="submit" class="btn btn-primary d-inline-block mr-3">Корзина</a>
+            <a href="{% url 'cart_detail' order_id=table.orders.last.id%}" type="submit" class="btn btn-primary d-inline-block mr-3">Корзина</a>
             {% endif %}
             <a href="{% url 'room_detail' room_id=table.room.id %}" type="submit" class="btn btn-primary d-inline-block">Комната</a>
         </div>
         
 
         <h1 class="my-4" style="color: white;">Меню</h1>
+        
         <section>
             {% include 'search.html' %}
         </section>
+
         <ul class="nav nav-tabs mb-4">
             {% for key, value in CATEGORIES.items %}
                 {% if key == "soft_drinks" %}
@@ -27,7 +29,7 @@
                     <ul class="nav nav-tabs mb-4">
                 {% endif %}
                 <li class="nav-item">
-                    <a href="{% url 'menu' table_id=table.table_id category=key %}?{% if order_id %}&order_id={{ table.table_id }}&category={{ key }}{% endif %}" class="nav-link menu-nav-link{% if category == key %} active{% endif %}">{{ value }}</a>
+                    <a href="{% url 'menu' table_id=table.table_id category=key %}?{% if order_id %}&order_id={{ table.table_id }}&category={{ key }}{% endif %}" class="nav-link delivery-nav-link{% if category == key %} active{% endif %}">{{ value }}</a>
 
                 </li>
             {% endfor %}

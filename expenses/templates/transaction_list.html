@@ -1,0 +1,157 @@
+{% extends "base.html" %}
+
+{% load static %}
+
+{% block title %}
+Список транзакций
+{% endblock %}
+
+{% block extra_head %}
+    <link rel="stylesheet" href="{% static 'css/style.css' %}">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="{% static 'scripts/chart_script.js' %}"></script>
+{% endblock %}
+
+{% block content %}
+<div class="container my-content">
+
+    <h1>Статистика</h1>
+
+    <form method="GET" action="">
+        <label for="start_date">С:</label>
+        <input type="date" name="start_date" id="start_date" value="{{ start_date }}" style="opacity: 0.3;">
+        <label for="end_date">По:</label>
+        <input type="date" name="end_date" id="end_date" value="{{ end_date }}" style="opacity: 0.3;">
+        <button type="submit">Фильтровать</button>
+        <button type="button" id="todayBtn">Сегодня</button>
+    </form>
+
+    <div class="statistics">
+        <h4>Общая</h4>
+        
+        <p><strong>Разница по сумме:</strong> {{ difference }} ₪.</p>
+        <p><strong>Разница в процентах (Прибыль):</strong> {{ percentage_difference|floatformat:2 }}%</p>
+
+        <div class="payment-methods-container">
+            
+            <div style="width:50%; float:left;">
+                
+                <h4>Методы оплаты (Прибыль)</h4>
+                {% for method_stat in payment_methods_income_stats %}
+                    <p><strong>{{ method_stat.payment_method }}:</strong> {{ method_stat.total }} ₪.</p>
+                {% endfor %}
+                <div class="additional-income-container">
+
+                    <h4>Доход от столов: <strong>{{ total_table_service_income }} ₪.</strong></h4>
+
+                    <p><strong>Доход от столов (Наличные):</strong> {{ total_table_service_income_cash }} ₪.</p>
+                    <p><strong>Доход от столов (Карта):</strong> {{ total_table_service_income_card }} ₪.</p>
+
+                    <h4>Доход от доставки: <strong>{{ total_delivery_income }} ₪.</strong></h4>
+
+                    <p><strong>Доход от доставки (Наличные):</strong> {{ total_delivery_income_cash }} ₪.</p>
+                    <p><strong>Доход от доставки (Карта):</strong> {{ total_delivery_income_card }} ₪.</p>
+
+                    <h4>Доход от самовывоза:<strong> {{ total_pickup_income }} ₪.</strong></h4>
+
+                    <p><strong>Доход от самовывоза (Наличные):</strong> {{ total_pickup_income_cash }} ₪.</p>
+                    <p><strong>Доход от самовывоза (Карта):</strong> {{ total_pickup_income_card }} ₪.</p>
+
+                    
+
+                </div>
+            </div>
+
+            <div style="width:50%; float:right;">
+                <h4>Методы оплаты (Затраты)</h4>
+                {% for method_stat in payment_methods_stats %}
+                    <p><strong>{{ method_stat.payment_method }}:</strong> {{ method_stat.total }} ₪.</p>
+                {% endfor %}
+            </div>
+
+            <div style="clear:both;"></div>
+        </div>
+
+    </div>
+
+    <button id="toggleTransactions">Показать</button>
+
+    <table class="transactions-table">
+        <tr>
+            <td valign="top" width="50%">
+                <h2>Прибыль: <strong>{{ total_income }} ₪.</strong></h2>
+                <ul class="transaction-details" style="display:none;">
+                    {% for transaction in incomes %}
+                    <li>
+                        <strong>Category:</strong> {{ transaction.category }}<br>
+                        <strong>Amount:</strong> {{ transaction.amount }} ₪.<br>
+                        <strong>Date:</strong> {{ transaction.date|date:"M. d, Y" }}<br>
+                        {% if transaction.cash_amount %}
+                            <strong>Cash Amount:</strong> {{ transaction.cash_amount }} ₪.<br>
+                        {% endif %}
+                        {% if transaction.card_amount %}
+                            <strong>Card Amount:</strong> {{ transaction.card_amount }} ₪.<br>
+                        {% endif %}
+                        {% if transaction.payment_method %}
+                            <strong>Payment Method:</strong> {{ transaction.payment_method }}<br>
+                        {% endif %}
+                    </li>
+                    {% endfor %}
+                </ul>
+            </td>
+            <td valign="top" width="50%">
+                <h2>Затраты: <strong>{{ total_expense }} ₪.</strong></h2>
+                <ul class="transaction-details" style="display:none;">
+                    {% for transaction in expenses %}
+                    <li>
+                        <strong>Category:</strong> {{ transaction.category }}<br>
+                        <strong>Amount:</strong> {{ transaction.amount }} ₪.<br>
+                        <strong>Date:</strong> {{ transaction.date|date:"M. d, Y" }}<br>
+                        {% if transaction.payment_method %}
+                            <strong>Payment Method:</strong> {{ transaction.payment_method }}<br>
+                        {% endif %}
+                    </li>
+                    {% endfor %}
+                </ul>
+            </td>
+        </tr>
+    </table>
+
+    <div class="chart-container">
+        <canvas id="expenseChart"></canvas>
+    </div>
+
+</div>
+{% endblock %}
+
+{% block script %}
+<script>
+window.addEventListener('DOMContentLoaded', function() {
+    var labels = {{ category_names_with_percentages|safe }};
+    var data = {{ category_amounts|safe }};
+    populateChartData(labels, data);
+
+    var toggleButton = document.getElementById("toggleTransactions");
+    var detailsLists = document.querySelectorAll(".transaction-details");
+
+    toggleButton.addEventListener("click", function() {
+        detailsLists.forEach(function(detailsList) {
+            if (detailsList.style.display === "none") {
+                detailsList.style.display = "block";
+                toggleButton.textContent = "Скрыть";
+            } else {
+                detailsList.style.display = "none";
+                toggleButton.textContent = "Показать";
+            }
+        });
+    });
+
+    document.getElementById("todayBtn").addEventListener("click", function() {
+        let today = new Date().toISOString().substr(0, 10);
+        document.getElementById("start_date").value = today;
+        document.getElementById("end_date").value = today;
+        document.querySelector("form").submit();
+    });
+});
+</script>
+{% endblock %}

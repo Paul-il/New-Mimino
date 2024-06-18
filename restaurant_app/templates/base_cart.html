@@ -1,0 +1,55 @@
+{% extends "base.html" %}
+{% load custom_tags %}
+{% load static %}
+
+{% block title %}Информация о заказе{% endblock %}
+<link rel="stylesheet" href="{{ STATIC_URL }}css/style.css">
+
+{% block content %}
+<div class="container">
+
+    <!-- Заголовок и номер стола (может быть переопределен) -->
+    {% block order_header %}
+    <h1 class="my-4" style="color: white;">Информация о заказе</h1>
+    <p style="color: white; font-size: 20px;">Номер Стол: {{ order.table.table_id }}</p>
+    {% endblock order_header %}
+
+    <!-- Таблица с заказами -->
+    <table class="table my-table">
+        <thead>
+            <tr>
+                <th scope="col" style="color: white; font-size: 26px;">Время</th>
+                <th scope="col" style="color: white; font-size: 26px;">Отдали</th>
+                <th scope="col" style="color: white; font-size: 26px;">Название</th>
+                <th scope="col" style="color: white; font-size: 26px;">Количество</th>
+                <th scope="col" style="color: white; font-size: 26px;">Цена</th>
+                <th scope="col" style="color: white; font-size: 26px;">Действия</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% csrf_token %}
+            {% block order_items %}
+            <!-- Содержимое для элементов заказа может быть переопределено здесь -->
+            {% endblock order_items %}
+        </tbody>
+    </table>
+
+    <!-- Общая сумма и время заказа -->
+    <p style="color: white;">Общая сумма: <span id="total-price" >{{ total_price }}</span>₪</p>
+    <p style="color: white;">Время заказа: {{ order.created_at }}</p>
+
+    <!-- Комментарии для кухни (если они общие для всех заказов) -->
+    {% block kitchen_comments %}
+    <div class="mb-3">
+      <label for="kitchen-comments" class="form-label" style="color: white;">Комментарии для кухни:</label>
+      <textarea class="form-control" id="kitchen-comments" rows="3">{{ order.comments|default:'' }}</textarea>
+    </div>
+    {% endblock kitchen_comments %}
+
+    <!-- Методы оплаты (могут быть переопределены) -->
+    {% block payment_method %}
+    
+    {% endblock payment_method %}
+
+</div>
+{% endblock %}

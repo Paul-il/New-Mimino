@@ -1,0 +1,165 @@
+.dark-navbar {
+    background-color: #1a1a1a; /* Deep black to match the image background */
+    border-bottom: 1px solid #d4af37; /* Gold border at the bottom to bring in the gold accents */
+}
+
+.dark-navbar .navbar-brand,
+.dark-navbar .nav-link {
+    color: #d4af37; /* Gold text color to match the golden tones of the bills */
+}
+
+.dark-navbar .nav-link:hover {
+    color: #b28834; /* A deeper shade of gold for hover effects */
+}
+
+/* Общие стили для формы */
+form {
+    display: inline-block;
+    background-color: rgba(26, 26, 26, 0.7); /* Полупрозрачный фон, который соответствует темному фону панели навигации */
+    padding: 20px;
+    border-radius: 4px;
+    margin-top: 30px;
+}
+
+/* Стили для меток */
+form label {
+    color: #d4af37; /* Золотой цвет для соответствия с текстом панели навигации */
+    margin-right: 10px;
+    font-weight: bold;
+}
+
+/* Стили для полей ввода даты */
+form input[type="date"] {
+    border: 1px solid #ddd;
+    padding: 8px;
+    border-radius: 4px;
+    background-color: rgba(255, 255, 255, 0.1); /* Полупрозрачный фон, который соответствует фону элементов списка */
+    color: #f5e6c8; /* Основной цвет текста */
+}
+
+/* Стили для кнопки отправки формы */
+form button {
+    background-color: #d4af37; /* Золотой цвет для соответствия с другими элементами дизайна */
+    border: none;
+    color: #1a1a1a; /* Цвет текста на кнопке */
+    padding: 10px 20px;
+    margin-left: 20px;
+    border-radius: 4px;
+    font-weight: bold;
+    transition: background-color 0.3s ease; /* Плавный переход для эффекта при наведении */
+}
+
+form button:hover {
+    background-color: #b28834; /* Темнее оттенок золотого цвета при наведении на кнопку */
+}
+
+#todayBtn {
+    background-color: #d4af37;
+    border: none;
+    color: #1a1a1a;
+    padding: 10px 20px;
+    margin-left: 10px;
+    border-radius: 4px;
+    font-weight: bold;
+    transition: background-color 0.3s ease;
+}
+
+#todayBtn:hover {
+    background-color: #b28834;
+}
+
+
+body {
+    font-family: Arial, sans-serif;
+    text-align: center;
+    margin: 0;
+    padding: 0;
+    color: #f5e6c8; /* Основной цвет текста */
+    background-image: url('/static/expenses/images/babki.jpg');
+    background-repeat: no-repeat;
+    background-size: cover;
+    background-attachment: fixed;
+    background-position: center center;
+}
+
+.container {
+    display: inline-block;
+}
+
+table {
+    border-collapse: collapse;
+    width: auto;
+    margin: 20px auto;
+}
+
+td {
+    padding: 10px;
+}
+
+h1 {
+    color: #f0d07a; /* Цвет заголовка */
+}
+
+ul {
+    list-style-type: none;
+    padding: 0;
+}
+
+li {
+    border: 1px solid #ddd;
+    margin: 8px 0;
+    padding: 12px;
+    background-color: rgba(255, 255, 255, 0.1); /* Полупрозрачный фон для элементов списка */
+    color: #f5e6c8; /* Цвет текста элементов списка */
+    border-radius: 4px;
+}
+
+li:hover {
+    background-color: rgba(240, 208, 122, 0.1); /* Эффект при наведении на элемент списка */
+}
+
+button {
+    background-color: #4CAF50;
+    border: none;
+    color: white;
+    padding: 8px 12px;
+    text-align: center;
+    text-decoration: none;
+    display: inline-block;
+    font-size: 14px;
+    margin: 4px 2px;
+    cursor: pointer;
+    border-radius: 4px;
+}
+
+button:hover {
+    background-color: #67864a; /* Темнее оттенок зеленого при наведении */
+    transition: background-color 0.3s ease; /* Плавный переход */
+}
+
+#expenseChart {
+    max-width: 400px;
+    height: 400px;  /* или другое значение, которое вам подходит */
+    margin: 0 auto;
+}
+
+.statistics {
+    margin-top: 20px;  /* добавляем отступ сверху */
+}
+
+.chart-container {
+    display: flex;
+    justify-content: center; 
+    align-items: center;
+    height: 420px;  /* увеличиваем высоту, чтобы диаграмма не перекрывала текст */
+    margin-top: 20px;  /* добавляем отступ сверху */
+}
+
+.my-content {
+    max-width: 800px; /* или другой размер, который вам подходит */
+    margin: 50px auto; /* верхний и нижний отступы для отделения от верха и низа страницы, и автоматические левый и правый отступы для центрирования */
+}
+
+.date-content {
+    display: none;
+}

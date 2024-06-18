@@ -1,0 +1,171 @@
+{% extends "base.html" %}
+
+{% block title %}Добавление Поставки{% endblock %}
+
+{% block content %}
+<div class="container">
+    <h1 style="color: white;">Добавление Поставки</h1>
+    
+    <div class="search-form">
+        <input type="text" id="productSearch" placeholder="Поиск продукта..." class="form-control">
+        <div id="searchResults" class="search-results"></div>
+    </div>
+
+    <div class="add-stock-form">
+        <form method="post" onsubmit="return confirm('Вы уверены, что хотите добавить эту поставку?');">
+            {% csrf_token %}
+            {{ form.as_p }}
+            <button type="submit" class="btn-submit"><i class="fa fa-plus"></i> Добавить поставку</button>
+        </form>
+    </div>
+
+    <h2 style="color: white; margin-top: 20px;">Список Поставок</h2>
+    <table id="stockTable" class="table table-striped">
+        <thead>
+            <tr>
+                <th>Продукт</th>
+                <th>Количество</th>
+                <th>Дата Поставки</th>
+                <!-- Другие столбцы при необходимости -->
+            </tr>
+        </thead>
+        <tbody>
+            {% for stock in stocks %}
+            <tr>
+                <td>{{ stock.product.product_name_rus }}</td>
+                <td>{{ stock.received_quantity }}</td>
+                <td>{{ stock.received_date }}</td>
+                <!-- Другие данные -->
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</div>
+
+<link rel="stylesheet" type="text/css" href="https://cdn.datatables.net/1.10.21/css/jquery.dataTables.css">
+<script type="text/javascript" charset="utf8" src="https://cdn.datatables.net/1.10.21/js/jquery.dataTables.js"></script>
+<script>
+    $(document).ready(function () {
+        $('#stockTable').DataTable({
+            "language": {
+                "lengthMenu": "Показывать _MENU_ записей на странице",
+                "zeroRecords": "Ничего не найдено",
+                "info": "Показана страница _PAGE_ из _PAGES_",
+                "infoEmpty": "Нет доступных записей",
+                "infoFiltered": "(отфильтровано из _MAX_ всего записей)",
+                "search": "Поиск:",
+                "paginate": {
+                    "first": "Первая",
+                    "last": "Последняя",
+                    "next": "Следующая",
+                    "previous": "Предыдущая"
+                }
+            },
+            "pagingType": "full_numbers",
+            "lengthChange": false,
+            "pageLength": 10
+        });
+
+        // Динамический поиск продуктов
+        $('#productSearch').on('input', function() {
+            var searchQuery = $(this).val();
+            if (searchQuery.length > 2) {
+                // AJAX запрос для поиска продуктов
+                $.ajax({
+                    url: '/search-products/',
+                    data: { 'query': searchQuery },
+                    success: function(data) {
+                        var resultsHTML = '';
+                        data.forEach(function(product) {
+                            resultsHTML += `<div>${product.name} - <button onclick="selectProduct('${product.id}')">Выбрать</button></div>`;
+                        });
+                        $('#searchResults').html(resultsHTML);
+                    }
+                });
+            } else {
+                $('#searchResults').html('');
+            }
+        });
+    });
+
+    function selectProduct(productId) {
+        // Логика для добавления выбранного продукта в форму
+    }
+</script>
+
+<style>
+    .container {
+        background-color: rgba(248, 249, 250, 0.1);
+        padding: 20px;
+        border-radius: 8px;
+        box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+    }
+
+    .container h1 {
+        color: #343a40;
+        text-align: center;
+        margin-bottom: 20px;
+    }
+
+    .search-form {
+        margin-bottom: 20px;
+    }
+
+    .add-stock-form {
+        background-color: white;
+        padding: 20px;
+        border-radius: 8px;
+        box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+    }
+
+    .btn-submit {
+        background-color: #28a745;
+        color: white;
+        padding: 10px 20px;
+        border: none;
+        border-radius: 5px;
+        cursor: pointer;
+        transition: background-color 0.2s, transform 0.1s;
+        font-size: 16px;
+        display: block;
+        width: 100%;
+        text-align: center;
+    }
+
+    .btn-submit:hover {
+        background-color: #218838;
+        transform: scale(1.05);
+    }
+
+    .btn-submit i {
+        margin-right: 5px;
+    }
+
+    .search-results div {
+        margin-top: 10px;
+    }
+
+    .form-control {
+        margin-bottom: 10px;
+    }
+
+    /* Стили для таблицы DataTables */
+    .table.table-striped {
+        color: white;
+        margin-top: 20px;
+    }
+
+    .table.table-striped thead {
+        background-color: #343a40;
+    }
+
+    .table.table-striped tbody tr:nth-of-type(odd) {
+        background-color: #2b2b2b;
+    }
+
+    .table.table-striped tbody tr:nth-of-type(even) {
+        background-color: #202020;
+    }
+</style>
+
+{% endblock %}

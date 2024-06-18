@@ -95,7 +95,7 @@ def pickup_increase_product_view(request, phone_number, product_id):
     cart_item.quantity += 1
     cart_item.save()
 
-    messages.success(request, f"{product_name} на один стало больше.")
+    messages.success(request, f"{product_name} был добавлен в корзину.")
     return redirect('pickup_app:pickup_cart', phone_number=phone_number, category=None)
 
 
@@ -113,13 +113,15 @@ def pickup_decrease_product_view(request, phone_number, product_id):
     product_name = cart_item.product.product_name_rus
 
     # Если количество товара равно 1, удаляем элемент из корзины
-    if cart_item.quantity == 1:
+    if cart_item.quantity <= 1:
         cart_item.delete()
+        messages.success(request, f"{product_name} был удалён из корзины.")
     else:
         cart_item.quantity -= 1
         cart_item.save()
+        messages.success(request, f"{product_name} был удалён из корзины.")
 
-    messages.success(request, f"{product_name} на один стало меньше.")
+    messages.success(request, f"{product_name} был добавлен в корзину.")
     return redirect('pickup_app:pickup_cart', phone_number=phone_number, category=None)
 
 

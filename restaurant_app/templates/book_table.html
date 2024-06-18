@@ -4,25 +4,16 @@
 
 {% block content %}
 <link rel="stylesheet" href="{% static 'css/styles.css' %}">
-  <div class="container">
+<div class="container">
     <a href="{% url 'rooms' %}" class="btn btn-primary">Назад.</a>
     <h1 style="color: white; font-size: 32px;">Забронировать стол</h1>
 
     <form method="post">
-      {% csrf_token %}
-      {{ form.as_p }}
-      <style>
-        .errorlist {
-          color: white;
-        }
-      </style>
-      <input type="hidden" name="table" value="{{ table.id }}">
-      <input type="hidden" name="user" value="{{ request.user.pk }}">
-      <div class="text-center">
-        <button type="submit" class="btn btn-primary">Забронировать</button>
-      </div>
-    </form>    
- 
-   
-  </div>
+        {% csrf_token %}
+        {{ form.as_p }}
+        <div class="text-center">
+            <button type="submit" class="btn btn-primary">Забронировать</button>
+        </div>
+    </form>
+</div>
 {% endblock %}

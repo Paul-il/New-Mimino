@@ -1,30 +1,51 @@
 {% extends "base.html" %}
-
+{% load custom_tags %}
+{% load static %}
 {% block title %}Rooms{% endblock %}
 
 {% block content %}
-  <div class="row">
-    {% for room in rooms %}
-    <div class="col-md-3 mb-3">
-      <div class="card rounded-lg">
-        <div class="card-body">
-          <h5 class="card-title"><a href="{% url 'room_detail' room_id=room.id %}" class="btn">{{ room.name }}</a></h5>
-          <ul>
-            {% for waiter_name, table_order_pairs in room.waiters.items %}
-                <li><span style="color: white;">Официант:</span> 
-                    <span style="background-color: blue; color: white; padding: 5px; border-radius: 5px;">{{ waiter_name }}</span>
-                    <ul>
-                        {% for table_id, order_id in table_order_pairs %}
-                            <li><a href="{% url 'order_detail' order_id=order_id %}" style="color: rgb(231, 235, 5);">Стол №{{ table_id }}</a></li>
-                        {% endfor %}
-                    </ul>
-                </li>
-            {% endfor %}
+<div class="row">
+  {% for room in rooms %}
+  <div class="col-md-3 mb-3">
+    <div class="card rounded-lg">
+      <div class="card-body">
+        <h5 class="card-title">
+          <a href="{% url 'room_detail' room_id=room.id %}" class="btn">{{ room.name }}</a>
+        </h5>
+        <ul>
+          {% for waiter_name, waiter_info in room.waiters.items %}
+          <li>
+            <span style="color: white;">Официант:</span> 
+            <span style="background-color: blue; color: white; padding: 5px; border-radius: 5px;">
+              {{ waiter_name }}
+            </span>
+            
+            <ul>
+              {% for table_id, order_id, all_delivered in waiter_info.tables_info %}
+              <li>
+                <a href="{% url 'cart_detail' order_id=order_id %}" style="color: rgb(231, 235, 5);">Стол №{{ table_id }}</a>
+                {% if all_delivered %}<img src="{% static 'img/galochka.jpg' %}" alt="Галочка" width="30" height="30"/>{% endif %}
+                <!-- Отображение деталей заказа, если есть информация по этому столу -->
+                {% if room.table_orders %}
+                  {% with order=room.table_orders|get_item:table_id %}
+                    {% if order %}
+                      <ul>
+                        <li style="color: white;">Время начала заказа: <span style="color: rgb(231, 235, 5);">{{ order.created_at|time:"H:i" }}</span></li>
+                        <li style="color: white;">Количество гостей: <span style="color: rgb(231, 235, 5);">{{ order.num_of_people }}</span></li>
+                        <li style="color: white;">Сумма заказа: <span style="color: rgb(231, 235, 5);">{{ order.active_order_total }}</span></li>
+                      </ul>
+                    {% endif %}
+                  {% endwith %}
+                {% endif %}
+              </li>
+              {% endfor %}
+            </ul>
+          </li>
+          {% endfor %}
         </ul>     
-
-        </div>
       </div>
     </div>
-    {% endfor %}
   </div>
+  {% endfor %}
+</div>
 {% endblock %}

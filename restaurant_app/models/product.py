@@ -1,5 +1,7 @@
 from django.db import models
 from django import forms
+from django.contrib.auth.models import User
+from django.conf import settings
 
 
 class Product(models.Model):
@@ -51,6 +53,7 @@ class Product(models.Model):
     is_available = models.BooleanField(default=True)
     preparation_time = models.PositiveIntegerField(default=0, verbose_name='Время приготовления (в минутах)',blank=True)
 
+
     def __str__(self):
         return f"{self.product_name_rus} ({self.product_price}₪)"
 
@@ -61,3 +64,29 @@ class ProductQuantityForm(forms.ModelForm):
         fields = ['quantity']
 
 
+class OrderChangeLog(models.Model):
+    ACTION_CHOICES = (
+        ('add', 'Добавили'),
+        ('decrease', 'Убавили'),
+        ('delete', 'Удалили'),
+        ('increase', 'Прибавили'),
+    )
+
+    class Meta:
+        ordering = ['change_time']
+        
+    order = models.ForeignKey('Order', on_delete=models.CASCADE)
+    order_item = models.ForeignKey('OrderItem', on_delete=models.CASCADE, null=True, blank=True)
+    product_name = models.CharField(max_length=255)
+    action = models.CharField(max_length=10, choices=ACTION_CHOICES)
+    change_time = models.DateTimeField(auto_now_add=True)
+    changed_by = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.SET_NULL, null=True, verbose_name='Изменил')
+
+
+class ProductStock(models.Model):
+    product = models.ForeignKey(Product, on_delete=models.CASCADE, related_name='stock')
+    received_quantity = models.PositiveIntegerField()
+    received_date = models.DateField(auto_now_add=True)
+
+    def __str__(self):
+        return f"{self.product.product_name_rus} - {self.received_quantity} received on {self.received_date}"

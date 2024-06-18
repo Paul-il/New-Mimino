@@ -13,44 +13,60 @@
         {% if table.active_order %}
             <img src="{% static 'img/active_order.jpg' %}" class="card-img-top">
             <a href="{% url 'menu' table_id=table.table_id category='salads' %}" class="btn btn-primary">Добавить в Заказ.</a>
-            <a href="{% url 'order_detail' order_id=table.orders.last.id %}" class="btn btn-primary">Просмотреть заказ</a>
+            <a href="{% url 'cart_detail' order_id=table.orders.last.id %}" class="btn btn-primary">Просмотреть заказ</a>
         {% else %}
             <img src="{% static 'img/empty_table.jpg' %}" class="card-img-top" alt="Стол {{ table.table_id }}">
-            <a href="{% url 'menu' table_id=table.table_id category='salads' %}" class="btn btn-primary">Начать Заказ.</a>
-            <a href="{% url 'book_table' table_id=table.table_id %}" class="btn btn-primary" >Забронировать.</a>
+            <!-- Триггер для модального окна -->
+            <button type="button" class="btn btn-primary" data-toggle="modal" data-target="#startOrderModal{{ table.table_id }}">Начать Заказ</button>
         {% endif %}
+        
+        <!-- Модальное окно для начала заказа и запроса количества посетителей -->
+        <div class="modal fade" id="startOrderModal{{ table.table_id }}" tabindex="-1" aria-labelledby="startOrderModalLabel{{ table.table_id }}" aria-hidden="true">
+          <div class="modal-dialog">
+            <div class="modal-content">
+              <div class="modal-header">
+                <h5 class="modal-title" id="startOrderModalLabel{{ table.table_id }}">Начало заказа</h5>
+                <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+                  <span aria-hidden="true">&times;</span>
+                </button>
+              </div>
+              <div class="modal-body">
+                <form action="{% url 'add_to_cart' table_id=table.table_id %}" method="post">
+                  {% csrf_token %}
+                  <div class="form-group">
+                    <label for="numOfPeople">Количество посетителей:</label>
+                    {% if messages %}
+                        {% for message in messages %}
+                            <div class="alert {{ message.tags }}">
+                                {{ message }}
+                            </div>
+                        {% endfor %}
+                    {% endif %}
+                    <input type="number" class="form-control" id="numOfPeople" name="num_of_people" min="1" max="{{ room.max_capacity }}" required>
+                  </div>
+                  <button type="submit" class="btn btn-primary">Подтвердить</button>
+                </form>
+              </div>
+            </div>
+          </div>
+        </div>
 
         <div class="card-body">
           <h5 class="card-title">Стол {{ table.table_id }}</h5>
-        </div>
-        <div class="card-footer">
-          {% if table.is_booked and table.are_guests_here %}
-            {% if table.active_order %}
-              <a href="{% url 'table_order' table_id=table.table_id order_id=active_order.id %}" class="btn btn-primary">Добавить в заказ.</a>
-              <a href="{% url 'order_detail' order_id=table.active_order.id %}" class="btn btn-primary">Информация о заказе.</a>
-            {% else %}
-              <a href="{% url 'menu' table_id=table.table_id category='salads' %}" class="btn btn-primary">Начать Заказ.</a>
-            {% endif %}
-          {% endif %}
-          {% if table.active_order %}
-              <p class="card-text">
-                  <span style="color: white;">Официант:</span> 
-                  <span style="background-color: blue; color: white; padding: 5px; border-radius: 5px;">{{ table.created_by_name }}</span>
-              </p>
-              <p class="card-text">
-                  <span style="color: white;">Время начала заказа:</span> 
-                  <span style="color: red;">{{ table.orders.last.created_at|time:"H:i" }}</span>
-              </p>
-              <p class="card-text">
-                  <span style="color: white;">Сумма заказа:</span> 
-                  <span style="color: rgb(231, 235, 5);">{{ table.active_order_total }}</span>
-              </p>
-          {% endif %}    
-
-
         </div>
       </div>
     </div>
     {% endfor %}
   </div>
+
+  <!-- Bootstrap и jQuery для работы модального окна -->
+  <script src="https://code.jquery.com/jquery-3.5.1.min.js"></script>
+  <script src="https://stackpath.bootstrapcdn.com/bootstrap/4.5.0/js/bootstrap.bundle.min.js"></script>
+
+ <!-- <script>
+    // jQuery для активации модальных окон Bootstrap
+    $(document).ready(function(){
+      $('[data-toggle="modal"]').modal();
+    });
+  </script>-->
 {% endblock %}

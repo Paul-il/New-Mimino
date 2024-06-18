@@ -1,21 +1,20 @@
 from django import forms
 from django.forms import CheckboxSelectMultiple
-from .models.tables import Booking
+from .models.tables import Booking, Table
 from .models.orders import Order, OrderItem, Product
 from datetime import time, timedelta, datetime
 from django.utils import timezone  # Убедимся, что timezone импортирован
+from django.core.exceptions import ValidationError
+from .models.product import ProductStock
 
-def generate_time_intervals(start_time, end_time, delta_minutes):
-    # Преобразование объектов datetime.time в datetime.datetime для выполнения арифметических операций
-    current_datetime = timezone.combine(timezone.now().date(), start_time)  # Изменили здесь
-    end_datetime = timezone.combine(timezone.now().date(), end_time)  # Изменили здесь
-    time_intervals = []
+class ProductStockForm(forms.ModelForm):
+    class Meta:
+        model = ProductStock
+        fields = ['product', 'received_quantity']
 
-    while current_datetime.time() <= end_datetime.time():
-        time_intervals.append((current_datetime.strftime('%H:%M'), current_datetime.strftime('%H:%M')))
-        current_datetime += timedelta(minutes=delta_minutes)
+class PasswordForm(forms.Form):
+    password = forms.CharField(widget=forms.PasswordInput())
 
-    return time_intervals
 
 def generate_time_intervals(start_time, end_time, delta_minutes):
     # Преобразование объектов datetime.time в datetime.datetime для выполнения арифметических операций
@@ -37,11 +36,17 @@ TIME_CHOICES = generate_time_intervals(start_time, end_time, delta_minutes)
 
 class BookingForm(forms.ModelForm):
     reserved_time = forms.ChoiceField(choices=TIME_CHOICES, label='Время')
+
+    # Добавление выпадающего списка для количества гостей
+    NUM_OF_PEOPLE_CHOICES = [(i, str(i)) for i in range(1, 60)]  # Например, от 1 до 20 гостей
+    num_of_people = forms.ChoiceField(choices=NUM_OF_PEOPLE_CHOICES, label='Количество гостей')
+
     class Meta:
         model = Booking
-        exclude = ['are_guests_here', 'is_deleted', 'created_at', 'guests_did_not_arrive']
+        fields = ['reserved_date', 'reserved_time', 'num_of_people', 'description']
         widgets = {
             'reserved_date': forms.TextInput(attrs={'type': 'date'}),
+            'description': forms.Textarea(attrs={'rows': 3}),
         }
         labels = {
             'reserved_date': 'Дата',
@@ -54,38 +59,87 @@ class BookingForm(forms.ModelForm):
         self.request = kwargs.pop('request', None)
         self.table = kwargs.pop('table', None)
         super().__init__(*args, **kwargs)
-        self.fields['table'].widget.attrs['disabled'] = True
-        self.fields['table'].widget.attrs['style'] = 'display:none'
-        self.fields['table'].label = ''
-        self.fields['user'].widget = forms.HiddenInput()
-        self.fields['user'].initial = self.request.user
-        self.fields['description'].widget.attrs['rows'] = 3
+        
+        # Проверка и настройка поля table
+        if 'table' in self.fields:
+            if self.table:
+                self.fields['table'].initial = self.table
+                self.fields['table'].widget = forms.HiddenInput()
+            else:
+                self.fields['table'].widget = forms.HiddenInput()
+
+        # Проверка и настройка поля user
+        if 'user' in self.fields:
+            self.fields['user'].widget = forms.HiddenInput()
+            if self.request:
+                self.fields['user'].initial = self.request.user
 
 
-        if self.table:
-            self.fields['table'].widget = forms.HiddenInput()
-            self.fields['table'].initial = self.table
-            
     def clean(self):
         cleaned_data = super().clean()
-        table = cleaned_data.get('table')
+        table_id = cleaned_data.get('table')  # Получаем ID стола
+        num_of_people = int(cleaned_data.get('num_of_people'))  # Преобразование в число
         reserved_date = cleaned_data.get('reserved_date')
-        reserved_time = cleaned_data.get('reserved_time')
+        reserved_time_str = cleaned_data.get('reserved_time')
 
-        num_of_people = cleaned_data.get('num_of_people')
-        description = cleaned_data.get('description')
+        try:
+            reserved_time = datetime.strptime(reserved_time_str, "%H:%M").time()
+        except ValueError:
+            raise forms.ValidationError('Неверный формат времени.')
 
-        if num_of_people and num_of_people > 10 and not description:
+        # Получение даты и времени бронирования
+        reserved_datetime = datetime.combine(reserved_date, reserved_time)
+
+        # Проверка статуса последнего заказа для выбранного стола
+        last_order = Order.objects.filter(table_id=table_id).order_by('-created_at').first()
+
+        if last_order and not last_order.is_completed:
+            # Проверка на количество человек и соответствующее ограничение времени
+            if num_of_people <= 3:
+                one_hour_later = timezone.now() + timedelta(hours=1)
+                if reserved_time < one_hour_later.time():
+                    raise forms.ValidationError('Для бронирования столика на группу до трех человек доступно только время через час после текущего.')
+            
+            elif 3 < num_of_people <= 6:
+                two_hours_later = timezone.now() + timedelta(hours=2)
+                if reserved_time < two_hours_later.time():
+                    raise forms.ValidationError('Для бронирования столика на группу от трех до шести человек доступно только время через два часа после текущего.')
+
+        if num_of_people > 10 and not cleaned_data.get('description'):
             raise forms.ValidationError('Поле "Комментарий" обязательно для заполнения, если количество гостей больше 10.')
 
-        # Check if the selected table is already booked at the selected date and time
-        if Booking.objects.filter(table=table, reserved_date=reserved_date, reserved_time=reserved_time, is_deleted=False).exists():
-            raise forms.ValidationError('Этот стол уже занят в выбранное время, пожалуйста, выберите другое время или стол.')
+        # Получение всех бронирований для выбранного стола на эту дату
+        existing_bookings = Booking.objects.filter(table_id=table_id, reserved_date=reserved_date)
 
-        # Check if the user has already made a booking at the selected date and time
-        if Booking.objects.filter(user=self.request.user, reserved_date=reserved_date, reserved_time=reserved_time, is_deleted=False).exists():
-            raise forms.ValidationError('Вы уже забронировали стол на выбранное время, пожалуйста, выберите другое время.')
-        
+        # Проверка, что новое время бронирования не пересекается с существующими
+        for booking in existing_bookings:
+            booking_start = datetime.combine(booking.reserved_date, booking.reserved_time)
+            booking_end = booking_start + timedelta(hours=1)  # Предполагаем, что бронь длится один час
+
+            # Создаем диапазон времени, когда столик не доступен
+            unavailable_start = booking_start - timedelta(hours=1)
+            unavailable_end = booking_end + timedelta(hours=1)
+
+            # Проверяем, попадает ли запрашиваемое время в недоступный диапазон
+            if unavailable_start <= reserved_datetime <= unavailable_end:
+                raise forms.ValidationError('Этот столик недоступен для бронирования за час до и после существующего бронирования.')
+
+        # Поиск доступных столов на указанную дату и время
+        available_tables = Table.objects.filter(
+            capacity__gte=num_of_people,
+            is_booked=False
+        ).exclude(
+            bookings__reserved_date=reserved_date,
+            bookings__reserved_time=reserved_time,
+            bookings__is_deleted=False
+        )
+
+        if not available_tables:
+            raise ValidationError('Нет доступных столов на выбранное время и дату для указанного количества гостей.')
+
+        # Выбор первого доступного стола
+        cleaned_data['table'] = available_tables.first()
+
         return cleaned_data
 
 class GuestsHereForm(forms.ModelForm):
@@ -124,10 +178,22 @@ class ProductForm(forms.Form):
 
 class DateRangeForm(forms.Form):
     DATERANGE_CHOICES = [
-        (1, 'Один день'),
-        (7, 'Семь дней'),
-        (14, '14 дней'),
-        (21, '21 день'),
-        (30, 'Месяц'),
+        ('1', 'Последний день'),
+        ('7', 'Последние 7 дней'),
+        ('30', 'Последний месяц'),
+        ('365', 'Последний год'),
+        # Добавьте другие опции по вашему выбору
     ]
-    date_range = forms.ChoiceField(choices=DATERANGE_CHOICES, required=False)
+    date_range = forms.ChoiceField(choices=DATERANGE_CHOICES, required=False, label="Выберите диапазон")
+    DAY_OF_WEEK_CHOICES = [
+        ('', 'Выбрать день недели'),
+        ('1', 'Понедельник'),
+        ('2', 'Вторник'),
+        ('3', 'Среда'),
+        ('4', 'Четверг'),
+        ('5', 'Пятница'),
+        ('6', 'Суббота'),
+        ('7', 'Воскресенье'),
+    ]
+    day_of_week = forms.ChoiceField(choices=DAY_OF_WEEK_CHOICES, required=False, label="День недели")
+

@@ -1,26 +1,38 @@
 body {
-  background-image: url('/static/img/background_image.jpg');
-  background-size: cover;
-}
-
-  nav {
-    background-color: white;
-    color: black;
+    font-family: Arial, sans-serif;
+    text-align: center;
+    margin: 0;
+    padding: 0;
+    color: #f5e6c8;
+    background-image: url('/static/img/background_image.jpg');
+    background-repeat: no-repeat;
+    background-size: cover;
+    background-attachment: fixed;
+    background-position: center center;
   }
   
-  .btn-primary {
+  nav {
+    background-color: #f5f5f5;
+    color: black;
+    font-weight: bold;
+  }
+
+
+  .btn-primary,
+  .btn-primary2 {
     background-color: #4f76e0;
     color: #fff;
+    margin: 0 10px;
     font-size: 1.2rem;
     padding: 10px 20px;
     border-radius: 5px;
     text-decoration: none;
-    
+    transition: background-color 0.3s ease;
   }
   
-  .btn-primary:hover {
+  .btn-primary:hover,
+  .btn-primary2:hover {
     background-color: #6a8105;
-    color: #fff;
   }
   
   .table-image {
@@ -29,61 +41,322 @@ body {
     width: 100%;
     height: 400px;
   }
-
-  .btn-primary2 {
-    background-color: #4f76e0;
-    color: #fff;
-    font-size: 1.2rem;
-    padding: 10px 20px;
-    border-radius: 5px;
-    margin-right: 20px;
-    
-  }
   
   .btn1 {
-    width: 70px;
+    box-shadow: none; /* Убирает тень */
+    background-color: #007bff;
+    color: white;
+    border: none;
+    padding: 15px 10px;
+    margin-right: 5px;
+    cursor: pointer;
+    border-radius: 5px;
+  }
+  
+  .btn1:hover {
+    background-color: #0056b3;
+  }
+  
+  .print_invoice,
+  .form-control-equal .form-control {
+    width: 200px;
     height: 50px;
-    font-size: 10px;
+    font-size: 20px;
     text-align: center;
-}
-.print_invoice {
-  width: 200px;
-  height: 50px;
-  font-size: 20px;
-  text-align: center;
-}
-
-.form-control-equal .form-control {
-  height: 50px;
-  font-size: 18px;
-}
-
-
-input[type="text"] {
+  }
+  
+  input[type="text"] {
     min-width: 300px;
     border-radius: 0.25rem 0 0 0.25rem;
-}
-
-button {
+  }
+  
+  button {
     border-radius: 0 0.25rem 0.25rem 0;
+  }
+  
+  label {
+    color: white;
+  }
+  
+  .form-control {
+    font-size: 16px;
+    height: 40px;
+  }
+  
+  .error-message {
+    color: white;
+  }
+  
+  .event-day a.ui-state-default {
+    background-color: green;
+  }
+  
+  #selected-users-list div {
+    display: inline-block;
+    padding: 5px 10px;
+    margin: 5px;
+    border: 1px solid #ccc;
+    border-radius: 5px;
+  }
+  
+  .card {
+    background-color: rgba(255, 255, 255, 0.5);
+  }
+  
+  .card-title a {
+    font-size: 1.5rem;
+  }
+  
+  .card-body li a {
+    color: black;
+    text-decoration: none;
+  }
+  
+  .card-body li a:hover {
+    color: grey;
+    text-decoration: underline;
+  }
+  
+  .btn {
+    background-color: rgba(255, 255, 255, 0.5);
+    color: #000;
+    border: 1px solid rgba(204, 204, 204, 0.5);
+    transition: background-color 0.3s ease;
+  }
+  
+  .btn:hover {
+    background-color: rgba(245, 245, 245, 0.8);
+  }
+  
+  .form-control:focus {
+    border-color: #ccc;
+    outline: none;
+    box-shadow: none;
+  }
+  
+  .delivery-nav-link {
+    color: rgb(231, 235, 5);
+  }
+  
+  .delivery-nav-link:hover,
+  .pickup-nav-link:hover,
+  .menu-nav-link:hover {
+    color: rgb(250, 255, 10);
+  }
+  
+  .delivery-nav-link.active,
+  .pickup-nav-link.active,
+  .menu-nav-link.active {
+    color: rgb(50, 50, 50);
+  }
+  .nav-tabs .nav-item {
+    display: inline-block;
+    flex: 1; /* Равномерное распределение пространства между вкладками */
+    text-align: center; /* Центрирование текста внутри каждой вкладки */
+  }
+  
+  .nav-tabs .nav-link {
+    width: 100%; /* Заполнение доступного горизонтального пространства вкладки */
+    padding: 0.5rem 1rem; /* Увеличенные отступы для лучшего визуального восприятия */
+    transition: background-color 0.3s, color 0.3s; /* Плавные переходы для цвета фона и текста */
+  }
+  
+  .dark-navbar {
+    background-color: #343a40; /* Более темный оттенок для лучшего контраста */
+    border-bottom: 2px solid #ffc107; /* Утолщенная граница для яркости */
+  }
+  
+  .dark-navbar .navbar-brand,
+  .dark-navbar .nav-link {
+    color: #000; /* Черный цвет текста по умолчанию */
+  }
+  
+  .dark-navbar .nav-link:hover {
+    color: #fff; /* Светлый цвет при наведении для контраста */
+    background-color: #505960; /* Темный фон при наведении для выделения */
+  }
+  
+  @media (max-width: 768px) {
+    /* Стили для мобильных устройств */
+    .nav-tabs .nav-item {
+      display: block; /* Вкладки располагаются вертикально на маленьких экранах */
+      width: 100%;
+    }
+  }  
+  
+  
+  form {
+    background-color: rgba(26, 26, 26, 0.7);
+    padding: 20px;
+    border-radius: 4px;
+    margin-top: 30px;
+  }
+  
+  form label {
+    color: #d4af37;
+    margin-right: 10px;
+    font-weight: bold;
+  }
+  form .form-group select,
+  form .form-group input[type="tel"],
+  form .form-group input[type="text"],
+  form .form-group input[type="number"],
+  form .form-group input[type="email"],
+  form .form-group input[type="password"] {
+    width: 100%; /* Это заставит элемент занять всю ширину родительского элемента .form-group */
+    max-width: 900px; /* Ограничение максимальной ширины каждого элемента */
+    margin: 0 auto; /* Центрирование элемента внутри .form-group */
+    display: block; /* Элемент будет отображаться на новой строке под меткой */
+    border: 1px solid #ddd; /* Стиль границы, чтобы совпадал с инпутами */
+    padding: 8px; /* Отступ для элемента, чтобы совпадал с инпутами */
+    border-radius: 4px; /* Радиус скругления границ, чтобы совпадал с инпутами */
+    background-color: rgba(255, 255, 255, 0.1); /* Фон элемента, чтобы совпадал с инпутами */
+    color: #f5e6c8; /* Цвет текста элемента, чтобы совпадал с инпутами */
+  }
+
+
+
+  
+  form button {
+    background-color: #d4af37;
+    border: none;
+    color: #1a1a1a;
+    padding: 10px 20px;
+    margin-left: 20px;
+    border-radius: 4px;
+    font-weight: bold;
+    transition: background-color 0.3s ease;
+  }
+  
+  form button:hover {
+    background-color: #b28834;
+  }
+  
+  #todayBtn {
+    background-color: #d4af37;
+  }
+  
+  #todayBtn:hover {
+    background-color: #b28834;
+  }
+  
+  table {
+    width: 100%;
+    border-collapse: collapse;
+  }
+  
+  table td, table th {
+    padding: 4px;
+    font-size: 14px;
+  }
+  
+  table td button, table th button {
+    padding: 2px 6px;
+    font-size: 12px;
+  }
+  
+  .my-table td, .my-table th {
+    padding: 4px;
+    vertical-align: middle;
+  }
+  
+  .my-table {
+    margin-bottom: 0;
+  }
+  
+  h1 {
+    color: #f0d07a;
+  }
+  
+  ul {
+    list-style-type: none;
+    padding: 0;
+  }
+  
+  li {
+    border: 1px solid #ddd;
+    margin: 8px 0;
+    padding: 12px;
+    background-color: rgba(255, 255, 255, 0.1);
+    color: #f5e6c8;
+    border-radius: 4px;
+  }
+  
+  li:hover {
+    background-color: rgba(240, 208, 122, 0.1);
+  }
+  
+  button {
+    background-color: #4CAF50;
+    border: none;
+    color: white;
+    padding: 8px 12px;
+    text-align: center;
+    text-decoration: none;
+    display: inline-block;
+    font-size: 14px;
+    margin: 4px 2px;
+    cursor: pointer;
+    border-radius: 4px;
+  }
+  
+  button:hover {
+    background-color: #67864a;
+  }
+  
+  #expenseChart {
+    max-width: 400px;
+    height: 400px;
+    margin: 0 auto;
+  }
+  
+  .statistics {
+    margin-top: 20px;
+  }
+  
+  .chart-container {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    height: 420px;
+    margin-top: 20px;
+  }
+  
+  .my-content {
+    max-width: 800px;
+    margin: 50px auto;
+  }
+  
+  .date-content {
+    display: none;
+  }
+
+
+/* Модальное окно */
+.modal {
+  display: none; /* Скрыто по умолчанию */
+  position: fixed; /* Остается на месте */
+  z-index: 1050; /* Находится над другими элементами */
+  left: 0;
+  top: 0;
+  width: 100%; /* Полная ширина */
+  height: 100%; /* Полная высота */
+  overflow: auto; /* Включить прокрутку при необходимости */
+  background-color: rgba(0, 0, 0, 0.5); /* Черный фон с непрозрачностью */
 }
 
-label {
-  color: white;
+/* Содержимое модального окна */
+.modal-content {
+  background-color: rgba(26, 26, 26, 0.7); /* Полупрозрачный черный фон */
+  margin: 15% auto; /* 15% от верха и по центру */
+  padding: 20px;
+  border: 1px solid #d4af37; /* Граница с золотым цветом */
+  width: 40%; /* Может быть больше или меньше в зависимости от размера экрана */
+  border-radius: 4px; /* Скругленные углы */
+  display: flex; /* Используем flexbox */
+  flex-direction: column; /* Элементы выстраиваются в колонку */
+  align-items: center; /* Центрирование элементов по горизонтали */
 }
-
-.form-control {
-  font-size: 16px;
-  height: 40px;
-}
-.error-message {
-  color: white;
-}
-
-.event-day a.ui-state-default {
-  background-color: green;
-}
-
 
 #selected-users-list div {
   display: inline-block;
@@ -93,61 +366,126 @@ label {
   border-radius: 5px;
 }
 
-.card {
-  background-color: rgba(255, 255, 255, 0.5);  /* полупрозрачный белый */
-}
-.card-title a {
-  font-size: 1.5rem;  /* Увеличиваем размер шрифта до 2rem, можно настроить по своему усмотрению */
-}
-
-.card-body li a {
-  color: black; /* Церный цвет текста */
-  text-decoration: none; /* Убираем подчеркивание */
-}
-
-.card-body li a:hover {
-  color: grey; /* Цвет текста при наведении */
-  text-decoration: underline; /* Подчеркивание при наведении */
+/* Кнопка закрыть */
+.close {
+  color: #aaa;
+  float: right;
+  font-size: 28px;
+  font-weight: bold;
+  position: absolute;
+  top: 10px; /* Расстояние от верха модального окна */
+  right: 10px; /* Расстояние от правого края модального окна */
+  color: #d4af37; /* Цвет кнопки, можно настроить */
 }
 
-
-.btn {
-  background-color: rgba(255, 255, 255, 0.5);  /* 80% непрозрачный белый */
-  color: #000;  /* черный текст */
-  border: 1px solid rgba(204, 204, 204, 0.5);  /* полупрозрачная серая рамка */
-  transition: background-color 0.3s ease;  /* плавное изменение цвета фона при наведении */
+.close:hover,
+.close:focus {
+  color: black;
+  text-decoration: none;
+  cursor: pointer;
 }
 
-.btn:hover {
-  background-color: rgba(245, 245, 245, 0.8);  /* 80% непрозрачный светло-серый при наведении */
+/* Кнопка для подтверждения выбора */
+.btn-primary {
+  background-color: #d4af37; /* Золотой фон */
+  color: #1a1a1a; /* Черный текст */
+  border: none;
+  padding: 10px 20px;
+  border-radius: 4px;
+  transition: background-color 0.3s ease;
 }
 
-.form-control:focus {
-  border-color: #ccc;  /* цвет границы при фокусе */
-  outline: none;       /* убирает стандартный контур браузера */
-  box-shadow: none;    /* убирает тень (если она используется, например, в Bootstrap) */
+.btn-primary:hover {
+  background-color: #b28834; /* Темно-золотой фон при наведении */
 }
 
-.delivery-nav-link {
-  color: rgb(231, 235, 5);
+
+.form-check-label {
+  color: #d4af37; /* Золотой цвет текста для меток */
 }
 
-.delivery-nav-link:hover {
-  color: rgb(250, 255, 10);  /* или другой цвет при наведении */
+/* Стили для обертки формы с радио-кнопками и метками */
+.form-check {
+  display: flex; /* Используем flexbox для выравнивания элементов в строку */
+  align-items: center; /* Центрируем элементы по вертикали */
+  margin-right: 15px; /* Добавляем немного пространства справа */
 }
 
-.delivery-nav-link.active {
-  color: rgb(50, 50, 50);  /* Цвет активной ссылки */
+/* Стили для радио-кнопок */
+.form-check-input {
+  margin-right: 10px; /* Добавляем немного пространства справа от радио-кнопки */
 }
 
-.pickup-nav-link, .menu-nav-link {
-  color: rgb(231, 235, 5);
+/* Стили для меток радио-кнопок */
+.form-check-label {
+  margin-bottom: 0; /* Убираем стандартный нижний отступ у меток */
 }
 
-.pickup-nav-link:hover, .menu-nav-link:hover {
-  color: rgb(250, 255, 10);  /* или другой цвет при наведении */
+
+/* Стили для модального окна */
+.modal-content {
+  background-color: #1a1a1a;
+  border: 1px solid #d4af37;
+  color: #d4af37;
 }
 
-.pickup-nav-link.active, .menu-nav-link.active {
-  color: rgb(50, 50, 50);  /* Цвет активной ссылки */
+.modal-header .modal-title {
+  color: #d4af37;
+}
+
+.modal-header .close {
+  color: #d4af37;
+}
+
+.modal-body .form-control {
+  background-color: rgba(255, 255, 255, 0.1);
+  color: #f5e6c8;
+  border: 1px solid #ddd;
+}
+
+.modal-body label {
+  color: #d4af37;
+}
+
+.modal-dialog {
+  max-width: 800px; /* Увеличьте ширину модального окна */
+  margin: 30px auto;
+  max-height: 90%; /* Максимальная высота относительно экрана */
+  overflow-y: auto; /* Позволяет скроллингу внутри модального окна */
+}
+
+.modal-content {
+  max-height: 90vh; /* Проценты от высоты видимой области экрана */
+  overflow-y: auto; /* Позволяет скроллирование, если содержимое превышает высоту */
+}
+
+
+.modal-backdrop {
+  display: none;
+}
+
+#users-select {
+  height: 150px; /* Устанавливаем желаемую высоту */
+}
+
+#tip-form {
+  margin-top: 1px; /* Пример уменьшения отступа сверху для формы */
+}
+
+#expenseChart {
+  max-width: 400px;
+  height: 400px;  /* или другое значение, которое вам подходит */
+  margin: 0 auto;
+}
+
+.statistics {
+  margin-top: 20px;  /* добавляем отступ сверху */
+}
+
+.chart-container {
+  display: flex;
+  justify-content: center; 
+  align-items: center;
+  height: 420px;  /* увеличиваем высоту, чтобы диаграмма не перекрывала текст */
+  margin-top: 20px;  /* добавляем отступ сверху */
 }

@@ -1,0 +1,200 @@
+{% extends "base_cart.html" %}
+{% load custom_tags %}
+{% load static %}
+
+{% block order_header %}
+<link rel="stylesheet" href="{% static 'css/style.css' %}">
+<div class="container">
+    <div class="my-4">
+        <a href="{% url 'menu' table_id=order.table.table_id category='salads' %}" class="btn btn-primary">Меню</a>
+        <a href="{% url 'room_detail' room_id=table.room.id %}" class="btn btn-primary d-inline-block">Комната</a>
+    </div>
+    <h1 class="my-4" style="color: white;">Информация о заказе</h1>
+    <p style="color: white; font-size: 20px;">Номер стола: {{ order.table.table_id }}</p>
+</div>
+{% endblock order_header %}
+
+{% block order_items %}
+{% csrf_token %}
+{% for order_item in order.order_items.all %}
+<tr>
+    <td>
+        {% for log in order_logs %}
+            {% if log.product_name == order_item.product.product_name_rus %}
+            <div style="color: white;">
+                {{ log.change_time|date:"H:i" }} - {{ log.get_action_display }}
+            </div>
+            {% endif %}
+        {% endfor %}
+    </td>
+    
+    <td>
+        <form class="form-with-checkbox" method="POST" action="{% url 'update_delivery_status' order_item.id %}">
+            {% csrf_token %}
+            <input type="checkbox" class="big-checkbox no-box-shadow" name="is_delivered" onchange="this.form.submit()" {% if order_item.is_delivered %} checked {% endif %}>
+        </form>
+    </td>     
+    <td style="color: rgb(231, 235, 5);">{{ order_item.product.product_name_rus }}</td>
+    <td id="order-item-{{ order_item.id }}-quantity" style="color: white;" hx-get="{% url 'get_order_item_quantity' order.id order_item.id %}">{{ order_item.quantity|append_grams:order_item.product.product_name_rus }}</td>
+    <td style="color: rgb(255, 255, 255);">{{ order_item.product.product_price }}₪</td>
+    <td class="product-quantity">
+        <button type="button" class="btn1" onclick="event.preventDefault(); document.getElementById('add-form-{{ order_item.id }}').submit();">Добавить</button>
+        <form id="add-form-{{ order_item.id }}" method="POST" action="{% url 'increase_product_in_order' order.id order_item.id %}" style="display: none;">
+            {% csrf_token %}
+            <input type="hidden" name="product_id" value="{{ order_item.product.id }}">
+        </form>
+        <button type="button" class="btn1" onclick="location.href='{% url 'password_check' order.id 'decrease' order_item.id %}'">Убавить</button>
+        <button type="button" class="btn1" onclick="location.href='{% url 'password_check' order.id 'delete' order_item.id %}'">Удалить</button>
+    </td>
+</tr>
+{% endfor %}
+{% endblock order_items %}
+
+{% block payment_method %}
+<form id="payment-form" method="post" action="{% url 'cart_detail' order.id %}">
+    {% csrf_token %}
+    <label class="form-group" style="color: rgb(238, 4, 4); font-size: 26px;">Метод Оплаты:</label>
+    <div id="split-payment-inputs" style="display: none;">
+        <input type="number" name="cash_amount" id="cash-amount" placeholder="Сумма Наличкой" oninput="checkPaymentSum()" />
+        <input type="number" name="card_amount" id="card-amount" placeholder="Сумма Картой" oninput="checkPaymentSum()" />
+    </div>
+    <div class="d-flex align-items-center mb-2">
+        <div class="text-left mr-2">
+            <input type="checkbox" id="split-payment" onchange="toggleSplitPayment()" />
+            <label for="split-payment" style="color: rgb(238, 4, 4);">Разделить платеж</label>
+        </div>
+        <div class="form-check text-left mr-2">
+            <input class="form-check-input" type="radio" name="payment_method" id="cash" value="cash" onchange="toggleSplitPayment(false)">
+            <label class="form-check-label" for="cash" style="color: rgb(238, 4, 4);">
+                Наличные
+            </label>
+        </div>
+        <div class="form-check text-left">
+            <input class="form-check-input" type="radio" name="payment_method" id="credit_card" value="card" onchange="toggleSplitPayment(false)">
+            <label class="form-check-label" for="credit_card" style="color: rgb(238, 4, 4);">
+                Кредитная карта
+            </label>
+        </div>
+    </div>
+
+    <div class="d-flex flex-row mb-2">
+        <button type="submit" id="pay-button" class="btn btn-primary mr-2">Оплатить</button>
+        <button type="button" id="print-kitchen" name="print-kitchen" class="btn btn-primary mr-2">Подтвердить Заказ</button>
+        {% if is_not_desktop %}
+            <button type="button" class="btn btn-primary" onclick="sendNotificationToAdmin({{ order.id }})">Отправить распечатать</button>
+        {% else %}
+            <button type="button" class="btn btn-primary" onclick="printInvoice({{ order.id }})">Распечатать Счет</button>
+        {% endif %}
+    </div>
+</form>
+
+<!-- Отображение частичных платежей и оставшейся суммы -->
+<div id="partial-payment-info">
+    <p style="color: white; font-size: 18px;">
+        Наличные: {{ partial_cash }}₪ <br>
+        Картой: {{ partial_card }}₪ <br>
+        Осталось заплатить: {{ remaining_total }}₪
+    </p>
+</div>
+{% endblock payment_method %}
+
+{% block script %}
+<script src="https://unpkg.com/htmx.org/dist/htmx.min.js"></script>
+<script src="{% static 'scripts/cart_detail.js' %}"></script>
+<script>
+    var orderId = '{{ order.id }}';
+    var printKitchenUrl = '{% url "print_kitchen" %}';
+    var remainingTotal = {{ remaining_total|floatformat:2 }};
+
+    function sendNotificationToAdmin(orderId) {
+        fetch('/path-to-send-notification/' + orderId, { method: 'POST' })
+            .then(response => {
+                if (response.ok) {
+                    alert('Уведомление администратору отправлено.');
+                } else {
+                    alert('Ошибка при отправке уведомления.');
+                }
+            })
+            .catch(error => console.error('Ошибка:', error));
+    }
+
+    document.addEventListener('DOMContentLoaded', function() {
+        var paymentMethodInputs = document.querySelectorAll('input[name="payment_method"]');
+        var payButton = document.getElementById('pay-button');
+        var tableId = '{{ order.table.table_id }}';
+
+        function checkPaymentMethod() {
+            var isPaymentMethodSelected = Array.from(paymentMethodInputs).some(input => input.checked);
+            payButton.disabled = !isPaymentMethodSelected;
+        }
+
+        paymentMethodInputs.forEach(function(input) {
+            input.addEventListener('change', checkPaymentMethod);
+        });
+
+        checkPaymentMethod(); 
+    });
+
+    function toggleSplitPayment(isSplit = true) {
+        var splitPaymentInputs = document.getElementById('split-payment-inputs');
+        var partialPaymentInfo = document.getElementById('partial-payment-info');
+        var splitPaymentChecked = document.getElementById('split-payment').checked;
+
+        splitPaymentInputs.style.display = isSplit && splitPaymentChecked ? 'block' : 'none';
+        partialPaymentInfo.style.display = isSplit && splitPaymentChecked ? 'block' : 'none';
+    }
+
+    function checkPaymentSum() {
+        var cashAmount = parseFloat(document.getElementById('cash-amount').value) || 0;
+        var cardAmount = parseFloat(document.getElementById('card-amount').value) || 0;
+        var totalPayment = cashAmount + cardAmount;
+        var partialPaymentInfo = document.getElementById('partial-payment-info');
+
+        if (totalPayment < remainingTotal) {
+            partialPaymentInfo.innerHTML = `
+                <p style="color: white; font-size: 18px;">
+                    Наличные: ${cashAmount}₪ <br>
+                    Картой: ${cardAmount}₪ <br>
+                    Осталось заплатить: ${remainingTotal - totalPayment}₪
+                </p>`;
+            partialPaymentInfo.style.display = 'block';
+        } else {
+            partialPaymentInfo.style.display = 'none';
+        }
+    }
+</script>
+<style>
+    .big-checkbox {
+        transform: scale(1.5);
+    }
+    form .big-checkbox {
+        background: transparent; 
+        border: none; 
+    }
+    td form {
+        background: transparent; 
+        display: flex; 
+        justify-content: center; 
+        align-items: center; 
+    }
+    td form .big-checkbox {
+        background: transparent; 
+        border: none; 
+        flex-shrink: 0; 
+    }
+    td .form-with-checkbox {
+        display: flex; 
+        justify-content: center; 
+        align-items: center; 
+        height: 100%; 
+        background: transparent; 
+        margin: 0; 
+    }
+    td .form-with-checkbox .big-checkbox {
+        transform: scale(1.5); 
+        background: transparent; 
+        border: none; 
+        flex-shrink: 0; 
+    }
+</style>
+{% endblock script %}

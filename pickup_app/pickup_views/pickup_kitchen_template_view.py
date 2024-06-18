@@ -24,7 +24,10 @@ def pickup_kitchen_view(request, phone_number, order_id):
     context = {'order': order, 'cart_items': cart_items, }
     return render(request, 'pickup_kitchen_template.html', context)
 
-import cups
+import sys
+
+if sys.platform != "win32":  # Проверяем, что ОС не Windows
+    import cups
 import tempfile
 import os
 

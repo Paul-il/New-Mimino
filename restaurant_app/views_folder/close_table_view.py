@@ -16,7 +16,8 @@ def close_table_view(request):
         table = order.table
         table.is_available = True
         table.save()
-
         return redirect('rooms')
+
     else:
         return HttpResponse("Not Supported Method")
+    

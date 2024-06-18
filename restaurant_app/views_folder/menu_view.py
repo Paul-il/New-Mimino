@@ -34,12 +34,10 @@ CATEGORIES = {
 @login_required
 def menu_view(request, table_id, category):
     table = get_object_or_404(Table, table_id=table_id)
+    products = Product.objects.filter(category=category)
     product_quantity_form = ProductQuantityForm()
     active_order = table.orders.filter(is_completed=False).first()
-    active_order_pk = table.orders.filter(is_completed=False).first().pk if table.orders.filter(is_completed=False).exists() else None
-
-
-    products = Product.objects.filter(category=category)
+    active_order_pk = active_order.pk if active_order else None
     order_id = request.GET.get('order_id')
 
     context = {
@@ -53,48 +51,6 @@ def menu_view(request, table_id, category):
         'active_order_pk': active_order_pk,
         'has_active_orders': bool(active_order),
     }
-
-    if request.method == 'POST':
-        product_id = request.POST.get('product_id')
-        quantity = request.POST.get('quantity')
-        product = get_object_or_404(Product, pk=product_id)
-
-        if active_order:
-            # Add the product to the existing active order
-            order_item, _ = OrderItem.objects.get_or_create(order=active_order, product=product)
-            if quantity is not None:
-                order_item.quantity = int(quantity)
-
-            order_item.save()
-            messages.success(request, f"{quantity} {order_item.product.product_name_rus} добавлено в корзину.")
-
-
-        else:
-            # Create a new active order and add the product to it
-            active_order = Order.objects.create(table=table, created_by=request.user, table_number=table.table_id)
-            order_item, _ = OrderItem.objects.get_or_create(order=active_order, product=product)
-            if quantity is not None:
-                order_item.quantity = int(quantity)
-            order_item.save()
-            messages.success(request, f"{quantity} {order_item.product.product_name_rus} добавлено в корзину.")
-
-
-        # Set the context variable for the active order after the update
-        context['active_order'] = active_order
-
-        # Get the category filter from the POST parameters or use the default value
-        category = request.POST.get('category', 'salads')
-
-        # Add the category to the parameters of the redirect
-        redirect_url = reverse('menu', kwargs={'table_id': table_id, 'category': category})
-        if order_id:
-            redirect_url += f'?order_id={order_id}'
-        return redirect(redirect_url)
-
-    if table:
-        context['order_id'] = f'{table_id}?order_id={order_id}&category={category}'
-
-    context['order_item_form'] = OrderItemForm()
 
     return render(request, 'menu.html', context=context)
 
@@ -121,23 +77,6 @@ def menu_for_waiter_view(request, category):
         'active_order_pk': active_order_pk,
         'has_active_orders': bool(active_order),
     }
-
-    if request.method == 'POST':
-        product_id = request.POST.get('product_id')
-        quantity = request.POST.get('quantity')
-        product = get_object_or_404(Product, pk=product_id)
-
-        order_item, _ = OrderItem.objects.get_or_create(waiter_order=active_order, product=product)
-
-        if quantity is not None:
-            order_item.quantity = int(quantity)
-        order_item.save()
-        messages.success(request, f"{quantity} {order_item.product.product_name_rus} добавлено в корзину.")
-
-        context['active_order'] = active_order
-        category = request.POST.get('category', 'salads')
-        redirect_url = reverse('menu_for_waiter', kwargs={'category': category})
-        return redirect(redirect_url)
 
     context['order_item_form'] = OrderItemForm()
     return render(request, 'menu_for_waiter.html', context=context)

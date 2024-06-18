@@ -1,0 +1,356 @@
+Mimino/
+└── import_excel.py
+└── manage.py
+    treee.py
+├── .vscode/
+├── delivery_app/
+│   └── admin.py
+│   └── apps.py
+│   └── forms.py
+│   └── models.py
+│   └── tests.py
+│   └── urls.py
+│   └── views.py
+│       __init__.py
+│   ├── migrations/
+│   │   └── 0001_initial.py
+│   │   └── 0002_alter_deliverycart_delivery_order.py
+│   │   └── 0003_alter_deliverycartitem_delivery_order.py
+│   │   └── 0004_alter_deliverycartitem_cart.py
+│   │   └── 0005_alter_deliverycartitem_delivery_order.py
+│   │   └── 0006_alter_deliverycustomer_street.py
+│   │   └── 0007_alter_deliverycustomer_name_and_more.py
+│   │   └── 0008_deliveryorder_payment_method.py
+│   │   └── 0009_alter_deliverycustomer_intercom_code.py
+│   │   └── 0010_alter_deliverycustomer_city.py
+│   │   └── 0011_alter_deliverycustomer_city.py
+│   │   └── 0012_deliverycartitem_printed_quantity.py
+│   │   └── 0013_courier.py
+│   │   └── 0014_deliveryorder_courier.py
+│   │   └── 0015_courier_delivery_address_courier_delivery_amount_and_more.py
+│   │   └── 0016_deliveryorder_total_amount_and_more.py
+│   │   └── 0017_alter_deliveryorder_payment_method.py
+│   │   └── 0018_alter_courier_name.py
+│   │   └── 0019_deliveryorder_delivery_date_and_more.py
+│   │   └── 0020_alter_courier_name.py
+│   │   └── 0021_alter_courier_name.py
+│   │       __init__.py
+│   ├── templates/
+│   │   └── add_delivery_customer.html
+│   │   └── check_delivery_customer.html
+│   │   └── check_delivery_number.html
+│   │   └── delivery_cart.html
+│   │   └── delivery_empty_cart.html
+│   │   └── delivery_kitchen_template.html
+│   │   └── delivery_menu.html
+│   │   └── delivery_pdf_template.html
+│   │   └── delivery_results.html
+│   │   └── delivery_search.html
+│   │   └── delivery_summary.html
+│   │   └── error_page.html
+│   │   └── future_orders_template.html
+│   │       later_delivery.html
+│   ├── view/
+│   │   └── add_delivery_customer_views.py
+│   │   └── check_delivery_customer_views.py
+│   │   └── clear_solo_dept.py
+│   │   └── delivery_cart_views.py
+│   │   └── delivery_close_cart.py
+│   │   └── delivery_kitchen_template_view.py
+│   │   └── delivery_menu_views.py
+│   │   └── delivery_process.py
+│   │   └── delivery_search_view.py
+│   │   └── delivery_summary.py
+│   │   └── delivery_template_pdf.py
+│   │   └── delivery_views.py
+│   │   └── for_later_delivery_view.py
+│   │   └── future_orders_view.py
+│   │       telegram_webhook_view.py
+├── expenses/
+│   └── admin.py
+│   └── apps.py
+│   └── models.py
+│   └── tests.py
+│   └── urls.py
+│   └── views.py
+│       __init__.py
+│   ├── migrations/
+│   │   └── 0001_initial.py
+│   │   └── 0002_rename_paymentmethod_paymethod.py
+│   │   └── 0003_remove_transaction_category_and_more.py
+│   │       __init__.py
+│   ├── static/
+│   │   ├── css/
+│   │   ├── images/
+│   │   ├── js/
+│   ├── templates/
+│   │   └── base_transaction.html
+│   │       transaction_list.html
+│   │   ├── admin/
+│   │   │   ├── transactions/
+│   │   │   │       change_list.html
+│   ├── view/
+│   │       transactions.py
+├── media/
+│   ├── orders_files/
+│   ├── product_images/
+├── order_statistics/
+│   └── admin.py
+│   └── apps.py
+│   └── models.py
+│   └── statistics.py
+│   └── tests.py
+│   └── urls.py
+│   └── views.py
+│       __init__.py
+│   ├── migrations/
+│   │   └── 0001_initial.py
+│   │       __init__.py
+│   ├── templates/
+├── pickup_app/
+│   └── admin.py
+│   └── apps.py
+│   └── forms.py
+│   └── models.py
+│   └── tests.py
+│   └── urls.py
+│       __init__.py
+│   ├── migrations/
+│   │   └── 0001_initial.py
+│   │   └── 0002_remove_cartitem_pickup_order.py
+│   │   └── 0003_cartitem_printed_quantity.py
+│   │   └── 0004_pickuporder_total_amount.py
+│   │   └── 0005_pickuporder_payment_method.py
+│   │   └── 0006_pickuporder_cart_snapshot.py
+│   │       __init__.py
+│   ├── pickup_views/
+│   │   └── pdf_template_view.py
+│   │   └── pickup_cart_view.py
+│   │   └── pickup_create_view.py
+│   │   └── pickup_kitchen_template_view.py
+│   │   └── pickup_menu_view.py
+│   │   └── pickup_pdf_views.py
+│   │       pickup_search_view.py
+│   ├── templates/
+│   │   └── pickup_cart.html
+│   │   └── pickup_create.html
+│   │   └── pickup_empty_cart.html
+│   │   └── pickup_kitchen_template.html
+│   │   └── pickup_menu.html
+│   │   └── pickup_pdf_template.html
+│   │   └── pickup_search.html
+│   │       pickup_search_results.html
+├── restaurant_app/
+│   └── admin.py
+│   └── apps.py
+│   └── booking_context.py
+│   └── context_processors.py
+│   └── forms.py
+│   └── tests.py
+│   └── views.py
+│       __init__.py
+│   ├── management/
+│   │   ├── commands/
+│   │   │       exportorders.py
+│   ├── migrations/
+│   │   └── 0001_initial.py
+│   │   └── 0002_auto_20230324_2130.py
+│   │   └── 0003_order_created_by.py
+│   │   └── 0004_alter_order_created_by.py
+│   │   └── 0005_alter_product_category.py
+│   │   └── 0006_booking_alcohol_booking_extras_booking_portion_and_more.py
+│   │   └── 0007_alter_product_category.py
+│   │   └── 0008_product_additional_option_1_price_and_more.py
+│   │   └── 0009_remove_product_additional_option_1_price_and_more.py
+│   │   └── 0010_remove_booking_alcohol_remove_booking_extras_and_more.py
+│   │   └── 0011_orderitem_printed_quantity_alter_product_category.py
+│   │   └── 0012_order_comments.py
+│   │   └── 0013_order_last_printed_comments.py
+│   │   └── 0014_order_total_price.py
+│   │   └── 0015_order_table_number.py
+│   │   └── 0016_tip.py
+│   │   └── 0017_userprofile.py
+│   │   └── 0018_product_is_available.py
+│   │   └── 0019_tipgoal.py
+│   │   └── 0020_booking_guests_did_not_arrive.py
+│   │   └── 0021_remove_tip_user_tip_users.py
+│   │   └── 0022_remove_tip_users_tipdistribution.py
+│   │   └── 0023_room_table_room.py
+│   │   └── 0024_product_printer.py
+│   │   └── 0025_alter_product_product_img.py
+│   │   └── 0026_alter_product_printer.py
+│   │   └── 0027_alter_product_printer.py
+│   │   └── 0028_alter_product_printer.py
+│   │   └── 0029_alter_tipdistribution_unique_together.py
+│   │   └── 0030_tip_order.py
+│   │   └── 0031_alter_product_category.py
+│   │   └── 0032_alter_product_category.py
+│   │   └── 0033_order_user_alter_order_created_by.py
+│   │   └── 0034_remove_order_user_waiterorder.py
+│   │   └── 0035_orderitem_waiter_order.py
+│   │   └── 0036_alter_orderitem_order.py
+│   │   └── 0037_waiterorder_last_printed_comments.py
+│   │   └── 0038_product_preparation_time.py
+│   │   └── 0039_order_num_of_people.py
+│   │   └── 0040_category_paymentmethod_transaction.py
+│   │   └── 0041_orderchangelog.py
+│   │   └── 0042_order_card_amount_order_cash_amount.py
+│   │   └── 0043_alter_order_payment_method.py
+│   │   └── 0044_order_payment_processed.py
+│   │   └── 0045_alter_paymentmethod_method.py
+│   │   └── 0046_alter_paymentmethod_method.py
+│   │   └── 0047_transaction_card_amount_transaction_cash_amount.py
+│   │   └── 0048_alter_paymentmethod_method.py
+│   │   └── 0049_alter_transaction_added_date_alter_transaction_date.py
+│   │   └── 0050_alter_transaction_added_date_alter_transaction_date.py
+│   │   └── 0051_room_max_capacity.py
+│   │   └── 0052_order_is_confirmed.py
+│   │   └── 0053_order_is_bill_printed.py
+│   │   └── 0054_orderitem_discount_percentage.py
+│   │   └── 0055_productstock.py
+│   │   └── 0056_orderitem_is_delivered.py
+│   │   └── 0057_alter_orderchangelog_action.py
+│   │   └── 0058_orderchangelog_order_item.py
+│   │   └── 0059_alter_orderchangelog_action.py
+│   │   └── 0060_alter_orderchangelog_action.py
+│   │   └── 0061_alter_orderchangelog_action.py
+│   │   └── 0062_alter_orderchangelog_options.py
+│   │   └── 0063_orderchangelog_changed_by.py
+│   │       __init__.py
+│   ├── models/
+│   │   └── message.py
+│   │   └── orders.py
+│   │   └── product.py
+│   │   └── tables.py
+│   │       __init__.py
+│   ├── static/
+│   │   ├── css/
+│   │   ├── fonts/
+│   │   ├── img/
+│   │   │   ├── bakery/
+│   │   │   ├── beer/
+│   │   │   ├── cognac/
+│   │   │   ├── delivery/
+│   │   │   ├── dessert/
+│   │   │   ├── dessert_drinks/
+│   │   │   ├── first_dish/
+│   │   │   ├── garnish/
+│   │   │   ├── grill_meat/
+│   │   │   ├── khachapuri/
+│   │   │   ├── khinkali/
+│   │   │   ├── meat_dishes/
+│   │   │   ├── salads/
+│   │   │   ├── soft_drinks/
+│   │   │   ├── soups/
+│   │   │   ├── vodka/
+│   │   │   ├── whisky/
+│   │   │   ├── wine/
+│   │   ├── scripts/
+│   ├── tables/
+│   │       tasks.py
+│   ├── templates/
+│   │   └── add_stock.html
+│   │   └── ask_where.html
+│   │   └── base.html
+│   │   └── base_cart.html
+│   │   └── bookings.html
+│   │   └── book_table.html
+│   │   └── cart_detail.html
+│   │   └── edit_booking.html
+│   │   └── empty_order_detail.html
+│   │   └── error.html
+│   │   └── find_product.html
+│   │   └── index.html
+│   │   └── kitchen_template.html
+│   │   └── manage_products.html
+│   │   └── menu.html
+│   │   └── menu_for_waiter.html
+│   │   └── number_of_people_form.html
+│   │   └── order_statistics.html
+│   │   └── order_summary.html
+│   │   └── password_check.html
+│   │   └── pdf_template.html
+│   │   └── recommendations.html
+│   │   └── rooms.html
+│   │   └── room_detail.html
+│   │   └── search.html
+│   │   └── search_results.html
+│   │   └── tables.html
+│   │   └── table_order.html
+│   │   └── tip.html
+│   │   └── user_detail.html
+│   │   └── user_summary.html
+│   │       waiter_cart.html
+│   │   ├── admin/
+│   │   │       change_list.html
+│   ├── templatetags/
+│   │       custom_tags.py
+│   ├── views_folder/
+│   │   └── add_stock_view.py
+│   │   └── ask_where_views.py
+│   │   └── book_table_view.py
+│   │   └── cart_view.py
+│   │   └── close_table_view.py
+│   │   └── confirm_order_view.py
+│   │   └── find_product.py
+│   │   └── kitchen_template.py
+│   │   └── login_view.py
+│   │   └── manage_products_view.py
+│   │   └── menu_view.py
+│   │   └── order_statistics_view.py
+│   │   └── order_summary.py
+│   │   └── pdf_template_view.py
+│   │   └── pdf_view.py
+│   │   └── recommend_view.py
+│   │   └── room_view.py
+│   │   └── search_product.py
+│   │   └── search_view.py
+│   │   └── set_bill_printed_view.py
+│   │   └── tables_view.py
+│   │   └── tip_view.py
+│   │       user_summary_view.py
+├── restaurant_project/
+│   └── asgi.py
+│   └── celery.py
+│   └── settings.py
+│   └── tasks.py
+│   └── urls.py
+│   └── wsgi.py
+│       __init__.py
+├── sales/
+│   └── admin.py
+│   └── apps.py
+│   └── models.py
+│   └── tests.py
+│   └── urls.py
+│   └── views.py
+│       __init__.py
+│   ├── migrations/
+│   │   └── 0001_initial.py
+│   │       __init__.py
+│   ├── templates/
+│   │       statistics.html
+├── staticfiles/
+│   ├── admin/
+│   │   ├── css/
+│   │   │   ├── vendor/
+│   │   │   │   ├── select2/
+│   │   ├── fonts/
+│   │   ├── img/
+│   │   │   ├── gis/
+│   │   ├── js/
+│   │   │   ├── admin/
+│   │   │   ├── vendor/
+│   │   │   │   ├── jquery/
+│   │   │   │   ├── select2/
+│   │   │   │   │   ├── i18n/
+│   │   │   │   ├── xregexp/
+│   ├── css/
+│   ├── fonts/
+│   ├── images/
+│   ├── img/
+│   │   ├── delivery/
+│   │   ├── first_dish/
+│   │   ├── salads/
+│   ├── js/
+│   ├── scripts/

@@ -1,0 +1,42 @@
+{% extends "admin/change_list.html" %}
+{% load i18n %}
+
+{% block result_list %}
+    {% if total_income %}
+        <div style="margin: 10px 0;">
+            <strong>{% trans "Total Income:" %}</strong> {{ total_income }}
+        </div>
+    {% endif %}
+    <div style="margin: 10px 0;">
+        <strong>{% trans "Total Income of Selected:" %}</strong> <span id="selected_total_income">0</span>
+    </div>
+    {{ block.super }}
+{% endblock %}
+
+{% block extra_js %}
+{{ block.super }}
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    function updateTotalIncome() {
+        let total = 0;
+        // Пройдите по всем выбранным чекбоксам
+        document.querySelectorAll('input[name="_selected_action"]:checked').forEach(function(checkbox) {
+            const row = checkbox.closest('tr');
+            // Получите значение колонки AMOUNT для этой строки
+            const amount = parseFloat(row.querySelector('.field-amount').textContent.trim());
+            total += amount;
+        });
+        // Обновите отображаемую общую сумму
+        document.getElementById('selected_total_income').textContent = total.toFixed(2);
+    }
+
+    // Подписывайтесь на событие изменения для всех чекбоксов
+    document.querySelectorAll('input[name="_selected_action"]').forEach(function(checkbox) {
+        checkbox.addEventListener('change', updateTotalIncome);
+    });
+
+    // Подписывайтесь на событие изменения для чекбокса "выбрать все"
+    document.querySelector('input#action-toggle').addEventListener('change', updateTotalIncome);
+});
+</script>
+{% endblock %}

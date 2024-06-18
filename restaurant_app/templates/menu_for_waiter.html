@@ -10,7 +10,7 @@
 
     <div class="my-4">
         {% if user.user_orders.last %}
-        <a href="{% url 'order_detail' order_id=user.user_orders.last.id %}" type="submit" class="btn btn-primary d-inline-block mr-3">Корзина</a>
+        <a href="{% url 'cart_detail' order_id=user.user_orders.last.id %}" type="submit" class="btn btn-primary d-inline-block mr-3">Корзина</a>
         {% endif %}
         <a href="{% url 'waiter_cart' %}" class="btn btn-primary d-inline-block mr-3">Корзина официанта</a>
     </div>

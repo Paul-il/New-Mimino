@@ -5,7 +5,11 @@ from django.http import HttpResponse, JsonResponse
 from django.template.loader import render_to_string
 from django.utils import timezone
 from bs4 import BeautifulSoup
-import cups
+import sys
+
+if sys.platform != "win32":  # Проверяем, что ОС не Windows
+    import cups
+    
 import tempfile
 from django.conf import settings
 import os

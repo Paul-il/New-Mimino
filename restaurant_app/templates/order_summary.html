@@ -6,6 +6,15 @@
 {% block content %}
 <div class="container my-5">
     <h1 class="mb-4" style="color: white;">Сводка Заказов на Сегодня</h1>
+    
+    <div class="date-selection mb-3">
+        <form method="GET" action="{% url 'order_summary' %}">
+            <label for="date">Выберите дату:</label>
+            <input type="date" id="date" name="date" required>
+            <input type="submit" value="Показать">
+        </form>
+    </div>
+
     <table id="orderSummaryTable" class="table table-striped">
         <thead>
             <tr>
@@ -13,17 +22,8 @@
                 <th scope="col" style="color: white; font-size: 15px;">Количество</th>
                 <th scope="col" style="color: white; font-size: 15px;">Общая Сумма</th>
             </tr>
-            
         </thead>
         <tbody>
-            <div class="date-selection">
-                <form method="GET" action="{% url 'order_summary' %}">
-                    <label for="date">Выберите дату:</label>
-                    <input type="date" id="date" name="date" required>
-                    <input type="submit" value="Показать">
-                </form>
-            </div>
-            
             <tr>
                 <td>Заказы в Ресторане</td>
                 <td>{{ total_orders_today }}</td>
@@ -42,16 +42,16 @@
         </tbody>
         <tfoot>
             <tr>
-                <th  style="color: white;">Всего</th>
-                <th  style="color: white;">{{ total_all_orders_today }}</th>
-                <th  style="color: white;">{{ total_all_orders_sum }}</th> <!-- Общая сумма всех заказов -->
+                <th style="color: white;">Всего</th>
+                <th style="color: white;">{{ total_all_orders_today }}</th>
+                <th style="color: white;">{{ total_all_orders_sum }}</th> <!-- Общая сумма всех заказов -->
             </tr>
         </tfoot>
     </table>
 </div>
 <script>
     $(document).ready(function () {
-        var table = $('#orderSummaryTable').DataTable();
+        $('#orderSummaryTable').DataTable();
     });
 </script>
 {% endblock %}

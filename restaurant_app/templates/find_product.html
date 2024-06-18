@@ -1,0 +1,46 @@
+{% extends "base.html" %}
+{% load static %}
+{% block title %}Поиск продукта{% endblock %}
+
+{% block content %}
+<div class="container mt-4">
+    <form method="get" action="{% url 'find_products' %}" class="mb-4">
+        <input type="text" name="query" placeholder="Введите название продукта" class="form-control" required>
+        <button type="submit" class="btn btn-primary mt-2">Поиск</button>
+    </form>
+
+    {% if products %}
+        <div class="row">
+            {% for product in products %}
+            <div class="col-md-4 mb-3 clickable-card" data-url="{% url 'cart_detail' order_id=product.order.id %}">
+                <div class="card h-100 rounded-lg">
+                    <div class="card-body" style="background-color: #343a40; color: white;">
+                        <h5 class="card-title">{{ product.product.product_name_rus }}</h5>
+                        <p class="card-text">
+                            Официант: <span style="background-color: #007bff; color: white; padding: 5px; border-radius: 5px;">{{ product.order.created_by.first_name }} {{ product.order.created_by.last_name }}</span><br>
+                            Номер стола: <span style="color: rgb(231, 235, 5);">{{ product.order.table_number }}</span><br>
+                            Количество: <span style="color: rgb(231, 235, 5);">{{ product.quantity }}</span><br>
+                            Время изменения: <span style="color: rgb(231, 235, 5);">{{ product.change_time|date:"H:i" }}</span>
+                        </p>
+                    </div>
+                </div>
+            </div>
+            {% endfor %}
+
+        </div>
+    {% else %}
+        <p>Продукты не найдены.</p>
+    {% endif %}
+</div>
+<script>
+    document.addEventListener('DOMContentLoaded', function () {
+        // Поиск всех элементов с классом 'clickable-card' и добавление обработчика события 'click'
+        document.querySelectorAll('.clickable-card').forEach(card => {
+            card.addEventListener('click', function () {
+                window.location.href = this.getAttribute('data-url');  // Перенаправление на URL, указанный в data-url
+            });
+        });
+    });
+    </script>
+    
+{% endblock %}
