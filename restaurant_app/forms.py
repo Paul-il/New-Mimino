@@ -6,7 +6,63 @@ from datetime import time, timedelta, datetime
 from django.utils import timezone  # Убедимся, что timezone импортирован
 from django.core.exceptions import ValidationError
 from .models.product import ProductStock
+from .models.message import Message
 
+class CombinedFilterForm(forms.Form):
+    start_date = forms.DateField(
+        required=False,
+        widget=forms.DateInput(attrs={'class': 'form-control', 'type': 'date'})
+    )
+    end_date = forms.DateField(
+        required=False,
+        widget=forms.DateInput(attrs={'class': 'form-control', 'type': 'date'})
+    )
+    day_of_week = forms.ChoiceField(
+        choices=[
+            ('', 'Все дни недели'),
+            ('1', 'Понедельник'),
+            ('2', 'Вторник'),
+            ('3', 'Среда'),
+            ('4', 'Четверг'),
+            ('5', 'Пятница'),
+            ('6', 'Суббота'),
+            ('7', 'Воскресенье')
+        ],
+        required=False,
+        widget=forms.Select(attrs={'class': 'form-control'})
+    )
+    category = forms.ChoiceField(
+        choices=[('', 'Все категории')] + list(Product.CATEGORY_CHOICES),
+        required=False,
+        widget=forms.Select(attrs={'class': 'form-control'})
+    )
+
+class CategoryFilterForm(forms.Form):
+    category = forms.ChoiceField(
+        choices=[('', 'Все категории')] + list(Product.CATEGORY_CHOICES),
+        required=False,
+        widget=forms.Select(attrs={'class': 'form-control'})
+    )
+
+class CategorySelectForm(forms.Form):
+    category = forms.ChoiceField(
+        choices=[('', 'Выберите категорию')] + Product.CATEGORY_CHOICES,
+        required=False,
+        label='Категория'
+    )
+
+class MessageForm(forms.ModelForm):
+    class Meta:
+        model = Message
+        fields = ['body']
+        widgets = {
+            'body': forms.Textarea(attrs={'class': 'form-control'}),
+        }
+        labels = {
+            'body': 'Сообщение',
+        }
+
+        
 class ProductStockForm(forms.ModelForm):
     class Meta:
         model = ProductStock

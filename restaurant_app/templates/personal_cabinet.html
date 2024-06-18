@@ -1,0 +1,15 @@
+{% extends 'base.html' %}
+
+{% block title %}Личный кабинет{% endblock %}
+
+{% block content %}
+<h1>Личный кабинет</h1>
+<p>Добро пожаловать в ваш личный кабинет, {{ user.first_name }}!</p>
+
+<!-- Кнопка для перехода на страницу изменения пароля -->
+<h2>Настройки</h2>
+<a class="btn btn-warning" href="{% url 'change_password' %}">Изменить пароль</a>
+
+<!-- Кнопка для перехода на страницу редактирования информации -->
+<a class="btn btn-info" href="{% url 'edit_profile' %}">Редактировать личную информацию</a>
+{% endblock %}

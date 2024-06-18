@@ -1,0 +1,1051 @@
+# File: c:\Users\p4ul7\OneDrive\מסמכים\Mimino\collect_files.py
+import os
+
+def collect_files(max_lines_per_file=1000):
+    project_path = os.path.dirname(os.path.abspath(__file__))  # Определяем путь к корневой директории проекта
+    output_dir = os.path.join(project_path, 'collected_files')
+    os.makedirs(output_dir, exist_ok=True)  # Создаем директорию для выходных файлов, если она не существует
+
+    file_counter = 1
+    line_counter = 0
+    output_file = os.path.join(output_dir, f'project_files_part_{file_counter}.txt')
+    out_file = open(output_file, 'w', encoding='utf-8')
+    print(f"Creating file: {output_file}")
+
+    for root, dirs, files in os.walk(project_path):
+        for file in files:
+            if file.endswith('.py'):
+                file_path = os.path.join(root, file)
+                with open(file_path, 'r', encoding='utf-8') as f:
+                    try:
+                        code = f.readlines()
+                    except UnicodeDecodeError as e:
+                        print(f"Error reading {file_path}: {e}")
+                        continue
+                
+                if line_counter + len(code) > max_lines_per_file:
+                    out_file.close()
+                    file_counter += 1
+                    output_file = os.path.join(output_dir, f'project_files_part_{file_counter}.txt')
+                    out_file = open(output_file, 'w', encoding='utf-8')
+                    print(f"Creating file: {output_file}")
+                    line_counter = 0
+                
+                out_file.write(f"# File: {file_path}\n")  # Записываем название файла
+                out_file.writelines(code)
+                out_file.write("\n\n# End of file\n\n")
+                line_counter += len(code) + 3
+
+    out_file.close()
+
+if __name__ == "__main__":
+    collect_files()
+    print("All files collected and split into parts in the 'collected_files' directory.")
+
+
+# End of file
+
+# File: c:\Users\p4ul7\OneDrive\מסמכים\Mimino\import_excel.py
+import pandas as pd
+from django.core.management import BaseCommand
+from restaurant_app.models.orders import Order
+
+class Command(BaseCommand):
+
+    def handle(self, *args, **kwargs):
+        # Получаем все объекты Order
+        orders = Order.objects.all()
+
+        # Создаем словарь для данных
+        data = {
+            "ID": [],
+            "Table": [],
+            "Created By": [],
+            "Created At": [],
+            "Updated At": [],
+            "Is Completed": [],
+            "Comments": [],
+            "Last Printed Comments": [],
+            "Table Number": [],
+            "Total Price": [],
+            "Status": [],
+            "Payment Method": [],
+            "Total Sum": [],
+        }
+
+        # Заполняем словарь данными из каждого объекта
+        for order in orders:
+            data["ID"].append(order.pk)
+            data["Table"].append(str(order.table))
+            data["Created By"].append(order.created_by.username)
+            data["Created At"].append(order.created_at)
+            data["Updated At"].append(order.updated_at)
+            data["Is Completed"].append(order.is_completed)
+            data["Comments"].append(order.comments)
+            data["Last Printed Comments"].append(order.last_printed_comments)
+            data["Table Number"].append(order.table_number)
+            data["Total Price"].append(order.total_price)
+            data["Status"].append(order.status)
+            data["Payment Method"].append(order.payment_method)
+            data["Total Sum"].append(order.total_sum())
+
+        # Преобразуем словарь в DataFrame
+        df = pd.DataFrame(data)
+
+        # Убираем информацию о часовом поясе из столбцов с датами/временем
+        df['Created At'] = df['Created At'].dt.tz_localize(None)
+        df['Updated At'] = df['Updated At'].dt.tz_localize(None)
+
+        # Сохраняем DataFrame в файл Excel
+        df.to_excel('orders_data.xlsx', index=False, engine='openpyxl')
+
+
+# End of file
+
+# File: c:\Users\p4ul7\OneDrive\מסמכים\Mimino\manage.py
+#!/usr/bin/env python
+"""Django's command-line utility for administrative tasks."""
+import os
+import sys
+
+
+def main():
+    """Run administrative tasks."""
+    os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'restaurant_project.settings')
+    try:
+        from django.core.management import execute_from_command_line
+    except ImportError as exc:
+        raise ImportError(
+            "Couldn't import Django. Are you sure it's installed and "
+            "available on your PYTHONPATH environment variable? Did you "
+            "forget to activate a virtual environment?"
+        ) from exc
+    execute_from_command_line(sys.argv)
+
+
+if __name__ == '__main__':
+    main()
+
+
+# End of file
+
+# File: c:\Users\p4ul7\OneDrive\מסמכים\Mimino\treee.py
+import os
+
+def list_files(startpath):
+    ignore_dirs = {'.git', '__pycache__', '00'}  # Добавьте сюда другие папки, которые вы хотите игнорировать
+    tree_str = ""
+    for root, dirs, files in os.walk(startpath, topdown=True):
+        dirs[:] = [d for d in dirs if d not in ignore_dirs]  # Игнорируем не нужные директории
+        level = root.replace(startpath, '').count(os.sep)
+        indent = '│   ' * (level - 1) + '├── ' if level > 0 else ''
+        tree_str += f"{indent}{os.path.basename(root)}/\n"
+        subindent = '│   ' * level + '└── '
+        for i, file in enumerate(files):
+            if file.endswith('.py') or file.endswith('.html'):  # Учитываем только .py и .html файлы
+                if i == len(files) - 1:  # Последний файл в папке
+                    subindent = '│   ' * level + '    '
+                tree_str += f"{subindent}{file}\n"
+    return tree_str
+
+# Укажите путь к корневой директории вашего проекта
+project_root = r"C:\Users\p4ul7\OneDrive\מסמכים\Mimino"
+
+# Генерируем древовидное представление
+project_tree = list_files(project_root)
+
+# Укажите путь и имя файла, куда вы хотите сохранить древовидную структуру
+output_file = r"C:\Users\p4ul7\OneDrive\מסמכים\Mimino\project_structure.txt"
+
+# Записываем древовидную структуру в файл
+with open(output_file, 'w', encoding='utf-8') as f:
+    f.write(project_tree)
+
+print(f"Древовидная структура проекта сохранена в файл: {output_file}")
+
+
+# End of file
+
+# File: c:\Users\p4ul7\OneDrive\מסמכים\Mimino\delivery_app\admin.py
+from django.contrib import admin
+from django.utils import timezone
+from .models import DeliveryCustomer, DeliveryOrder, DeliveryProduct, DeliveryCart, DeliveryCartItem, Courier
+from datetime import timedelta
+
+
+def mark_as_completed(modeladmin, request, queryset):
+    week_ago = timezone.now() - timedelta(days=7)
+    queryset.filter(created_at__lte=week_ago, is_completed=False).update(is_completed=True)
+
+
+class DeliveryCartItemInline(admin.TabularInline):
+    model = DeliveryCartItem
+    extra = 1
+
+
+@admin.register(DeliveryCart)
+class DeliveryCartAdmin(admin.ModelAdmin):
+    list_display = ('id', 'delivery_order', 'customer', 'total_price', 'created_at')
+    list_filter = ('delivery_order__is_completed', 'delivery_order__customer__city', 'created_at')
+    search_fields = ('delivery_order__customer__name', 'customer__name', 'delivery_order__customer__delivery_phone_number')
+    inlines = [DeliveryCartItemInline]
+    ordering = ('-created_at',)
+
+
+@admin.register(DeliveryCustomer)
+class DeliveryCustomerAdmin(admin.ModelAdmin):
+    list_display = ('delivery_phone_number', 'name', 'city', 'street', 'house_number', 'floor', 'apartment_number', 'intercom_code')
+    list_filter = ('city',)
+
+
+class DeliveryProductInline(admin.TabularInline):
+    model = DeliveryProduct
+    extra = 1
+
+
+@admin.register(DeliveryOrder)
+class DeliveryOrderAdmin(admin.ModelAdmin):
+    list_display = ('pk', 'customer', 'courier', 'formatted_created_at', 'total_amount', 'payment_method', 'is_completed')
+    list_filter = ('is_completed', 'customer__city', 'courier', 'payment_method')
+    search_fields = ('customer__name', 'customer__delivery_phone_number')
+    mark_as_completed.short_description = "Отметить заказы старше недели как выполненные"
+    actions = [mark_as_completed]
+    inlines = [DeliveryProductInline]
+
+    def formatted_created_at(self, obj):
+        local_dt = timezone.localtime(obj.created_at)
+        return local_dt.strftime('%Y-%m-%d %H:%M')
+    
+    formatted_created_at.admin_order_field = 'created_at'
+    formatted_created_at.short_description = 'Дата создания'
+
+
+class DeliveryProductAdmin(admin.ModelAdmin):
+    list_display = ('get_customer_phone_number', 'product', 'quantity', 'timestamp')
+    list_filter = ('timestamp',)
+    search_fields = ('product__name', 'delivery_customer__name')
+
+    def get_customer_phone_number(self, obj):
+        return obj.delivery_customer.delivery_phone_number
+
+    get_customer_phone_number.short_description = 'Customer Phone Number'
+
+
+@admin.register(Courier)
+class CourierAdmin(admin.ModelAdmin):
+    list_display = ('name', 'delivery_address', 'delivery_city', 'delivery_amount', 'payment_method')
+    list_editable = ('delivery_address', 'delivery_city', 'delivery_amount', 'payment_method')
+    list_display_links = ('name',)
+    list_filter = ('delivery_city', 'payment_method')
+
+
+
+
+# End of file
+
+# File: c:\Users\p4ul7\OneDrive\מסמכים\Mimino\delivery_app\apps.py
+from django.apps import AppConfig
+
+
+class DeliveryAppConfig(AppConfig):
+    default_auto_field = 'django.db.models.BigAutoField'
+    name = 'delivery_app'
+
+
+# End of file
+
+# File: c:\Users\p4ul7\OneDrive\מסמכים\Mimino\delivery_app\forms.py
+from django import forms
+from django.core.validators import RegexValidator
+from django.core.exceptions import ValidationError
+from datetime import datetime, time, timedelta
+from django.utils.html import format_html
+
+from .models import DeliveryCustomer
+
+
+class DeliveryForm(forms.Form):
+    delivery_phone_number = forms.CharField(label='Номер телефона', validators=[RegexValidator(regex=r'^\d{10}$', message='Номер телефона должен содержать ровно 10 цифр')])
+
+class DeliveryCustomerForm(forms.ModelForm):
+    city = forms.ChoiceField(choices=[('חיפה', 'Хайфа'), ('נשר', ('Нэшер')), ('טירת כרמל', 'Тира'), ('כפר גלים', 'Кфар Галим'),('קריית חיים', 'Кирият Хаим'), ('קריית אתא', 'Кирият Ата'), ('קריית ביאליק', 'Кирият Биалик'), ('קריית מוצקין', 'Кирият Моцкин'), ('קריית ים', ('Кирият Ям'))], widget=forms.Select(attrs={'class': 'form-control', 'required': True}))
+
+    class Meta:
+        model = DeliveryCustomer
+        fields = ['delivery_phone_number', 'name', 'city', 'street', 'house_number', 'floor', 'apartment_number', 'intercom_code']
+        widgets = {
+            'delivery_phone_number': forms.TextInput(attrs={'readonly': 'readonly'}),
+            'name': forms.TextInput(attrs={'class': 'form-control', 'required': True}),
+            'street': forms.TextInput(attrs={'class': 'form-control', 'required': True}),
+            'house_number': forms.TextInput(attrs={'class': 'form-control', 'required': True}),
+            'floor': forms.TextInput(attrs={'class': 'form-control', 'required': True}),
+            'apartment_number': forms.TextInput(attrs={'class': 'form-control', 'required': True}),
+            'intercom_code': forms.TextInput(attrs={'class': 'form-control'}),
+        }
+
+class ProductQuantityForm(forms.Form):
+    quantity = forms.IntegerField(min_value=1, max_value=10000, initial=1, widget=forms.NumberInput(attrs={
+        'class': 'form-control',
+        'style': 'width: 100px; display: inline-block;'
+    }))
+
+
+def generate_time_intervals(start_time, end_time, delta_minutes):
+    current_time = datetime.combine(datetime.today(), start_time)
+    end_datetime = datetime.combine(datetime.today(), end_time)
+    time_intervals = []
+
+    while current_time <= end_datetime:
+        time_intervals.append(current_time.strftime('%H:%M'))
+        current_time += timedelta(minutes=delta_minutes)
+
+    return time_intervals
+
+class DeliveryDateTimeForm(forms.Form):
+    form_type = forms.CharField(widget=forms.HiddenInput(), initial='delivery_date_time')
+    start_time = time(12, 0)
+    end_time = time(22, 0)
+    delta_minutes = 15
+
+    date = forms.DateField(label='Дата', widget=forms.DateInput(attrs={'type': 'date'}))
+    time_choices = generate_time_intervals(start_time, end_time, delta_minutes)
+    time = forms.ChoiceField(label='Время', choices=[(time, time) for time in time_choices])
+
+class SelectOrderForm(forms.Form):
+    form_type = forms.CharField(widget=forms.HiddenInput(), initial='select_order')
+    order = forms.ModelChoiceField(
+        queryset=None,  # Queryset будет передан позже
+        label="Выберите заказ",
+        empty_label=None,
+        widget=forms.Select(attrs={'class': 'form-control'})
+    )
+
+    def __init__(self, *args, **kwargs):
+        orders = kwargs.pop('orders', None)
+        super().__init__(*args, **kwargs)
+
+        self.fields['order'].queryset = orders
+        # Изменение отображения каждого заказа в списке
+        self.fields['order'].label_from_instance = self._order_label
+
+    def _order_label(self, order):
+        # Форматирование метки для каждого заказа в списке
+        return format_html(
+            "{} - {} - {} - {}, {}",
+            order.delivery_date.strftime('%Y-%m-%d'),
+            order.customer.name,
+            order.customer.delivery_phone_number,
+            order.customer.street,
+            order.customer.house_number
+        )
+
+# End of file
+
+# File: c:\Users\p4ul7\OneDrive\מסמכים\Mimino\delivery_app\models.py
+from django.db import models
+from datetime import timedelta
+from django.utils import timezone
+from restaurant_app.models.product import Product
+
+# Глобальные переменные для определения выборов
+CITY_CHOICES = (
+    ('חיפה', 'Хайфа'), 
+    ('נשר', ('Нэшер')), 
+    ('טירת כרמל', 'Тира'), 
+    ('כפר גלים', 'Кфар Галим'),
+    ('קריית חיים', 'Кирият Хаим'), 
+    ('קריית אתא', 'Кирият Ата'), 
+    ('קריית ביאליק', 'Кирият Биалик'),
+    ('קריית ים', ('Кирият Ям')),
+    ('קריית מוצקין', ('Кирият Моцкин'))
+)
+
+PAYMENT_METHOD_CHOICES = (
+    ('cash', 'Наличные'),
+    ('credit_card', 'Кредитная карта'),
+)
+
+
+class DeliveryCustomer(models.Model):
+    delivery_phone_number = models.CharField(max_length=10)
+    name = models.CharField(max_length=30)
+    city = models.CharField(max_length=50, choices=CITY_CHOICES)
+    street = models.CharField(max_length=50)
+    house_number = models.CharField(max_length=10)
+    floor = models.CharField(max_length=10)
+    apartment_number = models.CharField(max_length=10)
+    intercom_code = models.CharField(max_length=255, blank=True, null=True)
+
+    def __str__(self):
+        return f"{self.name} - {self.delivery_phone_number}"
+
+
+def mark_as_completed(modeladmin, request, queryset):
+    week_ago = timezone.now() - timedelta(days=7)
+    queryset.filter(created_at__lte=week_ago, is_completed=False).update(is_completed=True)
+
+
+class DeliveryOrder(models.Model):
+    customer = models.ForeignKey(DeliveryCustomer, on_delete=models.CASCADE, related_name='orders')
+    courier = models.ForeignKey('Courier', on_delete=models.SET_NULL, null=True, blank=True, related_name='orders')
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+    is_completed = models.BooleanField(default=False)
+    total_amount = models.DecimalField(max_digits=10, decimal_places=2, null=True, blank=True)
+    delivery_date = models.DateField(null=True, blank=True)
+    delivery_time = models.TimeField(null=True, blank=True)
+    payment_method = models.CharField(
+        max_length=12,
+        choices=PAYMENT_METHOD_CHOICES,
+        null=True,
+        blank=True,
+    )
+
+    class Meta:
+        verbose_name = 'Delivery Order'
+        verbose_name_plural = 'Delivery Orders'
+
+    def __str__(self):
+        return f"{self.pk} - {self.customer.name} ({self.customer.delivery_phone_number})"
+
+NAME_CHOICES = [
+    ('solo', 'Solo'),
+    ('our_courier', 'Стас'),
+    # Другие имена
+]    
+    
+class Courier(models.Model):
+    name = models.CharField(max_length=50, choices=NAME_CHOICES)  
+    delivery_address = models.TextField(blank=True, null=True)
+    delivery_city = models.CharField(max_length=50, choices=CITY_CHOICES, blank=True, null=True)
+    delivery_amount = models.DecimalField(max_digits=8, decimal_places=2, blank=True, null=True)
+    payment_method = models.CharField(max_length=12, choices=PAYMENT_METHOD_CHOICES, blank=True, null=True)
+
+    def __str__(self):
+        return self.name
+
+
+class CourierDelivery(models.Model):
+    courier = models.ForeignKey(Courier, on_delete=models.CASCADE)
+    delivery_address = models.CharField(max_length=255)
+    delivery_city = models.CharField(max_length=50, choices=CITY_CHOICES)
+    total_price = models.DecimalField(max_digits=10, decimal_places=2)
+    payment_method = models.CharField(max_length=12, choices=PAYMENT_METHOD_CHOICES)
+
+    def __str__(self):
+        return f"{self.courier.name} - {self.delivery_city} - {self.total_price}₪"
+
+
+class DeliveryProduct(models.Model):
+    delivery_order = models.ForeignKey(DeliveryOrder, on_delete=models.CASCADE)
+    product = models.ForeignKey(Product, on_delete=models.CASCADE, null=True)
+    quantity = models.PositiveIntegerField(default=1)
+    timestamp = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        verbose_name = 'Delivery Product'
+        verbose_name_plural = 'Delivery Products'
+
+    def __str__(self):
+        return f'{self.product.product_name_rus} ({self.quantity})'
+
+
+class DeliveryCart(models.Model):
+    delivery_order = models.ForeignKey(DeliveryOrder, on_delete=models.CASCADE, related_name='delivery_carts', null=True)
+    customer = models.ForeignKey(DeliveryCustomer, on_delete=models.CASCADE)
+    created_at = models.DateTimeField(auto_now_add=True)
+    total_price = models.DecimalField(max_digits=8, decimal_places=2, default=0)
+
+    def get_total(self):
+        if not self.pk:
+            return 0
+        else:
+            return sum([item.quantity * item.product.product_price for item in self.delivery_cart_items.all()])
+
+    def save(self, *args, **kwargs):
+        self.total_price = self.get_total()
+        super().save(*args, **kwargs)
+
+    def __str__(self):
+        return f"Cart ({self.pk}) for delivery order {self.delivery_order.customer.delivery_phone_number}"
+
+
+class DeliveryCartItem(models.Model):
+    cart = models.ForeignKey(DeliveryCart, on_delete=models.CASCADE, related_name='delivery_cart_items')
+    delivery_order = models.ForeignKey(DeliveryOrder, on_delete=models.CASCADE, related_name='delivery_cart_items')
+    product = models.ForeignKey(Product, on_delete=models.CASCADE, related_name='delivery_product', null=True)
+    quantity = models.PositiveIntegerField(default=1)
+    printed_quantity = models.PositiveIntegerField(default=0)
+
+    def save(self, *args, **kwargs):
+        self.quantity = int(self.quantity)
+        super().save(*args, **kwargs)
+
+    def __str__(self):
+        return f"{self.quantity} x {self.product.product_name_rus}"
+
+
+# End of file
+
+# File: c:\Users\p4ul7\OneDrive\מסמכים\Mimino\delivery_app\tests.py
+from django.test import TestCase
+
+# Create your tests here.
+
+
+# End of file
+
+# File: c:\Users\p4ul7\OneDrive\מסמכים\Mimino\delivery_app\urls.py
+from django.urls import path
+from .view.clear_solo_dept import clear_solo_debt
+from .view.delivery_views import delivery_view
+from .view.delivery_process import delivery_process_view
+from .view.delivery_summary import delivery_summary
+from .view.delivery_template_pdf import delivery_pdf_template_view
+from .view.delivery_menu_views import delivery_menu_view, set_courier
+from .view.delivery_kitchen_template_view import print_kitchen
+from .view.delivery_search_view import delivery_search_view
+from .view.delivery_close_cart import delivery_close_cart_view
+from .view.add_delivery_customer_views import add_delivery_customer_view, save_delivery_customer_changes_view
+from .view.check_delivery_customer_views import check_delivery_customer_view
+from .view.for_later_delivery_view import view_for_later_delivery
+from .view.future_orders_view import future_orders_view
+from .view.telegram_webhook_view import telegram_webhook
+
+from .view.delivery_cart_views import (
+    delivery_add_to_cart_view, 
+    delivery_cart_view,
+    delivery_increase_product_view,
+    delivery_decrease_product_view,
+    delivery_remove_product_view,
+    delivery_empty_cart_view,
+)
+
+app_name = 'delivery_app'
+
+urlpatterns = [
+    path('delivery_process/<str:delivery_type>/', delivery_process_view, name='delivery_process'),
+    path('check_delivery_number/<str:delivery_type>/', delivery_view, name='check_delivery_number'),
+    path('add_delivery_customer/<str:delivery_phone_number>/<str:delivery_type>/', add_delivery_customer_view, name='add_delivery_customer'),
+    path('save_delivery_customer_changes/<str:delivery_phone_number>/<str:delivery_type>/', save_delivery_customer_changes_view, name='save_delivery_customer_changes'),
+    path('check_delivery_customer/<str:delivery_phone_number>/<str:delivery_type>/', check_delivery_customer_view, name='check_delivery_customer'),
+    path('delivery_add_to_cart/<str:delivery_phone_number>/<str:category>/<str:delivery_type>/', delivery_add_to_cart_view, name='delivery_add_to_cart'),
+    path('delivery_menu/<str:delivery_phone_number>/<str:category>/<str:delivery_type>/', delivery_menu_view, name='delivery_menu'),
+    path('delivery_pdf_template/<str:delivery_phone_number>/<int:order_id>/', delivery_pdf_template_view, name='delivery_pdf_template'),
+    path('delivery_close_cart/<str:delivery_phone_number>/<int:order_id>/', delivery_close_cart_view, name='delivery_close_cart'),
+    path('print_kitchen/', print_kitchen, name='print_kitchen'),
+    path('delivery_search/<str:delivery_phone_number>/', delivery_search_view, name='delivery_search_products'),
+    path('delivery_empty_cart/<str:delivery_phone_number>/<str:delivery_type>/', delivery_empty_cart_view, name='delivery_empty_cart' ),
+    path('cart/<str:delivery_phone_number>/<str:delivery_type>/', delivery_cart_view, name='delivery_cart'),
+    path('cart/<str:delivery_phone_number>/<str:delivery_type>/increase/<int:product_id>/', delivery_increase_product_view, name='delivery_increase_product'),
+    path('cart/<str:delivery_phone_number>/<str:delivery_type>/decrease/<int:product_id>/', delivery_decrease_product_view, name='delivery_decrease_product'),
+    path('cart/<str:delivery_phone_number>/<str:delivery_type>/remove/<int:product_id>/', delivery_remove_product_view, name='delivery_remove_product'),
+    path('set_courier/<str:delivery_phone_number>/<str:delivery_type>/', set_courier, name='set_courier'),
+    path('clear_solo_debt/', clear_solo_debt, name='clear_solo_debt'),
+    path('delivery_summary/', delivery_summary, name='delivery_summary'),
+    path('later_delivery/<str:delivery_phone_number>/<str:delivery_type>/', view_for_later_delivery, name='view_for_later_delivery'),
+
+    path('future-orders/', future_orders_view, name='future_orders'),
+
+    path('telegram_webhook/', telegram_webhook, name='telegram_webhook'),
+
+
+]
+
+
+# End of file
+
+# File: c:\Users\p4ul7\OneDrive\מסמכים\Mimino\delivery_app\views.py
+from django.shortcuts import render
+
+# Create your views here.
+
+
+# End of file
+
+# File: c:\Users\p4ul7\OneDrive\מסמכים\Mimino\delivery_app\__init__.py
+
+
+# End of file
+
+# File: c:\Users\p4ul7\OneDrive\מסמכים\Mimino\delivery_app\migrations\0001_initial.py
+# Generated by Django 4.1.7 on 2023-03-21 08:17
+
+from django.db import migrations, models
+import django.db.models.deletion
+
+
+class Migration(migrations.Migration):
+
+    initial = True
+
+    dependencies = [
+        ('restaurant_app', '0001_initial'),
+    ]
+
+    operations = [
+        migrations.CreateModel(
+            name='DeliveryCart',
+            fields=[
+                ('id', models.BigAutoField(auto_created=True, primary_key=True, serialize=False, verbose_name='ID')),
+                ('created_at', models.DateTimeField(auto_now_add=True)),
+                ('total_price', models.DecimalField(decimal_places=2, default=0, max_digits=8)),
+            ],
+        ),
+        migrations.CreateModel(
+            name='DeliveryCustomer',
+            fields=[
+                ('id', models.BigAutoField(auto_created=True, primary_key=True, serialize=False, verbose_name='ID')),
+                ('delivery_phone_number', models.CharField(max_length=10)),
+                ('name', models.CharField(max_length=10)),
+                ('city', models.CharField(choices=[('חיפה', 'Хайфа'), ('נשר', 'Нэшер'), ('טירת כרמל', 'Тира'), ('כפר גלים', 'Кфар Галим'), ('קריית חיים', 'Кирият Хаим'), ('קריית אתא', 'Кирият Ата'), ('קריית ביאליק', 'Кирият Биалик'), ('קריית ים', 'Кирият Ям')], max_length=20)),
+                ('street', models.CharField(max_length=10)),
+                ('house_number', models.CharField(max_length=10)),
+                ('floor', models.CharField(max_length=10)),
+                ('apartment_number', models.CharField(max_length=10)),
+                ('intercom_code', models.CharField(blank=True, max_length=10, null=True)),
+            ],
+        ),
+        migrations.CreateModel(
+            name='DeliveryOrder',
+            fields=[
+                ('id', models.BigAutoField(auto_created=True, primary_key=True, serialize=False, verbose_name='ID')),
+                ('created_at', models.DateTimeField(auto_now_add=True)),
+                ('updated_at', models.DateTimeField(auto_now=True)),
+                ('is_completed', models.BooleanField(default=False)),
+                ('customer', models.ForeignKey(on_delete=django.db.models.deletion.CASCADE, related_name='orders', to='delivery_app.deliverycustomer')),
+            ],
+            options={
+                'verbose_name': 'Delivery Order',
+                'verbose_name_plural': 'Delivery Orders',
+            },
+        ),
+        migrations.CreateModel(
+            name='DeliveryProduct',
+            fields=[
+                ('id', models.BigAutoField(auto_created=True, primary_key=True, serialize=False, verbose_name='ID')),
+                ('quantity', models.PositiveIntegerField(default=1)),
+                ('timestamp', models.DateTimeField(auto_now_add=True)),
+                ('delivery_order', models.ForeignKey(on_delete=django.db.models.deletion.CASCADE, to='delivery_app.deliveryorder')),
+                ('product', models.ForeignKey(null=True, on_delete=django.db.models.deletion.CASCADE, to='restaurant_app.product')),
+            ],
+            options={
+                'verbose_name': 'Delivery Product',
+                'verbose_name_plural': 'Delivery Products',
+            },
+        ),
+        migrations.CreateModel(
+            name='DeliveryCartItem',
+            fields=[
+                ('id', models.BigAutoField(auto_created=True, primary_key=True, serialize=False, verbose_name='ID')),
+                ('quantity', models.PositiveIntegerField(default=1)),
+                ('cart', models.ForeignKey(null=True, on_delete=django.db.models.deletion.CASCADE, related_name='delivery_cart_items', to='delivery_app.deliverycart')),
+                ('delivery_order', models.ForeignKey(on_delete=django.db.models.deletion.CASCADE, related_name='delivery_cart_items', to='delivery_app.deliveryorder')),
+                ('product', models.ForeignKey(null=True, on_delete=django.db.models.deletion.CASCADE, related_name='delivery_product', to='restaurant_app.product')),
+            ],
+        ),
+        migrations.AddField(
+            model_name='deliverycart',
+            name='customer',
+            field=models.ForeignKey(on_delete=django.db.models.deletion.CASCADE, to='delivery_app.deliverycustomer'),
+        ),
+        migrations.AddField(
+            model_name='deliverycart',
+            name='delivery_order',
+            field=models.ForeignKey(on_delete=django.db.models.deletion.CASCADE, related_name='delivery_carts', to='delivery_app.deliveryorder'),
+        ),
+    ]
+
+
+# End of file
+
+# File: c:\Users\p4ul7\OneDrive\מסמכים\Mimino\delivery_app\migrations\0002_alter_deliverycart_delivery_order.py
+# Generated by Django 4.1.7 on 2023-03-22 10:48
+
+from django.db import migrations, models
+import django.db.models.deletion
+
+
+class Migration(migrations.Migration):
+
+    dependencies = [
+        ('delivery_app', '0001_initial'),
+    ]
+
+    operations = [
+        migrations.AlterField(
+            model_name='deliverycart',
+            name='delivery_order',
+            field=models.ForeignKey(null=True, on_delete=django.db.models.deletion.CASCADE, related_name='delivery_carts', to='delivery_app.deliveryorder'),
+        ),
+    ]
+
+
+# End of file
+
+# File: c:\Users\p4ul7\OneDrive\מסמכים\Mimino\delivery_app\migrations\0003_alter_deliverycartitem_delivery_order.py
+# Generated by Django 4.1.7 on 2023-03-22 10:50
+
+from django.db import migrations, models
+import django.db.models.deletion
+
+
+class Migration(migrations.Migration):
+
+    dependencies = [
+        ('delivery_app', '0002_alter_deliverycart_delivery_order'),
+    ]
+
+    operations = [
+        migrations.AlterField(
+            model_name='deliverycartitem',
+            name='delivery_order',
+            field=models.ForeignKey(default=1, on_delete=django.db.models.deletion.CASCADE, related_name='delivery_cart_items', to='delivery_app.deliveryorder'),
+        ),
+    ]
+
+
+# End of file
+
+# File: c:\Users\p4ul7\OneDrive\מסמכים\Mimino\delivery_app\migrations\0004_alter_deliverycartitem_cart.py
+# Generated by Django 4.1.7 on 2023-03-23 11:08
+
+from django.db import migrations, models
+import django.db.models.deletion
+
+
+class Migration(migrations.Migration):
+
+    dependencies = [
+        ('delivery_app', '0003_alter_deliverycartitem_delivery_order'),
+    ]
+
+    operations = [
+        migrations.AlterField(
+            model_name='deliverycartitem',
+            name='cart',
+            field=models.ForeignKey(default=1, on_delete=django.db.models.deletion.CASCADE, related_name='delivery_cart_items', to='delivery_app.deliverycart'),
+            preserve_default=False,
+        ),
+    ]
+
+
+# End of file
+
+# File: c:\Users\p4ul7\OneDrive\מסמכים\Mimino\delivery_app\migrations\0005_alter_deliverycartitem_delivery_order.py
+# Generated by Django 4.1.7 on 2023-03-23 12:37
+
+from django.db import migrations, models
+import django.db.models.deletion
+
+
+class Migration(migrations.Migration):
+
+    dependencies = [
+        ('delivery_app', '0004_alter_deliverycartitem_cart'),
+    ]
+
+    operations = [
+        migrations.AlterField(
+            model_name='deliverycartitem',
+            name='delivery_order',
+            field=models.ForeignKey(on_delete=django.db.models.deletion.CASCADE, related_name='delivery_cart_items', to='delivery_app.deliveryorder'),
+        ),
+    ]
+
+
+# End of file
+
+# File: c:\Users\p4ul7\OneDrive\מסמכים\Mimino\delivery_app\migrations\0006_alter_deliverycustomer_street.py
+# Generated by Django 4.0 on 2023-04-19 19:37
+
+from django.db import migrations, models
+
+
+class Migration(migrations.Migration):
+
+    dependencies = [
+        ('delivery_app', '0005_alter_deliverycartitem_delivery_order'),
+    ]
+
+    operations = [
+        migrations.AlterField(
+            model_name='deliverycustomer',
+            name='street',
+            field=models.CharField(max_length=30),
+        ),
+    ]
+
+
+# End of file
+
+# File: c:\Users\p4ul7\OneDrive\מסמכים\Mimino\delivery_app\migrations\0007_alter_deliverycustomer_name_and_more.py
+# Generated by Django 4.0 on 2023-04-20 09:30
+
+from django.db import migrations, models
+
+
+class Migration(migrations.Migration):
+
+    dependencies = [
+        ('delivery_app', '0006_alter_deliverycustomer_street'),
+    ]
+
+    operations = [
+        migrations.AlterField(
+            model_name='deliverycustomer',
+            name='name',
+            field=models.CharField(max_length=30),
+        ),
+        migrations.AlterField(
+            model_name='deliverycustomer',
+            name='street',
+            field=models.CharField(max_length=50),
+        ),
+    ]
+
+
+# End of file
+
+# File: c:\Users\p4ul7\OneDrive\מסמכים\Mimino\delivery_app\migrations\0008_deliveryorder_payment_method.py
+# Generated by Django 4.0 on 2023-04-22 13:16
+
+from django.db import migrations, models
+
+
+class Migration(migrations.Migration):
+
+    dependencies = [
+        ('delivery_app', '0007_alter_deliverycustomer_name_and_more'),
+    ]
+
+    operations = [
+        migrations.AddField(
+            model_name='deliveryorder',
+            name='payment_method',
+            field=models.CharField(blank=True, choices=[('cash', 'Наличные'), ('credit_card', 'Кредитная карта')], max_length=12, null=True),
+        ),
+    ]
+
+
+# End of file
+
+# File: c:\Users\p4ul7\OneDrive\מסמכים\Mimino\delivery_app\migrations\0009_alter_deliverycustomer_intercom_code.py
+# Generated by Django 4.0 on 2023-04-27 17:59
+
+from django.db import migrations, models
+
+
+class Migration(migrations.Migration):
+
+    dependencies = [
+        ('delivery_app', '0008_deliveryorder_payment_method'),
+    ]
+
+    operations = [
+        migrations.AlterField(
+            model_name='deliverycustomer',
+            name='intercom_code',
+            field=models.CharField(blank=True, max_length=255, null=True),
+        ),
+    ]
+
+
+# End of file
+
+# File: c:\Users\p4ul7\OneDrive\מסמכים\Mimino\delivery_app\migrations\0010_alter_deliverycustomer_city.py
+# Generated by Django 4.0 on 2023-06-30 11:45
+
+from django.db import migrations, models
+
+
+class Migration(migrations.Migration):
+
+    dependencies = [
+        ('delivery_app', '0009_alter_deliverycustomer_intercom_code'),
+    ]
+
+    operations = [
+        migrations.AlterField(
+            model_name='deliverycustomer',
+            name='city',
+            field=models.CharField(choices=[('חיפה', 'Хайфа'), ('נשר', 'Нэшер'), ('טירת כרמל', 'Тира'), ('כפר גלים', 'Кфар Галим'), ('קריית חיים', 'Кирият Хаим'), ('קריית אתא', 'Кирият Ата'), ('קריית ביאליק', 'Кирият Биалик'), ('קריית מוצקין', 'Кирият Моцкин'), ('קריית ים', 'Кирият Ям')], max_length=20),
+        ),
+    ]
+
+
+# End of file
+
+# File: c:\Users\p4ul7\OneDrive\מסמכים\Mimino\delivery_app\migrations\0011_alter_deliverycustomer_city.py
+# Generated by Django 4.0 on 2023-06-30 11:50
+
+from django.db import migrations, models
+
+
+class Migration(migrations.Migration):
+
+    dependencies = [
+        ('delivery_app', '0010_alter_deliverycustomer_city'),
+    ]
+
+    operations = [
+        migrations.AlterField(
+            model_name='deliverycustomer',
+            name='city',
+            field=models.CharField(choices=[('חיפה', 'Хайфа'), ('נשר', 'Нэшер'), ('טירת כרמל', 'Тира'), ('כפר גלים', 'Кфар Галим'), ('קריית חיים', 'Кирият Хаим'), ('קריית אתא', 'Кирият Ата'), ('קריית ביאליק', 'Кирият Биалик'), ('קריית ים', 'Кирият Ям'), ('קריית מוצקין', 'Кирият Моцкин')], max_length=50),
+        ),
+    ]
+
+
+# End of file
+
+# File: c:\Users\p4ul7\OneDrive\מסמכים\Mimino\delivery_app\migrations\0012_deliverycartitem_printed_quantity.py
+# Generated by Django 4.2.1 on 2023-07-20 08:06
+
+from django.db import migrations, models
+
+
+class Migration(migrations.Migration):
+
+    dependencies = [
+        ('delivery_app', '0011_alter_deliverycustomer_city'),
+    ]
+
+    operations = [
+        migrations.AddField(
+            model_name='deliverycartitem',
+            name='printed_quantity',
+            field=models.PositiveIntegerField(default=0),
+        ),
+    ]
+
+
+# End of file
+
+# File: c:\Users\p4ul7\OneDrive\מסמכים\Mimino\delivery_app\migrations\0013_courier.py
+# Generated by Django 4.0 on 2023-09-22 09:26
+
+from django.db import migrations, models
+
+
+class Migration(migrations.Migration):
+
+    dependencies = [
+        ('delivery_app', '0012_deliverycartitem_printed_quantity'),
+    ]
+
+    operations = [
+        migrations.CreateModel(
+            name='Courier',
+            fields=[
+                ('id', models.BigAutoField(auto_created=True, primary_key=True, serialize=False, verbose_name='ID')),
+                ('name', models.CharField(choices=[('our_courier', 'Наша Курьер'), ('solo', 'Соло')], max_length=50, unique=True)),
+            ],
+        ),
+    ]
+
+
+# End of file
+
+# File: c:\Users\p4ul7\OneDrive\מסמכים\Mimino\delivery_app\migrations\0014_deliveryorder_courier.py
+# Generated by Django 4.0 on 2023-09-22 13:44
+
+from django.db import migrations, models
+import django.db.models.deletion
+
+
+class Migration(migrations.Migration):
+
+    dependencies = [
+        ('delivery_app', '0013_courier'),
+    ]
+
+    operations = [
+        migrations.AddField(
+            model_name='deliveryorder',
+            name='courier',
+            field=models.ForeignKey(blank=True, null=True, on_delete=django.db.models.deletion.SET_NULL, related_name='orders', to='delivery_app.courier'),
+        ),
+    ]
+
+
+# End of file
+
+# File: c:\Users\p4ul7\OneDrive\מסמכים\Mimino\delivery_app\migrations\0015_courier_delivery_address_courier_delivery_amount_and_more.py
+# Generated by Django 4.2.1 on 2023-09-26 15:40
+
+from django.db import migrations, models
+import django.db.models.deletion
+
+
+class Migration(migrations.Migration):
+
+    dependencies = [
+        ('delivery_app', '0014_deliveryorder_courier'),
+    ]
+
+    operations = [
+        migrations.AddField(
+            model_name='courier',
+            name='delivery_address',
+            field=models.TextField(blank=True, null=True),
+        ),
+        migrations.AddField(
+            model_name='courier',
+            name='delivery_amount',
+            field=models.DecimalField(blank=True, decimal_places=2, max_digits=8, null=True),
+        ),
+        migrations.AddField(
+            model_name='courier',
+            name='delivery_city',
+            field=models.CharField(blank=True, choices=[('חיפה', 'Хайфа'), ('נשר', 'Нэшер'), ('טירת כרמל', 'Тира'), ('כפר גלים', 'Кфар Галим'), ('קריית חיים', 'Кирият Хаим'), ('קריית אתא', 'Кирият Ата'), ('קריית ביאליק', 'Кирият Биалик'), ('קריית ים', 'Кирият Ям'), ('קריית מוצקין', 'Кирият Моцкин')], max_length=50, null=True),
+        ),
+        migrations.AddField(
+            model_name='courier',
+            name='payment_method',
+            field=models.CharField(blank=True, choices=[('cash', 'Наличные'), ('credit_card', 'Кредитная карта')], max_length=12, null=True),
+        ),
+        migrations.CreateModel(
+            name='CourierDelivery',
+            fields=[
+                ('id', models.BigAutoField(auto_created=True, primary_key=True, serialize=False, verbose_name='ID')),
+                ('delivery_address', models.CharField(max_length=255)),
+                ('delivery_city', models.CharField(choices=[('חיפה', 'Хайфа'), ('נשר', 'Нэшер'), ('טירת כרמל', 'Тира'), ('כפר גלים', 'Кфар Галим'), ('קריית חיים', 'Кирият Хаим'), ('קריית אתא', 'Кирият Ата'), ('קריית ביאליק', 'Кирият Биалик'), ('קריית ים', 'Кирият Ям'), ('קריית מוצקין', 'Кирият Моцкин')], max_length=50)),
+                ('total_price', models.DecimalField(decimal_places=2, max_digits=10)),
+                ('payment_method', models.CharField(choices=[('cash', 'Наличные'), ('credit_card', 'Кредитная карта')], max_length=12)),
+                ('courier', models.ForeignKey(on_delete=django.db.models.deletion.CASCADE, to='delivery_app.courier')),
+            ],
+        ),
+    ]
+
+
+# End of file
+
+# File: c:\Users\p4ul7\OneDrive\מסמכים\Mimino\delivery_app\migrations\0016_deliveryorder_total_amount_and_more.py
+# Generated by Django 4.2.1 on 2023-09-26 21:08
+
+from django.db import migrations, models
+
+
+class Migration(migrations.Migration):
+
+    dependencies = [
+        ('delivery_app', '0015_courier_delivery_address_courier_delivery_amount_and_more'),
+    ]
+
+    operations = [
+        migrations.AddField(
+            model_name='deliveryorder',
+            name='total_amount',
+            field=models.DecimalField(blank=True, decimal_places=2, max_digits=10, null=True),
+        ),
+        migrations.AlterField(
+            model_name='deliveryorder',
+            name='payment_method',
+            field=models.CharField(blank=True, choices=[('cash', 'Наличные'), ('card', 'Картой')], max_length=12, null=True),
+        ),
+    ]
+
+
+# End of file
+

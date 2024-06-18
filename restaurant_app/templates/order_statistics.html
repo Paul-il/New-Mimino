@@ -1,6 +1,5 @@
 {% extends "base.html" %}
 {% load static %}
-{% load custom_tags %}
 {% block title %}Order Statistics{% endblock %}
 
 {% block content %}
@@ -17,26 +16,9 @@
         <p style="color: white; font-size: 15px;">Нет данных для отображения статистики.</p>
     {% endif %}
 
-    <!-- Form for date range and day of week selection -->
-    <form method="get" class="form-inline">
-        {% csrf_token %}
-        <div class="form-group mb-2">
-            <select name="category" class="form-control" onchange="this.form.submit()">
-                <option value="">Все категории</option>
-                {% for category, display_name in product_categories %}
-                <option value="{{ category }}" {% if selected_category == category %}selected{% endif %}>{{ display_name }}</option>
-                {% endfor %}
-            </select>
-        </div>
-        <div class="form-group mx-sm-3 mb-2">
-            <label for="day_of_week">День недели:</label>
-            <select name="day_of_week" id="day_of_week" class="form-control">
-                {% for value, name in form.day_of_week.choices %}
-                <option value="{{ value }}" {% if selected_day_of_week|stringformat:"s" == value|stringformat:"s" %}selected{% endif %}>{{ name }}</option>
-                {% endfor %}
-            </select>            
-        </div>        
-        <button type="submit" class="btn btn-primary mb-2">Фильтровать</button>
+    <form method="get" class="form-inline mb-4">
+        {{ form.as_p }}
+        <button type="submit" class="btn btn-primary">Фильтровать</button>
     </form>
 
     <table id="orderStatisticsTableByProduct" class="table table-striped">
@@ -51,23 +33,58 @@
         <tbody>
             {% for stats in product_statistics %}
                 <tr>
-                    <td>{{ stats.product__product_name_rus }}</td>
+                    <td><a href="{% url 'product_detail' stats.product__id %}">{{ stats.product__product_name_rus }}</a></td>
                     <td>{{ stats.total_quantity }}</td>
-                    <td>{{ stats.total_price|floatformat:2 }}</td>
+                    <td>₪{{ stats.total_price|floatformat:2 }}</td>
                     <td>{{ stats.percentage|floatformat:2 }}%</td>
                 </tr>
             {% endfor %}
         </tbody>
     </table>
+
+    <canvas id="weeklySalesChart" width="400" height="200"></canvas>
 </div>
+
+<!-- Подключение DataTables -->
+<link rel="stylesheet" href="https://cdn.datatables.net/1.11.3/css/jquery.dataTables.min.css">
+<script src="https://code.jquery.com/jquery-3.5.1.js"></script>
+<script src="https://cdn.datatables.net/1.11.3/js/jquery.dataTables.min.js"></script>
 <script>
     $(document).ready(function () {
         $('#orderStatisticsTableByProduct').DataTable({
-            "order": [[2, 'desc']],  // Default sorting on the "Сумма" column
+            "order": [[1, 'desc']],  // Default sorting on the "Количество" column
             "columnDefs": [
-                { "type": "num", "targets": 2 } // Specify that the third column is numeric
+                { "type": "num", "targets": 1 },  // Specify that the second column is numeric
+                { "type": "num", "targets": 2 },  // Specify that the third column is numeric
+                { "type": "num", "targets": 3 }   // Specify that the fourth column is numeric
             ]
         });
+    });
+
+    const ctx = document.getElementById('weeklySalesChart').getContext('2d');
+    const weeklySalesChart = new Chart(ctx, {
+        type: 'bar',
+        data: {
+            labels: ['Понедельник', 'Вторник', 'Среда', 'Четверг', 'Пятница', 'Суббота', 'Воскресенье'],
+            datasets: [{
+                label: 'Количество продаж',
+                data: [
+                    {% for day in weekly_sales %}
+                        {{ day.total_quantity }},
+                    {% endfor %}
+                ],
+                backgroundColor: 'rgba(75, 192, 192, 0.2)',
+                borderColor: 'rgba(75, 192, 192, 1)',
+                borderWidth: 1
+            }]
+        },
+        options: {
+            scales: {
+                y: {
+                    beginAtZero: true
+                }
+            }
+        }
     });
 </script>
 {% endblock %}

@@ -9,18 +9,18 @@
     
     <div class="date-selection mb-3">
         <form method="GET" action="{% url 'order_summary' %}">
-            <label for="date">Выберите дату:</label>
-            <input type="date" id="date" name="date" required>
-            <input type="submit" value="Показать">
+            <label for="date" style="color: white;">Выберите дату:</label>
+            <input type="date" id="date" name="date" value="{{ selected_date }}" required>
+            <input type="submit" value="Показать" class="btn btn-primary">
         </form>
     </div>
 
-    <table id="orderSummaryTable" class="table table-striped">
+    <table id="orderSummaryTable" class="table table-striped table-dark">
         <thead>
             <tr>
                 <th scope="col" style="color: white; font-size: 15px;">Тип Заказа</th>
                 <th scope="col" style="color: white; font-size: 15px;">Количество</th>
-                <th scope="col" style="color: white; font-size: 15px;">Общая Сумма</th>
+                <th scope="col" style="color: white; font-size: 15px;">Общая Сумма (₪)</th>
             </tr>
         </thead>
         <tbody>
@@ -44,7 +44,7 @@
             <tr>
                 <th style="color: white;">Всего</th>
                 <th style="color: white;">{{ total_all_orders_today }}</th>
-                <th style="color: white;">{{ total_all_orders_sum }}</th> <!-- Общая сумма всех заказов -->
+                <th style="color: white;">{{ total_all_orders_sum }}</th>
             </tr>
         </tfoot>
     </table>

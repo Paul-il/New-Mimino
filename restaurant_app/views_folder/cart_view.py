@@ -7,17 +7,22 @@ from django.contrib.auth.models import User
 from django.contrib.auth.decorators import login_required
 from django.core.cache import cache
 from django.utils import timezone
-from ..models.product import Product, OrderChangeLog
-from ..models.tables import Table
-from ..models.orders import OrderItem, Order, WaiterOrder
-from ..forms import PasswordForm
-from django.conf import settings
 from asgiref.sync import sync_to_async
 from decimal import Decimal
+from django.conf import settings
+from django.contrib.auth.hashers import check_password
 
+from ..models.product import Product, OrderChangeLog
+from ..models.tables import Table
+from ..models.orders import Order, OrderItem, WaiterOrder, Category, Transaction, PaymentMethod
+from ..forms import PasswordForm
+
+# Configure logger
+import logging
+logger = logging.getLogger(__name__)
 
 def log_order_change(order, product_name, action, changed_by):
-    """Логирует изменения в заказе."""
+    """Log changes in the order."""
     try:
         OrderChangeLog.objects.create(
             order=order, 
@@ -27,7 +32,17 @@ def log_order_change(order, product_name, action, changed_by):
             changed_by=changed_by
         )
     except Exception as e:
-        print(f"Ошибка при логировании изменения заказа: {e}")
+        logger.error(f"Error logging order change: {e}")
+
+
+def get_cached_product(product_id):
+    """Get product from cache or database."""
+    product = cache.get(f'product_{product_id}')
+    if not product:
+        product = get_object_or_404(Product, pk=product_id)
+        cache.set(f'product_{product_id}', product, timeout=300)  # кешируем на 5 минут
+    return product
+
 
 @login_required
 def confirm_order_view(request, order_id):
@@ -35,6 +50,7 @@ def confirm_order_view(request, order_id):
     order.is_confirmed = True
     order.save()
     return redirect('order_detail', order_id=order.id)
+
 
 @login_required
 def password_check_view(request, order_id, action, order_item_id=None):
@@ -46,7 +62,7 @@ def password_check_view(request, order_id, action, order_item_id=None):
 
     if request.method == 'POST':
         form = PasswordForm(request.POST)
-        if form.is_valid() and form.cleaned_data['password'] == settings.OPERATIONAL_PASSWORD:
+        if form.is_valid() and check_password(form.cleaned_data['password'], settings.OPERATIONAL_PASSWORD):
             return perform_order_action(request, order_id, action, order_item_id)
         else:
             messages.error(request, 'Неверный операционный пароль.')
@@ -60,6 +76,7 @@ def password_check_view(request, order_id, action, order_item_id=None):
         'action': action
     })
 
+
 @login_required
 def perform_order_action(request, order_id, action, order_item_id):
     if action == 'decrease':
@@ -72,56 +89,87 @@ def perform_order_action(request, order_id, action, order_item_id):
 
 @login_required
 def add_to_cart_view(request, table_id):
-    table = get_object_or_404(Table, pk=table_id)
-    room = table.room
+    try:
+        table = get_object_or_404(Table, pk=table_id)
+        room = table.room
 
-    if request.method == 'POST':
-        active_order = table.get_active_order()
+        if request.method == 'POST':
+            active_order = table.get_active_order()
 
-        if not active_order:
-            num_of_people_str = request.POST.get('num_of_people')
-            if num_of_people_str:
-                num_of_people = int(num_of_people_str)
-                if num_of_people > room.max_capacity:
-                    messages.error(request, f'Количество людей не может превышать максимальную вместимость комнаты {room.max_capacity}.')
+            if not active_order:
+                num_of_people_str = request.POST.get('num_of_people')
+                if num_of_people_str:
+                    num_of_people = int(num_of_people_str)
+                    if num_of_people > room.max_capacity:
+                        messages.error(request, f'Количество людей не может превышать максимальную вместимость комнаты {room.max_capacity}.')
+                        return redirect('rooms')
+
+                    active_order = Order(
+                        table=table, 
+                        created_by=request.user, 
+                        num_of_people=num_of_people,
+                        table_number=table.table_id
+                    )
+                    # Save the order to the database to get a primary key
+                    active_order.save()
+                else:
+                    messages.error(request, 'Необходимо указать количество посетителей.')
                     return redirect('rooms')
 
-                active_order = Order.objects.create(
-                    table=table, 
-                    created_by=request.user, 
-                    num_of_people=num_of_people,
-                    table_number=table.table_id
-                )
-            else:
-                messages.error(request, 'Необходимо указать количество посетителей.')
-                return redirect('rooms')
+            product_id = request.POST.get('product_id')
+            if product_id:
+                quantity = int(request.POST.get('quantity', 1))
+                product = get_cached_product(product_id)
 
-        product_id = request.POST.get('product_id')
-        if product_id:
-            quantity = int(request.POST.get('quantity', 1))
-            product = get_object_or_404(Product, pk=product_id)
-            order_item, created = active_order.order_items.get_or_create(
-                product=product, 
-                defaults={'quantity': quantity}
-            )
-            if not created:
-                order_item.quantity = F('quantity') + quantity
-                order_item.save(update_fields=['quantity'])
-            messages.success(request, f"{quantity} {order_item.product.product_name_rus} добавлено в заказ.")
-            log_order_change(order=active_order, product_name=order_item.product.product_name_rus, action='add', changed_by=request.user)
+                try:
+                    if product.has_limit and product.limit_quantity < quantity:
+                        messages.error(request, f"Количество лимитированного продукта '{product.product_name_rus}' не может превышать {product.limit_quantity}.")
+                        return redirect('menu', table_id=table_id, category=request.POST.get('category', 'salads'))
 
-        return redirect('menu', table_id=table_id, category=request.POST.get('category', 'salads'))
+                    order_item, created = active_order.order_items.get_or_create(
+                        product=product, 
+                        defaults={'quantity': quantity}
+                    )
+                    if not created:
+                        order_item.quantity += quantity
+                    order_item.save()
 
-    return redirect('menu', table_id=table_id, category='salads')
+                    # Get the updated product quantity after saving the order item
+                    product.refresh_from_db()
+
+                    if quantity > 1:
+                        messages.success(request, f"{quantity} {product.product_name_rus} добавлено в заказ.")
+                    else:
+                        messages.success(request, f"{product.product_name_rus} добавлено в заказ.")
+                    
+                    log_order_change(order=active_order, product_name=order_item.product.product_name_rus, action='add', changed_by=request.user)
+
+                    if product.has_limit:
+                        if product.limit_quantity <= 3:
+                            messages.warning(request, f'Внимание: количество продукта "{product.product_name_rus}" ниже порогового уровня. Осталось {product.limit_quantity}.')
+                        if not product.is_available:
+                            messages.warning(request, f'Внимание: продукт "{product.product_name_rus}" больше не доступен.')
+
+                except ValueError as e:
+                    messages.error(request, str(e))
+                return redirect('menu', table_id=table_id, category=request.POST.get('category', 'salads'))
+
+        return redirect('menu', table_id=table_id, category='salads')
+
+    except Table.DoesNotExist:
+        messages.error(request, "Table not found.")
+        return redirect('rooms')
+
 
 @login_required
 def calculate_discount_for_product(product_id):
+    """Calculate discount for a product."""
     product = Product.objects.get(id=product_id)
     return product.product_price * (product.discount_percentage / 100)
 
-@login_required
+
 def add_product_to_order(product_id, quantity, active_order, request):
-    product = get_object_or_404(Product, pk=product_id)
+    product = get_cached_product(product_id)
     discount_amount = calculate_discount_for_product(product_id)
     order_item, created = active_order.order_items.get_or_create(
         product=product, 
@@ -134,15 +182,34 @@ def add_product_to_order(product_id, quantity, active_order, request):
     messages.success(request, f"{quantity} {order_item.product.product_name_rus} добавлено в заказ.")
     log_order_change(order=active_order, product_name=order_item.product.product_name_rus, action='add')
 
+
 @login_required
 def increase_product_in_order_view(request, order_id, order_item_id):
     order_item = get_object_or_404(OrderItem, id=order_item_id)
+    product = order_item.product
+
+    if product.has_limit and product.limit_quantity < 1:
+        messages.error(request, f"Количество лимитированного продукта '{product.product_name_rus}' не может быть увеличено.")
+        return redirect('cart_detail', order_id)
+
     order_item.quantity += 1
     order_item.is_delivered = False
     order_item.save()
+
+    # Refresh the product instance to get the updated limit_quantity and is_available status
+    product.refresh_from_db()
+
     log_order_change(order=order_item.order, product_name=order_item.product.product_name_rus, action='add', changed_by=request.user)
     messages.success(request, f"{order_item.product.product_name_rus} добавлено в корзину.")
+
+    if product.has_limit:
+        if product.limit_quantity <= 3:
+            messages.warning(request, f'Внимание: количество продукта "{product.product_name_rus}" ниже порогового уровня. Осталось {product.limit_quantity}.')
+        if not product.is_available:
+            messages.warning(request, f'Внимание: продукт "{product.product_name_rus}" больше не доступен.')
+
     return redirect('cart_detail', order_id)
+
 
 @login_required
 def decrease_product_from_order_view(request, order_id, order_item_id):
@@ -150,26 +217,26 @@ def decrease_product_from_order_view(request, order_id, order_item_id):
     order = get_object_or_404(Order, id=order_id)
 
     if order_item.quantity <= 1:
-        if OrderItem.objects.filter(order_id=order_id).count() == 1:
-            Order.objects.get(id=order_id).delete()
+        order_item.delete()
+        log_order_change(order, order_item.product.product_name_rus, 'decrease', request.user)
+        if not order.order_items.exists():
+            order.delete()
             return redirect('rooms')
-        else:
-            order_item.delete()
-            log_order_change(order, order_item.product.product_name_rus, 'decrease', request.user)
     else:
         order_item.quantity -= 1
         order_item.save()
         log_order_change(order, order_item.product.product_name_rus, 'decrease', request.user)
 
-    messages.success(request, f"{order_item.product.product_name_rus} убрали из корзины.")
+    messages.success(request, f"{order_item.product.product_name_rus} убран из заказа.")
     return redirect('cart_detail', order_id)
+
 
 @login_required
 def delete_product_from_order_view(request, order_id, order_item_id):
     order_item = get_object_or_404(OrderItem, id=order_item_id)
     order = get_object_or_404(Order, id=order_id)
     order_item.delete()
-    messages.success(request, f"{order_item.product.product_name_rus} удалено из корзины.")
+    messages.success(request, f"{order_item.product.product_name_rus} удален из заказа.")
     log_order_change(order, order_item.product.product_name_rus, 'delete', request.user)
 
     if not order.order_items.exists():
@@ -178,24 +245,26 @@ def delete_product_from_order_view(request, order_id, order_item_id):
 
     return redirect('cart_detail', order_id)
 
+
 @login_required
 def get_order_item_quantity_view(request, order_id, order_item_id):
     order_item = OrderItem.objects.get(order__id=order_id, id=order_item_id)
     data = {order_item.quantity}
     return JsonResponse(data, safe=False)
 
+
 @login_required
 def remove_empty_order_items():
+    """Remove order items with zero quantity."""
     empty_order_items = OrderItem.objects.filter(quantity=0)
     empty_order_items.delete()
+
 
 @login_required
 def empty_order_detail_view(request, order_id):
     order = get_object_or_404(Order, id=order_id)
     return render(request, 'empty_order_detail.html', {"order_id": order_id, "order": order})
 
-
-from decimal import Decimal
 
 @login_required
 def order_detail_view(request, order_id):
@@ -217,35 +286,49 @@ def order_detail_view(request, order_id):
 
     if request.method == 'POST':
         payment_method = request.POST.get('payment_method')
+        split_payment = request.POST.get('split_payment')
         cash_amount = Decimal(request.POST.get('cash_amount', '0') or '0')
         card_amount = Decimal(request.POST.get('card_amount', '0') or '0')
 
-        if payment_method == 'cash':
-            order.cash_amount = total_price
-            order.card_amount = Decimal('0')
-        elif payment_method == 'card':
-            order.card_amount = total_price
-            order.cash_amount = Decimal('0')
-        elif payment_method == 'mixed':
-            order.cash_amount = (order.cash_amount or Decimal('0')) + cash_amount
-            order.card_amount = (order.card_amount or Decimal('0')) + card_amount
+        logger.info(f"Received payment method: {payment_method}, split payment: {split_payment}, cash amount: {cash_amount}, card amount: {card_amount}")
 
-        order.save()
+        if payment_method in ['cash', 'card', 'mixed']:
+            if split_payment:
+                order.cash_amount = cash_amount
+                order.card_amount = card_amount
+                order.payment_method = 'mixed'
+                logger.info(f"Order {order.id} paid partially in cash: {cash_amount}, and partially with card: {card_amount}.")
+            else:
+                if payment_method == 'cash':
+                    order.cash_amount = total_price
+                    order.card_amount = Decimal('0')
+                    logger.info(f"Order {order.id} paid fully in cash.")
+                elif payment_method == 'card':
+                    order.card_amount = total_price
+                    order.cash_amount = Decimal('0')
+                    logger.info(f"Order {order.id} paid fully with card.")
+                order.payment_method = payment_method
 
-        print(f"Общая сумма: {total_price}₪")
-        print(f"Заплачено наличными: {order.cash_amount}₪")
-        print(f"Заплачено картой: {order.card_amount}₪")
-        remaining_total = total_price - ((order.cash_amount or Decimal('0')) + (order.card_amount or Decimal('0')))
-        print(f"Осталось заплатить: {remaining_total}₪")
+            remaining_total = total_price - (order.cash_amount + order.card_amount)
+            logger.info(f"Order {order.id} remaining total after payment: {remaining_total}")
 
-        if remaining_total <= 0:
-            order.is_completed = True
-            print(f"Заказ {order.id} закрыт")
-            if hasattr(order, 'table'):
-                order.table.is_ordered = False
-                order.table.save()
-            return redirect('tip', table_id=order.table.id)
+            if remaining_total <= 0:
+                order.is_completed = True
+                order.payment_processed = True
+                logger.info(f"Order {order.id} marked as completed and payment processed.")
+                if hasattr(order, 'table'):
+                    order.table.is_ordered = False
+                    order.table.save()
+            order.save()
 
+            if not order.transaction_created:
+                create_transaction_for_order(order)
+                order.transaction_created = True
+                order.save()
+
+            return redirect('tip', table_id=order.table.id if hasattr(order, 'table') else None)
+
+        messages.error(request, 'Неизвестный метод оплаты.')
         return redirect('cart_detail', order_id=order.id)
 
     return render(request, 'cart_detail.html', {
@@ -261,6 +344,36 @@ def order_detail_view(request, order_id):
         'is_admin': is_admin,
         'order_logs': order_logs,
     })
+
+def create_transaction_for_order(order):
+    category, _ = Category.objects.get_or_create(name='Table Service Income')
+
+    payment_method = None
+    cash_amount = None
+    card_amount = None
+
+    if order.payment_method == 'cash':
+        payment_method = PaymentMethod.objects.filter(method=PaymentMethod.CASH).first()
+        cash_amount = order.total_sum()
+    elif order.payment_method == 'card':
+        payment_method = PaymentMethod.objects.filter(method=PaymentMethod.CREDIT_CARD).first()
+        card_amount = order.total_sum()
+    elif order.payment_method == 'mixed':
+        payment_method = PaymentMethod.objects.filter(method=PaymentMethod.MIXED).first()
+        cash_amount = order.cash_amount
+        card_amount = order.card_amount
+
+    Transaction.objects.create(
+        type=Transaction.INCOME,
+        category=category,
+        amount=order.total_sum(),
+        cash_amount=cash_amount,
+        card_amount=card_amount,
+        payment_method=payment_method,
+        date=order.updated_at
+    )
+    logger.info(f"Transaction created for Order {order.id} with amount {order.total_sum()}")
+
 
 
 @login_required
@@ -282,6 +395,7 @@ def apply_discount_view(request):
 
     return redirect('cart_detail', order_id=request.POST.get('order_id'))
 
+
 @login_required
 def update_delivery_status(request, order_item_id):
     order_item = get_object_or_404(OrderItem, id=order_item_id)
@@ -291,6 +405,7 @@ def update_delivery_status(request, order_item_id):
         return redirect('cart_detail', order_id=order_item.order.id)
     else:
         return HttpResponseNotAllowed(['POST'])
+
 
 @login_required
 def add_to_waiter_cart_view(request):
@@ -305,14 +420,15 @@ def add_to_waiter_cart_view(request):
         messages.error(request, "Выбран неверный продукт.")
         return redirect('menu_for_waiter', category=category)
 
-    add_product_to_waiter_order(product_id, quantity, request)
-    return redirect('menu_for_waiter', category=category)
+    # Передаем product_id и quantity как параметры запроса
+    return redirect('add_product_to_waiter_order', product_id=product_id, quantity=quantity)
+
 
 @login_required
-def add_product_to_waiter_order(product_id, quantity, request):
+def add_product_to_waiter_order_view(request, product_id, quantity):
     user = request.user
     active_order, created = WaiterOrder.objects.get_or_create(user=user, is_completed=False, defaults={'created_by': user})
-    product = get_object_or_404(Product, pk=product_id)
+    product = get_cached_product(product_id)
     order_item, created = OrderItem.objects.get_or_create(waiter_order=active_order, product=product)
 
     if not created:
@@ -322,6 +438,8 @@ def add_product_to_waiter_order(product_id, quantity, request):
     order_item.save()
 
     messages.success(request, f"{quantity} {order_item.product.product_name_rus} добавлено в корзину.")
+    return redirect('menu_for_waiter', category=request.POST.get('category'))
+
 
 @login_required
 def waiter_cart_view(request):
@@ -342,10 +460,29 @@ def waiter_cart_view(request):
 
     return render(request, 'waiter_cart.html', context=context)
 
+
 @login_required
 def delete_product_from_waiter_order_view(request, waiter_order_id, order_item_id):
-    waiter_order = get_object_or_404(WaiterOrder, id=waiter_order_id)
+    waiter_order = get_object_or_404(WaiterOrder, id=waiter_order_id, user=request.user, is_completed=False)
     order_item = get_object_or_404(OrderItem, id=order_item_id, waiter_order=waiter_order)
     order_item.delete()
     messages.success(request, f"{order_item.product.product_name_rus} удалено из корзины официанта.")
+    if not waiter_order.waiter_order_items.exists():
+        waiter_order.delete()
+        return redirect('menu_for_waiter', category='salads')
     return redirect('waiter_cart')
+
+@login_required
+def delete_waiter_order_and_items_view(request, waiter_order_id):
+    waiter_order = get_object_or_404(WaiterOrder, id=waiter_order_id, user=request.user, is_completed=False)
+    
+    # Удаляем все элементы из заказа
+    waiter_order.waiter_order_items.all().delete()
+    
+    # Удаляем сам заказ
+    waiter_order.delete()
+    
+    messages.success(request, "Заказ и все элементы успешно удалены.")
+    return JsonResponse({'status': 'success', 'message': 'Заказ и все элементы успешно удалены.'})
+
+

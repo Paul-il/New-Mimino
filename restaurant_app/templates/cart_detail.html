@@ -35,7 +35,7 @@
         </form>
     </td>     
     <td style="color: rgb(231, 235, 5);">{{ order_item.product.product_name_rus }}</td>
-    <td id="order-item-{{ order_item.id }}-quantity" style="color: white;" hx-get="{% url 'get_order_item_quantity' order.id order_item.id %}">{{ order_item.quantity|append_grams:order_item.product.product_name_rus }}</td>
+    <td id="order-item-{{ order_item.id }}-quantity" style="color: white;">{{ order_item.quantity|append_grams:order_item.product.product_name_rus }}</td>
     <td style="color: rgb(255, 255, 255);">{{ order_item.product.product_price }}₪</td>
     <td class="product-quantity">
         <button type="button" class="btn1" onclick="event.preventDefault(); document.getElementById('add-form-{{ order_item.id }}').submit();">Добавить</button>
@@ -60,7 +60,7 @@
     </div>
     <div class="d-flex align-items-center mb-2">
         <div class="text-left mr-2">
-            <input type="checkbox" id="split-payment" onchange="toggleSplitPayment()" />
+            <input type="checkbox" id="split-payment" name="split_payment" onchange="toggleSplitPayment()" />
             <label for="split-payment" style="color: rgb(238, 4, 4);">Разделить платеж</label>
         </div>
         <div class="form-check text-left mr-2">
@@ -80,13 +80,10 @@
     <div class="d-flex flex-row mb-2">
         <button type="submit" id="pay-button" class="btn btn-primary mr-2">Оплатить</button>
         <button type="button" id="print-kitchen" name="print-kitchen" class="btn btn-primary mr-2">Подтвердить Заказ</button>
-        {% if is_not_desktop %}
-            <button type="button" class="btn btn-primary" onclick="sendNotificationToAdmin({{ order.id }})">Отправить распечатать</button>
-        {% else %}
-            <button type="button" class="btn btn-primary" onclick="printInvoice({{ order.id }})">Распечатать Счет</button>
-        {% endif %}
+        <button type="button" class="btn btn-primary" id="print-button">Загрузка...</button>
     </div>
 </form>
+
 
 <!-- Отображение частичных платежей и оставшейся суммы -->
 <div id="partial-payment-info">
@@ -98,30 +95,61 @@
 </div>
 {% endblock payment_method %}
 
+<!-- Добавление формы для закрытия стола -->
+{% block close_table %}
+<form method="post" action="{% url 'close_table_view' %}">
+    {% csrf_token %}
+    <input type="hidden" name="table_id" value="{{ order.table.table_id }}">
+    <button type="submit" class="btn btn-primary">Закрыть стол</button>
+</form>
+{% endblock close_table %}
+
 {% block script %}
-<script src="https://unpkg.com/htmx.org/dist/htmx.min.js"></script>
 <script src="{% static 'scripts/cart_detail.js' %}"></script>
 <script>
+    function sendLinkToPaul(orderId) {
+        fetch('/send-link-to-paul/', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRFToken': '{{ csrf_token }}',
+            },
+            body: JSON.stringify({ order_id: orderId })
+        })
+        .then(response => {
+            if (response.ok) {
+                alert('Просьба об распечате счета отправлена.');
+            } else {
+                alert('Ошибка при отправке ссылки.');
+            }
+        })
+        .catch(error => console.error('Ошибка:', error));
+    }
+
     var orderId = '{{ order.id }}';
     var printKitchenUrl = '{% url "print_kitchen" %}';
     var remainingTotal = {{ remaining_total|floatformat:2 }};
 
-    function sendNotificationToAdmin(orderId) {
-        fetch('/path-to-send-notification/' + orderId, { method: 'POST' })
-            .then(response => {
-                if (response.ok) {
-                    alert('Уведомление администратору отправлено.');
-                } else {
-                    alert('Ошибка при отправке уведомления.');
-                }
-            })
-            .catch(error => console.error('Ошибка:', error));
-    }
-
     document.addEventListener('DOMContentLoaded', function() {
         var paymentMethodInputs = document.querySelectorAll('input[name="payment_method"]');
         var payButton = document.getElementById('pay-button');
+        var printButton = document.getElementById('print-button');
         var tableId = '{{ order.table.table_id }}';
+
+        // Определяем, является ли устройство настольным компьютером или мобильным устройством/планшетом
+        var isDesktop = !/Mobi|Android/i.test(navigator.userAgent);
+
+        if (isDesktop) {
+            printButton.textContent = 'Распечатать счет';
+            printButton.onclick = function() {
+                printInvoice(orderId);
+            };
+        } else {
+            printButton.textContent = 'Послать на печать';
+            printButton.onclick = function() {
+                sendLinkToPaul(orderId);
+            };
+        }
 
         function checkPaymentMethod() {
             var isPaymentMethodSelected = Array.from(paymentMethodInputs).some(input => input.checked);

@@ -1,0 +1,201 @@
+{% extends 'base.html' %}
+
+{% block title %}Чат{% endblock %}
+
+{% block content %}
+<h1>Чат с {% for user in chat.participants.all %}{{ user.username }}{% if not forloop.last %}, {% endif %}{% endfor %}</h1>
+
+<div id="unread-messages-count" class="unread-messages-count">
+    Непрочитанные сообщения: <span id="unread-count">0</span>
+</div>
+
+<form id="delete-messages-form" method="post" action="{% url 'delete_selected_messages' chat.id %}">
+    {% csrf_token %}
+    <div id="chat-log" class="chat-log">
+        <ul class="messages">
+            {% for message in messages_received %}
+                <li class="message {% if message.sender == request.user %}sent{% else %}received{% endif %}">
+                    <div class="message-info">
+                        <span class="sender">{{ message.sender.username }}</span>
+                        <span class="timestamp">{{ message.timestamp|date:"F j, Y, g:i a" }}</span>
+                        <input type="checkbox" name="messages" value="{{ message.id }}" class="message-checkbox">
+                    </div>
+                    <div class="message-body">{{ message.body }}</div>
+                </li>
+            {% empty %}
+                <li class="no-messages">Сообщений нет.</li>
+            {% endfor %}
+        </ul>
+    </div>
+    {% if messages_received %}
+        <button type="submit" class="btn btn-danger">Удалить выбранные</button>
+    {% endif %}
+</form>
+<form id="chat-message-form" method="post" action="{% url 'chat_detail' chat.id %}">
+    {% csrf_token %}
+    {{ form.as_p }}
+    <button type="submit" class="btn btn-primary">Отправить сообщение</button>
+</form>
+
+<form id="delete-all-messages-form" method="post" action="{% url 'delete_all_messages' chat.id %}">
+    {% csrf_token %}
+    <button type="submit" class="btn btn-danger">Удалить все сообщения</button>
+</form>
+
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    const chatId = "{{ chat.id }}";
+    const username = "{{ request.user.username }}";
+
+    const chatSocket = new WebSocket(
+        'ws://' + window.location.host + '/ws/chat/' + chatId + '/'
+    );
+
+    chatSocket.onmessage = function(e) {
+        const data = JSON.parse(e.data);
+        const message = data.message;
+        const sender = data.sender;
+        const timestamp = data.timestamp;
+
+        const messageElement = document.createElement('li');
+        messageElement.className = 'message';
+        if (sender === username) {
+            messageElement.classList.add('sent');
+        } else {
+            messageElement.classList.add('received');
+        }
+        messageElement.innerHTML = `
+            <div class="message-info">
+                <span class="sender">${sender}</span>
+                <span class="timestamp">${timestamp}</span>
+                <input type="checkbox" name="messages" value="${data.id}" class="message-checkbox">
+                <button type="button" class="btn btn-danger btn-sm delete-message" data-message-id="${data.id}">Удалить</button>
+            </div>
+            <div class="message-body">${message}</div>
+        `;
+        document.querySelector('.messages').appendChild(messageElement);
+
+        // Обновление счетчика непрочитанных сообщений
+        updateUnreadCount();
+    };
+
+    chatSocket.onclose = function(e) {
+        console.error('Chat socket closed unexpectedly');
+    };
+
+    document.querySelector('#chat-message-form').onsubmit = function(e) {
+        e.preventDefault();
+
+        const messageInputDom = document.querySelector('#id_body');
+        const message = messageInputDom.value;
+        chatSocket.send(JSON.stringify({
+            'message': message,
+            'sender': username
+        }));
+        messageInputDom.value = '';
+    };
+
+    document.querySelectorAll('.delete-message').forEach(button => {
+        button.addEventListener('click', function() {
+            const messageId = this.dataset.messageId;
+            fetch(`/delete_message/${messageId}/`, {
+                method: 'POST',
+                headers: {
+                    'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]').value
+                }
+            }).then(response => {
+                if (response.ok) {
+                    this.closest('.message').remove();
+                }
+            });
+        });
+    });
+
+    function updateUnreadCount() {
+        fetch('/unread_messages_count/')
+            .then(response => response.json())
+            .then(data => {
+                document.getElementById('unread-count').textContent = data.unread_messages_count;
+            });
+    }
+
+    // Инициализация счетчика непрочитанных сообщений
+    updateUnreadCount();
+</script>
+{% endblock %}
+
+<style>
+.unread-messages-count {
+    font-weight: bold;
+    margin-bottom: 10px;
+}
+
+.chat-log {
+    max-height: 500px;
+    overflow-y: scroll;
+    border: 1px solid #ccc;
+    padding: 10px;
+    margin-bottom: 20px;
+    background-color: #f9f9f9;
+}
+
+.messages {
+    list-style: none;
+    padding: 0;
+    display: flex;
+    flex-direction: column;
+}
+
+.message {
+    margin-bottom: 10px;
+    padding: 10px;
+    border-radius: 10px;
+    max-width: 60%;
+    display: flex;
+    flex-direction: column;
+}
+
+.message.sent {
+    align-self: flex-end;
+    background-color: #dcf8c6;
+    text-align: right;
+}
+
+.message.received {
+    align-self: flex-start;
+    background-color: #f1f0f0;
+    text-align: left;
+}
+
+.message-info {
+    font-size: 0.8em;
+    color: #555;
+    display: flex;
+    justify-content: space-between;
+    margin-bottom: 5px;
+}
+
+.message-body {
+    font-size: 1em;
+}
+
+.sender {
+    font-weight: bold;
+}
+
+.timestamp {
+    font-style: italic;
+}
+
+.delete-message {
+    color: red;
+    margin-left: 10px;
+    cursor: pointer;
+}
+
+input[type="checkbox"] {
+    margin-left: 10px;
+}
+</style>

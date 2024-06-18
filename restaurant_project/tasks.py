@@ -1,5 +1,5 @@
 from celery import shared_task
-from ..models.tables import Tip
+from restaurant_app.views_folder.tip_view import Tip
 
 @shared_task
 def reset_tips():

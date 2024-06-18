@@ -27,7 +27,6 @@ document.addEventListener('DOMContentLoaded', function() {
             creditCardInput.checked = false;
         }
 
-        // Отображаем информацию о частичных платежах и оставшейся сумме
         if (remainingTotal > 0) {
             partialPaymentInfo.innerHTML = `
                 <p style="color: white; font-size: 18px;">
@@ -51,10 +50,9 @@ document.addEventListener('DOMContentLoaded', function() {
             alert('Выберите способ оплаты!');
             event.preventDefault();
         } else {
-            // Открываем модальное окно с чаевыми
             $('#tipModal').modal('show');
         }
-    }); 
+    });
 
     window.toggleSplitPayment = function() {
         var splitPaymentCheckbox = document.getElementById('split-payment');
@@ -119,6 +117,7 @@ document.addEventListener('DOMContentLoaded', function() {
     window.printInvoice = printInvoice;
 
     document.getElementById('print-kitchen').addEventListener('click', function() {
+        console.log('Confirming order for orderId:', orderId); // Logging orderId for debugging
         fetch('/confirm-order/' + orderId, {
             method: 'POST',
             headers: {
@@ -135,7 +134,12 @@ document.addEventListener('DOMContentLoaded', function() {
                     if (xhr.status === 200) {
                         var response = JSON.parse(xhr.responseText);
                         alert(response.message);
+                    } else {
+                        alert('Ошибка при подтверждении заказа.');
                     }
+                };
+                xhr.onerror = function() {
+                    alert('Ошибка при подключении к серверу.');
                 };
                 xhr.send();
             } else {
@@ -145,6 +149,7 @@ document.addEventListener('DOMContentLoaded', function() {
             }
         }).catch(error => {
             console.error('Ошибка:', error);
+            alert('Ошибка при подтверждении заказа: ' + error.message);
         });
     });
 
@@ -152,7 +157,7 @@ document.addEventListener('DOMContentLoaded', function() {
         let cookieValue = null;
         if (document.cookie && document.cookie !== '') {
             const cookies = document.cookie.split(';');
-            for (let i = 0; i < cookies.length; i++) {
+            for (let i = 0; cookies.length; i++) {
                 const cookie = cookies[i].trim();
                 if (cookie.substring(0, name.length + 1) === (name + '=')) {
                     cookieValue = decodeURIComponent(cookie.substring(name.length + 1));

@@ -20,4 +20,4 @@ def statistics_view(request):
             categories_data[category] = {'total_count': count, 'products': [{product: count}]}
 
     context = {'categories_data': categories_data}
-    return render(request, 'statistics.html', context)
+    return render(request, 'sales/statistics.html', context)

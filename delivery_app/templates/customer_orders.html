@@ -1,0 +1,37 @@
+{% extends "base.html" %}
+{% load static %}
+
+{% block title %}Customer Orders{% endblock %}
+
+{% block content %}
+    <h1>Customer Orders</h1>
+    <p>Total Customers: {{ total_customers }}</p>
+
+    <!-- Форма поиска по номеру телефона -->
+    <form method="GET" action=".">
+        <label for="search">Искать номер:</label>
+        <input type="text" id="search" name="search" value="{{ search_query }}" placeholder="Enter phone number">
+        <input type="submit" value="Search">
+    </form>
+
+    <h2>Customers</h2>
+    <table>
+        <tr>
+            <th>Имя</th>
+            <th>Телефон</th>
+            <th>Город</th>
+            <th>Улица</th>
+            <th>Номер дома</th>
+        </tr>
+        {% for customer in customers %}
+        <tr>
+            <td>{{ customer.name }}</td>
+            <td><a href="{% url 'delivery_app:customer_detail' customer.id %}">{{ customer.delivery_phone_number }}</a></td>
+            <td>{{ customer.city }}</td>
+            <td>{{ customer.street }}</td>
+            <td>{{ customer.house_number }}</td>
+        </tr>
+        {% endfor %}
+    </table>
+
+{% endblock %}

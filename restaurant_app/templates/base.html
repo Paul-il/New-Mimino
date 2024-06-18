@@ -1,115 +1,154 @@
-
-{% load static %}
 <!DOCTYPE html>
 <html lang="ru">
-  <head>
+<head>
     <title>{% block title %} {% endblock %}</title>
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <meta charset="utf-8">
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/css/bootstrap.min.css" rel="stylesheet">
     <link rel="stylesheet" type="text/css" href="https://cdn.datatables.net/v/dt/dt-1.11.3/datatables.min.css"/>
+    {% load static %}
     <link rel="stylesheet" href="{% static 'css/style.css' %}">
     <link rel="stylesheet" href="{% static 'css/login-form.css' %}">
+    <link rel="stylesheet" href="{% static 'css/messages.css' %}">
     <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/htmx.org/dist/htmx.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/popper.js/1.16.0/umd/popper.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.2.1/dist/js/bootstrap.bundle.min.js"></script>
     <script type="text/javascript" src="https://cdn.datatables.net/v/dt/dt-1.11.3/datatables.min.js"></script>
     <link rel="stylesheet" href="https://code.jquery.com/ui/1.12.1/themes/base/jquery-ui.css">
     <script src="https://code.jquery.com/ui/1.12.1/jquery-ui.min.js"></script>
     {% block extra_head %}
-    
     {% endblock %}
-    
-  </head>
-  <body>
+    <style>
+        #unread-messages-count {
+            display: none;
+        }
+    </style>
+</head>
+<body>
     <nav class="navbar navbar-expand-lg navbar-light">
-      <div class="container">
-          {% if user.is_authenticated %}
-              <ul class="navbar-nav me-auto">
-                  <li class="nav-item">
-                      <a class="nav-link" href="{% url 'rooms' %}">Комнаты</a>
-                  </li>
-                  {% if request.user_agent.is_pc %}
-                  <li class="nav-item dropdown">
-                      <a class="nav-link dropdown-toggle" href="#" id="deliveryDropdown" role="button" data-bs-toggle="dropdown" aria-expanded="false">
-                          Доставка/Самовывоз
-                      </a>
-                      <ul class="dropdown-menu" aria-labelledby="deliveryDropdown">
-                          <li><a class="dropdown-item" href="{% url 'delivery_app:delivery_process' delivery_type='now' %}">На сейчас</a></li>
-                          <li><a class="dropdown-item" href="{% url 'delivery_app:delivery_process' delivery_type='later' %}">На будущее</a></li>
-                          <li><a class="dropdown-item" href="{% url 'pickup_app:pickup_create' %}">Самовывоз</a></li>
-                      </ul>
-                  </li>
-                  {% endif %}
-                  <li class="nav-item dropdown">
-                      <a class="nav-link dropdown-toggle" href="#" id="deliveryDropdown" role="button" data-bs-toggle="dropdown" aria-expanded="false">
-                          Бронирования/Продукты
-                      </a>
-                      <ul class="dropdown-menu" aria-labelledby="deliveryDropdown">
-                          <li><a class="dropdown-item" href="{% url 'bookings' %}">Бронирования</a></li>
-                          <li><a class="dropdown-item" href="{% url 'manage_products' %}">Продукты</a></li>
-                          <li><a class="dropdown-item" href="{% url 'find_products' %}">Поиск ранних продуктов</a></li>
-                      </ul>
-                  </li>
-              </ul>
-              <ul class="navbar-nav ms-auto"> <!-- Используйте ms-auto для выравнивания справа -->
-                  <li class="nav-item">
-                      <a class="nav-link" href="{% url 'user_detail' user.id %}">Чаевые: {{ tip_amount }}</a>
-                  </li>
-                  <li class="nav-item dropdown">
-                      <a class="nav-link dropdown-toggle" href="#" id="user-dropdown" role="button" data-bs-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
-                          {{ user.first_name }}
-                      </a>
-                      <div class="dropdown-menu" aria-labelledby="user-dropdown">
-                        <a class="dropdown-item" href="{% url 'menu_for_waiter' category='salads' %}">Хочу кушать</a>
-                        <a class="dropdown-item" href="{% url 'delivery_app:delivery_summary' %}">Сводка по доставке</a>
-                        {% if user.is_superuser %}
-                          <a class="dropdown-item" href="{% url 'order_summary' %}">Сводка</a>
-                          <a class="dropdown-item" href="{% url 'user_summary' %}">Чаевые официантов</a>
-                          <a class="dropdown-item" href="{% url 'admin:index' %}">Админ-панель</a>
-                          <a class="dropdown-item" href="{% url 'order_statistics' %}">Статистика Продаж</a>
-                          <a class="dropdown-item" href="{% url 'expenses:transaction_list' %}">Затраты/Прибыль</a>
-                        {% endif %}
-                        <a id="logout-button" class="dropdown-item" href="#">Выход из системы</a>
-                      </div>
-                  </li>
-              </ul>
-          {% endif %}
-      </div>
-  </nav>
-  
-
+        <div class="container">
+            {% if user.is_authenticated %}
+                <ul class="navbar-nav me-auto">
+                    <li class="nav-item">
+                        <a class="nav-link" href="{% url 'rooms' %}">Комнаты</a>
+                    </li>
+                    {% if request.user_agent.is_pc %}
+                    <li class="nav-item dropdown">
+                        <a class="nav-link dropdown-toggle" href="#" id="deliveryDropdown" role="button" data-bs-toggle="dropdown" aria-expanded="false">
+                            Доставка/Самовывоз
+                        </a>
+                        <ul class="dropdown-menu" aria-labelledby="deliveryDropdown">
+                            <li><a class="dropdown-item" href="{% url 'delivery_app:delivery_process' delivery_type='now' %}">На сейчас</a></li>
+                            <li><a class="dropdown-item" href="{% url 'delivery_app:delivery_process' delivery_type='later' %}">На будущее</a></li>
+                            <li><a class="dropdown-item" href="{% url 'pickup_app:pickup_create' %}">Самовывоз</a></li>
+                        </ul>
+                    </li>
+                    {% endif %}
+                    <li class="nav-item dropdown">
+                        <a class="nav-link dropdown-toggle" href="#" id="productDropdown" role="button" data-bs-toggle="dropdown" aria-expanded="false">
+                            Бронирования/Продукты
+                        </a>
+                        <ul class="dropdown-menu" aria-labelledby="productDropdown">
+                            <li><a class="dropdown-item" href="{% url 'bookings' %}">Бронирования</a></li>
+                            <li><a class="dropdown-item" href="{% url 'manage_products' %}">Продукты</a></li>
+                            <li><a class="dropdown-item" href="{% url 'find_products' %}">Поиск ранних продуктов</a></li>
+                        </ul>
+                    </li>
+                </ul>
+                <ul class="navbar-nav ms-auto">
+                    <li class="nav-item">
+                        <a class="nav-link" href="{% url 'user_detail' user.id %}">Чаевые: {{ tip_amount }}</a>
+                    </li>
+                    <li class="nav-item dropdown">
+                        <a class="nav-link dropdown-toggle" href="#" id="user-dropdown" role="button" data-bs-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
+                            {{ user.first_name }}
+                            <span id="unread-messages-count" class="badge bg-danger"></span>
+                        </a>
+                        <div class="dropdown-menu" aria-labelledby="user-dropdown">
+                            <a class="dropdown-item" href="{% url 'menu_for_waiter' category='salads' %}">Хочу кушать</a>
+                            <a class="dropdown-item" href="{% url 'delivery_app:delivery_summary' %}">Сводка по доставке</a>
+                            <a class="dropdown-item" href="{% url 'personal_cabinet' %}">Личный кабинет</a>
+                            <a class="dropdown-item" href="{% url 'inbox' %}">Входящие сообщения</a>
+                            <a class="dropdown-item" href="{% url 'send_message' %}">Написать сообщения</a>
+                            <a class="dropdown-item" href="{% url 'limited_products' %}">Махсан</a>
+                            {% if user.is_superuser %}
+                            <a class="dropdown-item" href="{% url 'delivery_app:customer_orders' %}">Клиенты</a>
+                            <a class="dropdown-item" href="{% url 'order_summary' %}">Сводка</a>
+                            <a class="dropdown-item" href="{% url 'user_summary' %}">Чаевые официантов</a>
+                            <a class="dropdown-item" href="{% url 'admin:index' %}">Админ-панель</a>
+                            <a class="dropdown-item" href="{% url 'order_statistics' %}">Статистика Продаж</a>
+                            <a class="dropdown-item" href="{% url 'expenses:transaction_list' %}">Затраты/Прибыль</a>
+                            {% endif %}
+                            <a id="logout-button" class="dropdown-item" href="#">Выход из системы</a>
+                        </div>
+                    </li>
+                </ul>
+            {% endif %}
+        </div>
+    </nav>
     <div class="container mt-5">
-      {% if messages %}
-        {% for message in messages %}
-          <div class="alert alert-success" role="alert">
-            {{ message }}
-          </div>
-        {% endfor %}
-      {% endif %}
-      {% block content %}
-      {% endblock %}
+        {% if messages %}
+            {% for message in messages %}
+                <div class="alert alert-{{ message.tags }}" role="alert">
+                    {{ message }}
+                </div>
+            {% endfor %}
+        {% endif %}
+        {% block content %}
+        {% endblock %}
     </div>
-
-    <!-- Выход из системы -->
     <form id="logout-form" action="{% url 'logout' %}" method="POST" style="display: none;">
-    {% csrf_token %}
+        {% csrf_token %}
     </form>
 
+    <!-- Модальное окно для уведомлений -->
+    <div class="modal fade" id="messageModal" tabindex="-1" aria-labelledby="messageModalLabel" aria-hidden="true">
+        <div class="modal-dialog modal-dialog-centered">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title" id="messageModalLabel">Новое сообщение</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body">
+                    У вас новое сообщение!
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Закрыть</button>
+                    <a href="{% url 'inbox' %}" class="btn btn-primary">Посмотреть</a>
+                </div>
+            </div>
+        </div>
+    </div>
+
+
     <script>
-    $(document).ready(function() {
-        // При нажатии на кнопку выхода отправляем форму выхода.
-        $('#logout-button').click(function(event) {
-            event.preventDefault();
-            $('#logout-form').submit();
-        });
-    });
-    </script>
-  {% block script %}
-   
-  {% endblock %}
-    
-  </body>
-  
+      $(document).ready(function() {
+          $('#logout-button').click(function(event) {
+              event.preventDefault();
+              $('#logout-form').submit();
+          });
+      
+          // Initialize WebSocket for notifications
+          const ws_scheme = window.location.protocol === "https:" ? "wss" : "ws";
+          const notificationsSocket = new WebSocket(
+              ws_scheme + '://' + window.location.host + '/ws/notifications/');
+      
+          notificationsSocket.onmessage = function(e) {
+              const data = JSON.parse(e.data);
+              console.log('Notification received:', data);
+              if (data.notification === 'new_message') {
+                  $('#messageModal').modal('show');
+              }
+          };
+      
+          notificationsSocket.onclose = function(e) {
+              console.error('Notifications socket closed unexpectedly');
+          };
+      });
+      </script>   
+      
+
+    {% block script %}
+    {% endblock %}
+</body>
 </html>

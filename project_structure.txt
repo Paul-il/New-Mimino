@@ -1,8 +1,10 @@
 Mimino/
+└── collect_files.py
 └── import_excel.py
 └── manage.py
     treee.py
 ├── .vscode/
+├── collected_files/
 ├── delivery_app/
 │   └── admin.py
 │   └── apps.py
@@ -34,6 +36,7 @@ Mimino/
 │   │   └── 0019_deliveryorder_delivery_date_and_more.py
 │   │   └── 0020_alter_courier_name.py
 │   │   └── 0021_alter_courier_name.py
+│   │   └── 0022_deliveryorder_transaction_created.py
 │   │       __init__.py
 │   ├── templates/
 │   │   └── add_delivery_customer.html
@@ -122,6 +125,7 @@ Mimino/
 │   │   └── 0004_pickuporder_total_amount.py
 │   │   └── 0005_pickuporder_payment_method.py
 │   │   └── 0006_pickuporder_cart_snapshot.py
+│   │   └── 0007_pickuporder_transaction_created.py
 │   │       __init__.py
 │   ├── pickup_views/
 │   │   └── pdf_template_view.py
@@ -144,8 +148,10 @@ Mimino/
 │   └── admin.py
 │   └── apps.py
 │   └── booking_context.py
+│   └── consumers.py
 │   └── context_processors.py
 │   └── forms.py
+│   └── signals.py
 │   └── tests.py
 │   └── views.py
 │       __init__.py
@@ -216,6 +222,17 @@ Mimino/
 │   │   └── 0061_alter_orderchangelog_action.py
 │   │   └── 0062_alter_orderchangelog_options.py
 │   │   └── 0063_orderchangelog_changed_by.py
+│   │   └── 0064_table_is_available_alter_order_card_amount_and_more.py
+│   │   └── 0065_message_alter_tip_date_and_more.py
+│   │   └── 0066_alter_order_created_by_alter_tipgoal_user_and_more.py
+│   │   └── 0067_product_has_limit_product_limit_quantity.py
+│   │   └── 0068_alter_product_printer_alter_product_product_price.py
+│   │   └── 0069_remove_message_recipient_chat_message_chat.py
+│   │   └── 0070_alter_message_chat.py
+│   │   └── 0071_auto_20240606_1426.py
+│   │   └── 0072_order_transaction_created.py
+│   │   └── 0073_product_is_available_for_delivery.py
+│   │   └── 0074_deliveryorder.py
 │   │       __init__.py
 │   ├── models/
 │   │   └── message.py
@@ -256,12 +273,17 @@ Mimino/
 │   │   └── bookings.html
 │   │   └── book_table.html
 │   │   └── cart_detail.html
+│   │   └── change_password.html
+│   │   └── chat_detail.html
 │   │   └── edit_booking.html
+│   │   └── edit_profile.html
 │   │   └── empty_order_detail.html
 │   │   └── error.html
 │   │   └── find_product.html
+│   │   └── inbox.html
 │   │   └── index.html
 │   │   └── kitchen_template.html
+│   │   └── limited_products.html
 │   │   └── manage_products.html
 │   │   └── menu.html
 │   │   └── menu_for_waiter.html
@@ -270,12 +292,15 @@ Mimino/
 │   │   └── order_summary.html
 │   │   └── password_check.html
 │   │   └── pdf_template.html
+│   │   └── personal_cabinet.html
 │   │   └── recommendations.html
 │   │   └── rooms.html
 │   │   └── room_detail.html
 │   │   └── search.html
 │   │   └── search_results.html
+│   │   └── send_message.html
 │   │   └── tables.html
+│   │   └── table_detail.html
 │   │   └── table_order.html
 │   │   └── tip.html
 │   │   └── user_detail.html
@@ -289,6 +314,7 @@ Mimino/
 │   │   └── add_stock_view.py
 │   │   └── ask_where_views.py
 │   │   └── book_table_view.py
+│   │   └── cabinet.py
 │   │   └── cart_view.py
 │   │   └── close_table_view.py
 │   │   └── confirm_order_view.py
@@ -297,6 +323,7 @@ Mimino/
 │   │   └── login_view.py
 │   │   └── manage_products_view.py
 │   │   └── menu_view.py
+│   │   └── message_view.py
 │   │   └── order_statistics_view.py
 │   │   └── order_summary.py
 │   │   └── pdf_template_view.py
@@ -307,11 +334,13 @@ Mimino/
 │   │   └── search_view.py
 │   │   └── set_bill_printed_view.py
 │   │   └── tables_view.py
+│   │   └── table_detail_view.py
 │   │   └── tip_view.py
 │   │       user_summary_view.py
 ├── restaurant_project/
 │   └── asgi.py
 │   └── celery.py
+│   └── routing.py
 │   └── settings.py
 │   └── tasks.py
 │   └── urls.py

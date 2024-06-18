@@ -2,22 +2,28 @@
 
 {% block content %}
   <h1 style="color: white; text-align: center;">Статистика продаж</h1>
-  <table>
-    <tr>
-      <th style="color: white; font-size: 15px; text-align: center;" >Товар</th>
-      <th style="color: white; font-size: 15px; text-align: center;" >Продажи</th>
-      <th style="color: white; font-size: 15px; text-align: center;" >Процент продаж</th>
-    </tr>
-    {% for sale in sales %}
+  {% for category, data in categories_data.items %}
+    <h2 style="color: white;">{{ category }}</h2>
+    <table>
       <tr>
-        <td style="color: white; font-size: 15px; text-align: center;">{{ sale.order_item__product__product_name_rus }}</td>
-        <td style="color: white; font-size: 15px; text-align: center;">{{ sale.sales_count }}</td>
-        <td style="color: white; font-size: 15px; text-align: center;">{{ sale.sales_percentage|floatformat:2 }}%</td>
+        <th style="color: white; font-size: 15px; text-align: center;">Товар</th>
+        <th style="color: white; font-size: 15px; text-align: center;">Продажи</th>
+        <th style="color: white; font-size: 15px; text-align: center;">Процент продаж</th>
       </tr>
-    {% empty %}
-      <tr>
-        <td colspan="3" style="color: white; font-size: 15px; text-align: center;">Пока нет продаж</td>
-      </tr>
-    {% endfor %}
-  </table>
+      {% for product in data.products %}
+        {% for product_name, count in product.items %}
+          <tr>
+            <td style="color: white; font-size: 15px; text-align: center;">{{ product_name }}</td>
+            <td style="color: white; font-size: 15px; text-align: center;">{{ count }}</td>
+            <td style="color: white; font-size: 15px; text-align: center;">{{ (count|floatformat:2) / (data.total_count|floatformat:2) * 100 }}%</td>
+          </tr>
+        {% endfor %}
+      {% endfor %}
+      {% if not data.products %}
+        <tr>
+          <td colspan="3" style="color: white; font-size: 15px; text-align: center;">Пока нет продаж</td>
+        </tr>
+      {% endif %}
+    </table>
+  {% endfor %}
 {% endblock %}

@@ -42,12 +42,15 @@
                         {% if not product.is_available %}
                             <p>Продукт закончился</p>
                         {% endif %}
+                        {% if product.has_limit %}
+                            <p>Осталось: {{ product.limit_quantity }}</p>
+                        {% endif %}
                     </form>
-                    
                 </div>
             </div>
         </div>
         {% endfor %}
-    </div>
+    </div>    
+    
 </div>
 {% endblock %}

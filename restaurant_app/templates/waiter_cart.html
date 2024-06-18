@@ -33,15 +33,10 @@
                     <td style="color: rgb(255, 255, 255);">{{ order_item.product.product_price }}₪</td>
                     <td class="product-quantity">
                         <div class="btn-group" role="group">
-                            <form method="POST" action="{% url 'delete_product_from_order' active_order.id order_item.id %}">
-                                {% csrf_token %}
-                                <input type="hidden" name="csrfmiddlewaretoken" value="{{ csrf_token }}">
-                                <input type="hidden" name="product_id" value="{{ order_item.product.id }}">
-                            </form>
-                            <form method="post" action="{% url 'delete_product_from_waiter_order' waiter_order_id=active_order.id order_item_id=order_item.id %}">
+                            <form method="POST" action="{% url 'delete_product_from_waiter_order' waiter_order_id=active_order.id order_item_id=order_item.id %}">
                                 {% csrf_token %}
                                 <button type="submit" class="btn1 btn-danger btn-sm">Удалить</button>
-                            </form>                            
+                            </form>
                         </div>
                     </td>
                 </tr>
@@ -58,22 +53,38 @@
     </div>
 
     <div class="d-flex justify-content-between">
-        <button type="button" id="waiter-print-kitchen" name="waiter-print-kitchen" class="btn-primary2" data-waiter-order-id="{{ active_order.id }}">Подтвердить Заказ.</button>
+        <button type="button" id="waiter-confirm-order" name="waiter-confirm-order" class="btn-primary2" data-waiter-order-id="{{ active_order.id }}">Подтвердить Заказ.</button>
     </div>
     
     <script src="https://unpkg.com/htmx.org/dist/htmx.min.js"></script>
     <script src="{% static 'scripts/order_detail.js' %}"></script>
     
     <script>
-        document.getElementById("waiter-print-kitchen").addEventListener("click", function() {
+        document.getElementById("waiter-confirm-order").addEventListener("click", function() {
             let waiterOrderId = this.getAttribute('data-waiter-order-id');
+            
+            // Логика отправки заказа на кухню
             fetch(`/print_kitchen_for_waiter/?waiter_order_id=${waiterOrderId}`)
             .then(response => response.json())
             .then(data => {
                 if (data.status === 'success') {
-                    alert(data.message);
-                    // Здесь можно добавить перенаправление на другую страницу или обновить текущую страницу, например:
-                    // window.location.href = "/path_to_redirect/";
+                    // После успешной отправки заказа на кухню, удаляем все продукты
+                    fetch(`/delete_waiter_order_and_items/${waiterOrderId}/`, {
+                        method: 'POST',
+                        headers: {
+                            'X-CSRFToken': '{{ csrf_token }}'
+                        }
+                    })
+                    .then(response => response.json())
+                    .then(data => {
+                        if (data.status === 'success') {
+                            alert(data.message);
+                            // Перенаправление на страницу меню после успешного подтверждения заказа
+                            window.location.href = "{% url 'rooms' %}";
+                        } else {
+                            alert(data.message);
+                        }
+                    });
                 } else {
                     alert(data.message);
                 }

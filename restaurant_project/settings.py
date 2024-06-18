@@ -82,16 +82,17 @@ INSTALLED_APPS = [
     'django.contrib.messages',
     'django.contrib.staticfiles',
     'django_user_agents',
-    'restaurant_app',
-    'delivery_app',
-    'pickup_app',
+    'restaurant_app.apps.RestaurantAppConfig',
+    'delivery_app.apps.DeliveryAppConfig',
+    'pickup_app.apps.PickupAppConfig',
     'xhtml2pdf',
     'corsheaders',
-    'order_statistics',
-    'sales',
-    'expenses',
-
+    'channels',
+    'order_statistics.apps.OrderStatisticsConfig',
+    'sales.apps.SalesConfig',
+    'expenses.apps.ExpensesConfig',
 ]
+
 
 MIDDLEWARE = [
 
@@ -121,6 +122,7 @@ TEMPLATES = [
                 'django.contrib.messages.context_processors.messages',
                 'restaurant_app.context_processors.tips_and_goal',
                 'restaurant_app.booking_context.booking_exists',
+                'restaurant_app.context_processors.unread_messages_count',
             ],
         },
     },
@@ -204,24 +206,55 @@ CELERY_BEAT_SCHEDULE = {
     },
 }
 
+ASGI_APPLICATION = 'restaurant_app.asgi.application'
+
+CHANNEL_LAYERS = {
+    'default': {
+        'BACKEND': 'channels_redis.core.RedisChannelLayer',
+        'CONFIG': {
+            'hosts': [('127.0.0.1', 6379)],
+        },
+    },
+}
+
 
 """LOGGING = {
     'version': 1,
     'disable_existing_loggers': False,
+    'formatters': {
+        'verbose': {
+            'format': '{levelname} {asctime} {module} {message}',
+            'style': '{',
+        },
+        'simple': {
+            'format': '{levelname} {message}',
+            'style': '{',
+        },
+    },
     'handlers': {
         'file': {
             'level': 'DEBUG',
             'class': 'logging.FileHandler',
-            'filename': 'debug.log',
-            'encoding': 'utf-8',  # Specify the encoding here
+            'filename': os.path.join(BASE_DIR, 'debug.log'),
+            'formatter': 'verbose',
+            'encoding': 'utf-8',
+        },
+        'console': {
+            'level': 'DEBUG',
+            'class': 'logging.StreamHandler',
+            'formatter': 'simple',
         },
     },
     'loggers': {
         'django': {
-            'handlers': ['file'],
+            'handlers': ['file', 'console'],
             'level': 'DEBUG',
             'propagate': True,
         },
+        'django.utils.autoreload': {
+            'handlers': ['file', 'console'],
+            'level': 'INFO',  # Устанавливаем уровень логирования на INFO, чтобы подавить DEBUG сообщения
+            'propagate': False,
+        },
     },
-}
-"""
+}"""

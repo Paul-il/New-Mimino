@@ -46,6 +46,11 @@ def table_order_view(request, table_id):
     else:
         form = OrderForm()
 
+    # Добавляем проверку на пустой заказ при выходе
+    if request.method == 'GET' and not active_order.order_items.exists():
+        active_order.delete()
+        return redirect('rooms')
+
     active_order_items, active_order_total, _ = get_order_details(active_order) if active_order else (None, 0, None)
 
     return render(request, 'table_order.html', {

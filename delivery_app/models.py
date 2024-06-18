@@ -6,14 +6,14 @@ from restaurant_app.models.product import Product
 # Глобальные переменные для определения выборов
 CITY_CHOICES = (
     ('חיפה', 'Хайфа'), 
-    ('נשר', ('Нэшер')), 
+    ('נשר', 'Нэшер'), 
     ('טירת כרמל', 'Тира'), 
     ('כפר גלים', 'Кфар Галим'),
     ('קריית חיים', 'Кирият Хаим'), 
     ('קריית אתא', 'Кирият Ата'), 
     ('קריית ביאליק', 'Кирият Биалик'),
-    ('קריית ים', ('Кирият Ям')),
-    ('קריית מוצקין', ('Кирият Моцкин'))
+    ('קריית ים', 'Кирият Ям'),
+    ('קריית מוצקין', 'Кирият Моцкин')
 )
 
 PAYMENT_METHOD_CHOICES = (
@@ -50,6 +50,7 @@ class DeliveryOrder(models.Model):
     total_amount = models.DecimalField(max_digits=10, decimal_places=2, null=True, blank=True)
     delivery_date = models.DateField(null=True, blank=True)
     delivery_time = models.TimeField(null=True, blank=True)
+    transaction_created = models.BooleanField(default=False)
     payment_method = models.CharField(
         max_length=12,
         choices=PAYMENT_METHOD_CHOICES,
@@ -63,6 +64,7 @@ class DeliveryOrder(models.Model):
 
     def __str__(self):
         return f"{self.pk} - {self.customer.name} ({self.customer.delivery_phone_number})"
+
 
 NAME_CHOICES = [
     ('solo', 'Solo'),
@@ -111,6 +113,7 @@ class DeliveryCart(models.Model):
     customer = models.ForeignKey(DeliveryCustomer, on_delete=models.CASCADE)
     created_at = models.DateTimeField(auto_now_add=True)
     total_price = models.DecimalField(max_digits=8, decimal_places=2, default=0)
+    is_completed = models.BooleanField(default=False)
 
     def get_total(self):
         if not self.pk:

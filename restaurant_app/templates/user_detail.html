@@ -2,23 +2,9 @@
 {% load static %}
 {% load custom_tags %}
 
-{% block additional_css %}
-    <link rel="stylesheet" href="{% static 'css/jquery-ui.min.css' %}">
-    <link rel="stylesheet" href="https://cdn.datatables.net/1.10.25/css/dataTables.bootstrap4.min.css">
-{% endblock %}
-
-{% block additional_js %}
-    <script src="https://code.jquery.com/jquery-3.5.1.js"></script>
-    <script src="https://code.jquery.com/ui/1.12.1/jquery-ui.js"></script>
-    <script src="https://cdn.datatables.net/1.10.25/js/jquery.dataTables.min.js"></script>
-    <script src="https://cdn.datatables.net/1.10.25/js/dataTables.bootstrap4.min.js"></script>
-{% endblock %}
-
-{% block title %}Детали официанта - {{ user.first_name }}{% endblock %}
-
 {% block content %}
 <div class="container my-5">
-    <h1 class="mb-4" style="color: white;">Детали официанта - {{ user.first_name }}</h1>
+    <h1 class="mb-4" style="color: white;">Детали пользователя - {{ user.username }}</h1>
     <div class="row">
         <div class="col-md-6">
             <h2 class="mb-4" style="color: white;">Общая информация</h2>
@@ -60,37 +46,51 @@
         <p>Чаевые: {{ today_total_tips }}</p>
         <p>Соотношение: {{ today_tip_ratio }}%</p>
     </div>
-</div>
 
-<h2 class="mb-4" style="color: white;">Распределение чаевых</h2>
-<table id="tipDistributionTable" class="table table-striped">
-    <thead>
-        <tr>
-            <th scope="col" style="color: white; font-size: 15px;">Официант</th>
-            <th scope="col" style="color: white; font-size: 15px;">Сумма чаевых</th>
-            <th scope="col" style="color: white; font-size: 15px;">Дата</th>
-            <th scope="col" style="color: white; font-size: 15px;">Поделено с</th>
-        </tr>
-    </thead>
-    <tbody>
-        {% for tip in tips_with_sharing %}
+    {% if is_admin %}
+    <h2 class="mb-4" style="color: white;">Распределение чаевых</h2>
+    <table id="tipDistributionTable" class="table table-striped">
+        <thead>
             <tr>
-                <td>{{ tip.user.username }}</td>
-                <td>{{ tip.amount }}</td>
-                <td>{{ tip.date|date:"F j, Y, g:i a" }}</td>
-                <td>
-                    {% if tip.shared_with != '-' %}
-                        {% for share in tip.shared_with %}
-                            {{ share.user.username }} ({{ share.amount }}), 
-                        {% endfor %}
-                    {% else %}
-                        -
-                    {% endif %}
-                </td>
+                <th scope="col" style="color: white; font-size: 15px;">Официант</th>
+                <th scope="col" style="color: white; font-size: 15px;">Сумма чаевых</th>
+                <th scope="col" style="color: white; font-size: 15px;">Дата</th>
+                <th scope="col" style="color: white; font-size: 15px;">Поделено с</th>
+                <th scope="col" style="color: white; font-size: 15px;">Номер стола</th>
+                <th scope="col" style="color: white; font-size: 15px;">Общая сумма заказа</th>
+                <th scope="col" style="color: white; font-size: 15px;">Количество людей</th>
             </tr>
-        {% endfor %}
-    </tbody>
-</table>
+        </thead>
+        <tbody>
+            {% for tip in tips_with_sharing %}
+                <tr>
+                    <td>{{ tip.user.username }}</td>
+                    <td>{{ tip.amount }}</td>
+                    <td>{{ tip.date|date:"F j, Y, H:i" }}</td>
+                    <td>
+                        {% if tip.shared_with != '-' %}
+                            {% for share in tip.shared_with %}
+                                {{ share.user.username }} ({{ share.amount }}), 
+                            {% endfor %}
+                        {% else %}
+                            -
+                        {% endif %}
+                    </td>
+                    <td>
+                        {% if tip.table_id != '-' %}
+                            <a href="{% url 'table_detail' table_id=tip.table_id order_id=tip.order_id %}" style="color: black;">{{ tip.table_id }}</a>
+                        {% else %}
+                            {{ tip.table_id }}
+                        {% endif %}
+                    </td>
+                    <td>{{ tip.order_amount }}</td>
+                    <td>{{ tip.num_people }}</td>
+                </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+    {% endif %}
+</div>
 
 <script>
     $(document).ready(function () {

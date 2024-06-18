@@ -10,7 +10,7 @@
     <div class="my-4">
         <a href="{% url 'pickup_app:pickup_cart' phone_number=pickup_order.phone category=category %}" type="submit" class="btn btn-primary">Корзина</a>
     </div>
-    {% endif%}
+    {% endif %}
     <h1 class="my-4" style="color: white;">Меню на Самовывоз №: {{ phone_number }}</h1>
     <section>
         {% include 'pickup_search.html' %}
@@ -43,6 +43,9 @@
                         {% if not product.is_available %}
                             <p>Продукт закончился</p>
                         {% endif %}
+                        {% if product.has_limit %}
+                            <p>Осталось: {{ product.limit_quantity }}</p>
+                        {% endif %}
                     </form>
                 </div>
             </div>
@@ -50,6 +53,5 @@
         {% endfor %}
     </div>
 
- 
 </div>
 {% endblock %}

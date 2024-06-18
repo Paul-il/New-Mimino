@@ -80,20 +80,27 @@ def get_order_item_quantity_view(request, order_id, order_item_id):
 
 @login_required
 def pickup_increase_product_view(request, phone_number, product_id):
-    # Извлекаем последний заказ по номеру телефона
     pickup_order = PickupOrder.objects.filter(phone=phone_number).order_by('-date_created').first()
-
-    # Проверяем, что заказ был найден
     if not pickup_order:
         messages.error(request, "Заказ не найден.")
         return redirect('pickup_app:pickup_empty_cart', phone_number=phone_number)
 
-    # Используем select_related для предзагрузки продукта вместе с cart_item
     cart_item = CartItem.objects.select_related('product').get(cart__pickup_order=pickup_order, product_id=product_id)
     product_name = cart_item.product.product_name_rus
-    
+
+    # Проверка лимита продукта
+    if cart_item.product.has_limit:
+        if cart_item.product.limit_quantity < 1:
+            messages.error(request, f"Количество лимитированного продукта '{product_name}' не может быть увеличено.")
+            return redirect('pickup_app:pickup_cart', phone_number=phone_number, category=None)
+
     cart_item.quantity += 1
     cart_item.save()
+
+    if cart_item.product.has_limit:
+        cart_item.product.limit_quantity = F('limit_quantity') - 1
+        cart_item.product.save(update_fields=['limit_quantity'])
+        cart_item.product.refresh_from_db()
 
     messages.success(request, f"{product_name} был добавлен в корзину.")
     return redirect('pickup_app:pickup_cart', phone_number=phone_number, category=None)
@@ -101,46 +108,50 @@ def pickup_increase_product_view(request, phone_number, product_id):
 
 @login_required
 def pickup_decrease_product_view(request, phone_number, product_id):
-    # Извлекаем последний заказ по номеру телефона
     pickup_order = PickupOrder.objects.filter(phone=phone_number).order_by('-date_created').first()
-
-    # Если заказ не найден, перенаправляем пользователя на страницу пустой корзины
     if not pickup_order:
         return redirect('pickup_app:pickup_empty_cart', phone_number=phone_number)
 
-    # Используем select_related для предзагрузки продукта вместе с cart_item
     cart_item = CartItem.objects.select_related('product').get(cart__pickup_order=pickup_order, product_id=product_id)
     product_name = cart_item.product.product_name_rus
 
-    # Если количество товара равно 1, удаляем элемент из корзины
     if cart_item.quantity <= 1:
         cart_item.delete()
+        if cart_item.product.has_limit:
+            cart_item.product.limit_quantity = F('limit_quantity') + 1
+            cart_item.product.save(update_fields=['limit_quantity'])
+            cart_item.product.refresh_from_db()
         messages.success(request, f"{product_name} был удалён из корзины.")
     else:
         cart_item.quantity -= 1
         cart_item.save()
-        messages.success(request, f"{product_name} был удалён из корзины.")
+        if cart_item.product.has_limit:
+            cart_item.product.limit_quantity = F('limit_quantity') + 1
+            cart_item.product.save(update_fields=['limit_quantity'])
+            cart_item.product.refresh_from_db()
+        messages.success(request, f"{product_name} был убран из корзины.")
 
-    messages.success(request, f"{product_name} был добавлен в корзину.")
     return redirect('pickup_app:pickup_cart', phone_number=phone_number, category=None)
+
 
 
 @login_required
 def pickup_remove_product_view(request, phone_number, product_id):
-    # Извлекаем последний заказ по номеру телефона
     pickup_order = PickupOrder.objects.filter(phone=phone_number).order_by('-date_created').first()
-
-    # Если заказ не найден, перенаправляем пользователя на страницу пустой корзины
     if not pickup_order:
         return redirect('pickup_app:pickup_empty_cart', phone_number=phone_number)
 
-    # Используем select_related для предзагрузки продукта вместе с cart_item
     cart_item = CartItem.objects.select_related('product').get(cart__pickup_order=pickup_order, product_id=product_id)
     product_name = cart_item.product.product_name_rus
+    if cart_item.product.has_limit:
+        cart_item.product.limit_quantity = F('limit_quantity') + cart_item.quantity
+        cart_item.product.save(update_fields=['limit_quantity'])
+        cart_item.product.refresh_from_db()
     cart_item.delete()
 
-    messages.success(request, f"{product_name} Был удалён из корзины!")
+    messages.success(request, f"{product_name} был удалён из корзины.")
     return redirect('pickup_app:pickup_cart', phone_number=phone_number, category=None)
+
 
 
 @login_required

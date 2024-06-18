@@ -1,0 +1,1057 @@
+# File: c:\Users\p4ul7\OneDrive\מסמכים\Mimino\restaurant_app\tests.py
+from django.test import TestCase, Client
+from django.urls import reverse
+from django.contrib.auth.models import User
+
+import django
+from django.conf import settings
+
+settings.configure(DEFAULT_SETTINGS_MODULE='restaurant_project.settings')
+django.setup()
+
+# Теперь вы можете импортировать модели и прочие компоненты Django
+
+
+class SendPrintNotificationTest(TestCase):
+    def setUp(self):
+        # Создание тестового пользователя и вход в систему
+        self.client = Client()
+        self.test_user = User.objects.create_user(username='testuser', password='12345')
+        self.client.login(username='testuser', password='12345')
+
+        # Создайте здесь объекты, необходимые для тестирования
+
+    def test_send_notification(self):
+        url = reverse('send_print_notification', args=[1])  # Предполагается, что заказ с ID=1 существует
+        response = self.client.post(url)
+        
+        self.assertEqual(response.status_code, 200)
+        # Дополнительные проверки ответа
+
+
+# End of file
+
+# File: c:\Users\p4ul7\OneDrive\מסמכים\Mimino\restaurant_app\views.py
+from django.shortcuts import render, redirect
+from django.urls import reverse
+
+from django.contrib.auth.decorators import login_required
+
+from .models.tables import Table, Booking
+from .models.orders import Order, OrderItem
+from .models.product import Product
+
+from .forms import GuestsHereForm, BookingForm
+from django.shortcuts import get_object_or_404
+from django.contrib import messages
+from django.utils import timezone
+
+@login_required
+def book_table_view(request):
+    if request.method == 'POST':
+        form = BookingForm(request.POST, request=request)
+        if form.is_valid():
+            booking = form.save(commit=False)  # Создаем объект бронирования, но пока не сохраняем в базе данных
+            booking.user = request.user
+
+            # Теперь используем выбранный стол из очищенных данных формы
+            selected_table = form.cleaned_data.get('table')
+            if selected_table:
+                booking.table = selected_table  # Устанавливаем выбранный стол
+            else:
+                # Обработка случая, если подходящий стол не был найден (можно добавить сообщение об ошибке)
+                messages.error(request, 'Подходящий стол не найден.')
+                return render(request, 'book_table.html', {'form': form})
+
+            booking.save()  # Сохраняем объект бронирования в базе данных
+            # ... остальная логика ...
+            return redirect('ask_where')
+    else:
+        form = BookingForm(request=request)
+    
+    return render(request, 'book_table.html', {'form': form})
+
+
+
+@login_required
+def bookings_view(request):
+    # Получаем текущую дату
+    today = timezone.now().date()
+
+    # Получаем и сортируем бронирования начиная с ближайшей даты к текущей
+    bookings = Booking.objects.filter(reserved_date__gte=today, is_deleted=False).order_by('reserved_date', 'reserved_time')
+
+    context = {'bookings': bookings}
+    return render(request, 'bookings.html', context)
+
+@login_required
+def guests_here_view(request, booking_id):
+    booking = get_object_or_404(Booking, id=booking_id)
+    if request.method == 'POST':
+        form = GuestsHereForm(request.POST, instance=booking)
+        if form.is_valid():
+            booking = form.save(commit=False)
+            booking.are_guests_here = not booking.are_guests_here
+            booking.user = request.user
+            if booking.are_guests_here:
+                booking.table.is_booked = False
+                booking.table.are_guests_here = True
+                booking.table.save()
+                booking.is_deleted = True
+            booking.save()
+            messages.success(request, 'Статус гостей обновлен.')
+            return redirect('bookings')
+    else:
+        form = GuestsHereForm(instance=booking, initial={'are_guests_here': booking.are_guests_here})
+    return render(request, 'guests_here.html', {'form': form, 'booking': booking})
+
+@login_required
+def start_order_view(request, order_id):
+    order = get_object_or_404(Order, id=order_id)
+    order.order_time = timezone.now()  # Update order_time field to current time
+    order.save()
+    return redirect('order_detail', order_id=order_id)
+
+
+
+
+
+# End of file
+
+# File: c:\Users\p4ul7\OneDrive\מסמכים\Mimino\restaurant_app\__init__.py
+default_app_config = 'restaurant_app.RestaurantAppConfig'
+
+
+# End of file
+
+# File: c:\Users\p4ul7\OneDrive\מסמכים\Mimino\restaurant_app\management\commands\exportorders.py
+import pandas as pd
+from django.core.management import BaseCommand
+from restaurant_app.models.orders import Order
+
+class Command(BaseCommand):
+
+    def handle(self, *args, **kwargs):
+        # Получаем все объекты Order
+        orders = Order.objects.all()
+
+        # Создаем словарь для данных
+        data = {
+            "ID": [],
+            "Table": [],
+            "Created By": [],
+            "Created At": [],
+            "Updated At": [],
+            "Is Completed": [],
+            "Comments": [],
+            "Last Printed Comments": [],
+            "Table Number": [],
+            "Total Price": [],
+            "Status": [],
+            "Payment Method": [],
+            "Total Sum": [],
+        }
+
+        # Заполняем словарь данными из каждого объекта
+        for order in orders:
+            data["ID"].append(order.pk)
+            data["Table"].append(str(order.table))
+            data["Created By"].append(order.created_by.username)
+            data["Created At"].append(order.created_at)
+            data["Updated At"].append(order.updated_at)
+            data["Is Completed"].append(order.is_completed)
+            data["Comments"].append(order.comments)
+            data["Last Printed Comments"].append(order.last_printed_comments)
+            data["Table Number"].append(order.table_number)
+            data["Total Price"].append(order.total_price)
+            data["Status"].append(order.status)
+            data["Payment Method"].append(order.payment_method)
+            data["Total Sum"].append(order.total_sum())
+
+        # Преобразуем словарь в DataFrame
+        df = pd.DataFrame(data)
+
+        # Убираем информацию о часовом поясе из столбцов с датами/временем
+        df['Created At'] = df['Created At'].dt.tz_localize(None)
+        df['Updated At'] = df['Updated At'].dt.tz_localize(None)
+
+        # Сохраняем DataFrame в файл Excel
+        df.to_excel('orders_data.xlsx', index=False, engine='openpyxl')
+
+
+# End of file
+
+# File: c:\Users\p4ul7\OneDrive\מסמכים\Mimino\restaurant_app\migrations\0001_initial.py
+# Generated by Django 4.1.7 on 2023-03-21 08:17
+
+from django.conf import settings
+from django.db import migrations, models
+import django.db.models.deletion
+import django.utils.timezone
+
+
+class Migration(migrations.Migration):
+
+    initial = True
+
+    dependencies = [
+        migrations.swappable_dependency(settings.AUTH_USER_MODEL),
+    ]
+
+    operations = [
+        migrations.CreateModel(
+            name='Product',
+            fields=[
+                ('id', models.AutoField(primary_key=True, serialize=False)),
+                ('product_name_rus', models.CharField(max_length=100, verbose_name='Название блюда (рус.)')),
+                ('product_name_heb', models.CharField(max_length=100, verbose_name='שם מנה (עברית)')),
+                ('product_price', models.DecimalField(decimal_places=2, max_digits=6)),
+                ('product_img', models.ImageField(upload_to='product_images/')),
+                ('category', models.CharField(choices=[('first_dishes', 'first_dishes'), ('meat_dishes', 'meat_dishes'), ('bakery', 'bakery'), ('khinkali', 'khinkali'), ('khachapuri', 'khachapuri'), ('garnish', 'garnish'), ('grill_meat', 'grill_meat'), ('dessert', 'dessert'), ('soups', 'soups'), ('salads', 'salads'), ('sales', 'sales'), ('delivery', 'delivery'), ('drinks', 'drinks'), ('soft_drinks', 'soft_drinks'), ('beer', 'beer'), ('wine', 'wine'), ('vodka', 'vodka'), ('cognac', 'cognac'), ('whisky', 'whisky'), ('dessert_drinks', 'dessert_drinks')], max_length=50)),
+                ('created_at', models.DateTimeField(auto_now_add=True)),
+                ('quantity', models.PositiveIntegerField(default=1)),
+                ('delivery_price', models.DecimalField(blank=True, decimal_places=2, max_digits=8, null=True)),
+            ],
+        ),
+        migrations.CreateModel(
+            name='Table',
+            fields=[
+                ('id', models.BigAutoField(auto_created=True, primary_key=True, serialize=False, verbose_name='ID')),
+                ('table_id', models.IntegerField()),
+                ('description', models.TextField(blank=True, null=True)),
+                ('is_booked', models.BooleanField(default=False)),
+                ('is_ordered', models.BooleanField(default=False)),
+                ('reserved_date', models.DateField(blank=True, null=True)),
+                ('reserved_time', models.TimeField(blank=True, null=True)),
+                ('num_of_people', models.IntegerField(blank=True, null=True)),
+                ('order_time', models.DateTimeField(blank=True, null=True)),
+                ('are_guests_here', models.BooleanField(default=False)),
+                ('capacity', models.IntegerField()),
+                ('active_order', models.BooleanField(default=False)),
+            ],
+            options={
+                'ordering': ['table_id'],
+            },
+        ),
+        migrations.CreateModel(
+            name='Order',
+            fields=[
+                ('id', models.BigAutoField(auto_created=True, primary_key=True, serialize=False, verbose_name='ID')),
+                ('created_at', models.DateTimeField(default=django.utils.timezone.now)),
+                ('updated_at', models.DateTimeField(auto_now=True)),
+                ('is_completed', models.BooleanField(default=False)),
+                ('status', models.CharField(choices=[('active', 'Active'), ('completed', 'Completed'), ('canceled', 'Canceled')], default='active', max_length=20)),
+                ('payment_method', models.CharField(blank=True, choices=[('cash', 'Cash'), ('card', 'Card')], max_length=10, null=True)),
+                ('table', models.ForeignKey(on_delete=django.db.models.deletion.CASCADE, related_name='orders', to='restaurant_app.table')),
+            ],
+        ),
+        migrations.CreateModel(
+            name='Booking',
+            fields=[
+                ('id', models.BigAutoField(auto_created=True, primary_key=True, serialize=False, verbose_name='ID')),
+                ('reserved_date', models.DateField()),
+                ('reserved_time', models.TimeField()),
+                ('num_of_people', models.IntegerField()),
+                ('are_guests_here', models.BooleanField(default=False)),
+                ('description', models.TextField(blank=True, null=True)),
+                ('is_deleted', models.BooleanField(default=False)),
+                ('created_at', models.DateTimeField(auto_now_add=True)),
+                ('table', models.ForeignKey(on_delete=django.db.models.deletion.CASCADE, related_name='bookings', to='restaurant_app.table')),
+                ('user', models.ForeignKey(on_delete=django.db.models.deletion.CASCADE, related_name='bookings', to=settings.AUTH_USER_MODEL)),
+            ],
+        ),
+        migrations.CreateModel(
+            name='OrderItem',
+            fields=[
+                ('id', models.BigAutoField(auto_created=True, primary_key=True, serialize=False, verbose_name='ID')),
+                ('quantity', models.PositiveIntegerField(default=1, verbose_name='quantity')),
+                ('phone_number', models.CharField(max_length=10)),
+                ('order', models.ForeignKey(on_delete=django.db.models.deletion.CASCADE, related_name='order_items', to='restaurant_app.order')),
+                ('product', models.ForeignKey(on_delete=django.db.models.deletion.CASCADE, related_name='order_items', to='restaurant_app.product')),
+            ],
+            options={
+                'unique_together': {('order', 'product')},
+            },
+        ),
+    ]
+
+
+# End of file
+
+# File: c:\Users\p4ul7\OneDrive\מסמכים\Mimino\restaurant_app\migrations\0002_auto_20230324_2130.py
+# Generated by Django 4.1.7 on 2023-03-24 21:30
+
+from django.db import migrations
+
+
+class Migration(migrations.Migration):
+
+    dependencies = [
+        ('restaurant_app', '0001_initial'),
+    ]
+
+    operations = [
+    ]
+
+
+# End of file
+
+# File: c:\Users\p4ul7\OneDrive\מסמכים\Mimino\restaurant_app\migrations\0003_order_created_by.py
+# Generated by Django 4.1.7 on 2023-03-25 12:52
+
+from django.conf import settings
+from django.db import migrations, models
+import django.db.models.deletion
+
+
+class Migration(migrations.Migration):
+
+    dependencies = [
+        migrations.swappable_dependency(settings.AUTH_USER_MODEL),
+        ('restaurant_app', '0002_auto_20230324_2130'),
+    ]
+
+    operations = [
+        migrations.AddField(
+            model_name='order',
+            name='created_by',
+            field=models.ForeignKey(default=1, on_delete=django.db.models.deletion.CASCADE, related_name='orders_created', to=settings.AUTH_USER_MODEL),
+            preserve_default=False,
+        ),
+    ]
+
+
+# End of file
+
+# File: c:\Users\p4ul7\OneDrive\מסמכים\Mimino\restaurant_app\migrations\0004_alter_order_created_by.py
+# Generated by Django 4.1.7 on 2023-03-25 13:01
+
+from django.conf import settings
+from django.db import migrations, models
+import django.db.models.deletion
+
+
+class Migration(migrations.Migration):
+
+    dependencies = [
+        migrations.swappable_dependency(settings.AUTH_USER_MODEL),
+        ('restaurant_app', '0003_order_created_by'),
+    ]
+
+    operations = [
+        migrations.AlterField(
+            model_name='order',
+            name='created_by',
+            field=models.ForeignKey(on_delete=django.db.models.deletion.CASCADE, related_name='orders', to=settings.AUTH_USER_MODEL),
+        ),
+    ]
+
+
+# End of file
+
+# File: c:\Users\p4ul7\OneDrive\מסמכים\Mimino\restaurant_app\migrations\0005_alter_product_category.py
+# Generated by Django 4.1.7 on 2023-03-25 17:57
+
+from django.db import migrations, models
+
+
+class Migration(migrations.Migration):
+
+    dependencies = [
+        ('restaurant_app', '0004_alter_order_created_by'),
+    ]
+
+    operations = [
+        migrations.AlterField(
+            model_name='product',
+            name='category',
+            field=models.CharField(choices=[('first_dishes', 'first_dishes'), ('meat_dishes', 'meat_dishes'), ('bakery', 'bakery'), ('khinkali', 'khinkali'), ('khachapuri', 'khachapuri'), ('garnish', 'garnish'), ('grill_meat', 'grill_meat'), ('dessert', 'dessert'), ('soups', 'soups'), ('salads', 'salads'), ('sales', 'sales'), ('delivery', 'delivery'), ('drinks', 'drinks'), ('soft_drinks', 'soft_drinks'), ('beer', 'beer'), ('wine', 'wine'), ('vodka', 'vodka'), ('cognac', 'cognac'), ('whisky', 'whisky'), ('dessert_drinks', 'dessert_drinks'), ('own_alc', 'own_alc')], max_length=50),
+        ),
+    ]
+
+
+# End of file
+
+# File: c:\Users\p4ul7\OneDrive\מסמכים\Mimino\restaurant_app\migrations\0006_booking_alcohol_booking_extras_booking_portion_and_more.py
+# Generated by Django 4.1.7 on 2023-03-27 13:14
+
+from django.db import migrations, models
+
+
+class Migration(migrations.Migration):
+
+    dependencies = [
+        ('restaurant_app', '0005_alter_product_category'),
+    ]
+
+    operations = [
+        migrations.AddField(
+            model_name='booking',
+            name='alcohol',
+            field=models.BooleanField(default=False),
+        ),
+        migrations.AddField(
+            model_name='booking',
+            name='extras',
+            field=models.BooleanField(default=False),
+        ),
+        migrations.AddField(
+            model_name='booking',
+            name='portion',
+            field=models.IntegerField(choices=[(1, '180'), (2, '200')], default=1),
+        ),
+        migrations.AddField(
+            model_name='booking',
+            name='premium_wine',
+            field=models.BooleanField(default=False),
+        ),
+        migrations.AddField(
+            model_name='booking',
+            name='prepayment',
+            field=models.DecimalField(blank=True, decimal_places=2, max_digits=6, null=True),
+        ),
+    ]
+
+
+# End of file
+
+# File: c:\Users\p4ul7\OneDrive\מסמכים\Mimino\restaurant_app\migrations\0007_alter_product_category.py
+# Generated by Django 4.1.7 on 2023-03-27 13:17
+
+from django.db import migrations, models
+
+
+class Migration(migrations.Migration):
+
+    dependencies = [
+        ('restaurant_app', '0006_booking_alcohol_booking_extras_booking_portion_and_more'),
+    ]
+
+    operations = [
+        migrations.AlterField(
+            model_name='product',
+            name='category',
+            field=models.CharField(choices=[('first_dishes', 'first_dishes'), ('meat_dishes', 'meat_dishes'), ('bakery', 'bakery'), ('khinkali', 'khinkali'), ('khachapuri', 'khachapuri'), ('garnish', 'garnish'), ('grill_meat', 'grill_meat'), ('dessert', 'dessert'), ('soups', 'soups'), ('salads', 'salads'), ('sales', 'sales'), ('delivery', 'delivery'), ('drinks', 'drinks'), ('soft_drinks', 'soft_drinks'), ('beer', 'beer'), ('wine', 'wine'), ('vodka', 'vodka'), ('cognac', 'cognac'), ('whisky', 'whisky'), ('dessert_drinks', 'dessert_drinks'), ('own_alc', 'own_alc'), ('banket', 'banket')], max_length=50),
+        ),
+    ]
+
+
+# End of file
+
+# File: c:\Users\p4ul7\OneDrive\מסמכים\Mimino\restaurant_app\migrations\0008_product_additional_option_1_price_and_more.py
+# Generated by Django 4.1.7 on 2023-04-02 14:38
+
+from django.db import migrations, models
+
+
+class Migration(migrations.Migration):
+
+    dependencies = [
+        ('restaurant_app', '0007_alter_product_category'),
+    ]
+
+    operations = [
+        migrations.AddField(
+            model_name='product',
+            name='additional_option_1_price',
+            field=models.DecimalField(blank=True, decimal_places=2, max_digits=6, null=True),
+        ),
+        migrations.AddField(
+            model_name='product',
+            name='additional_option_2_price',
+            field=models.DecimalField(blank=True, decimal_places=2, max_digits=6, null=True),
+        ),
+        migrations.AddField(
+            model_name='product',
+            name='additional_option_3_price',
+            field=models.DecimalField(blank=True, decimal_places=2, max_digits=6, null=True),
+        ),
+    ]
+
+
+# End of file
+
+# File: c:\Users\p4ul7\OneDrive\מסמכים\Mimino\restaurant_app\migrations\0009_remove_product_additional_option_1_price_and_more.py
+# Generated by Django 4.1.7 on 2023-04-17 08:58
+
+from django.db import migrations, models
+
+
+class Migration(migrations.Migration):
+
+    dependencies = [
+        ('restaurant_app', '0008_product_additional_option_1_price_and_more'),
+    ]
+
+    operations = [
+        migrations.RemoveField(
+            model_name='product',
+            name='additional_option_1_price',
+        ),
+        migrations.RemoveField(
+            model_name='product',
+            name='additional_option_2_price',
+        ),
+        migrations.RemoveField(
+            model_name='product',
+            name='additional_option_3_price',
+        ),
+        migrations.AddField(
+            model_name='orderitem',
+            name='printed',
+            field=models.BooleanField(default=False),
+        ),
+    ]
+
+
+# End of file
+
+# File: c:\Users\p4ul7\OneDrive\מסמכים\Mimino\restaurant_app\migrations\0010_remove_booking_alcohol_remove_booking_extras_and_more.py
+# Generated by Django 4.1.7 on 2023-04-18 00:22
+
+from django.db import migrations
+
+
+class Migration(migrations.Migration):
+
+    dependencies = [
+        ('restaurant_app', '0009_remove_product_additional_option_1_price_and_more'),
+    ]
+
+    operations = [
+        migrations.RemoveField(
+            model_name='booking',
+            name='alcohol',
+        ),
+        migrations.RemoveField(
+            model_name='booking',
+            name='extras',
+        ),
+        migrations.RemoveField(
+            model_name='booking',
+            name='portion',
+        ),
+        migrations.RemoveField(
+            model_name='booking',
+            name='premium_wine',
+        ),
+        migrations.RemoveField(
+            model_name='booking',
+            name='prepayment',
+        ),
+    ]
+
+
+# End of file
+
+# File: c:\Users\p4ul7\OneDrive\מסמכים\Mimino\restaurant_app\migrations\0011_orderitem_printed_quantity_alter_product_category.py
+# Generated by Django 4.0 on 2023-04-21 17:25
+
+from django.db import migrations, models
+
+
+class Migration(migrations.Migration):
+
+    dependencies = [
+        ('restaurant_app', '0010_remove_booking_alcohol_remove_booking_extras_and_more'),
+    ]
+
+    operations = [
+        migrations.AddField(
+            model_name='orderitem',
+            name='printed_quantity',
+            field=models.IntegerField(default=0),
+        ),
+        migrations.AlterField(
+            model_name='product',
+            name='category',
+            field=models.CharField(choices=[('first_dishes', 'first_dishes'), ('meat_dishes', 'meat_dishes'), ('bakery', 'bakery'), ('khinkali', 'khinkali'), ('khachapuri', 'khachapuri'), ('garnish', 'garnish'), ('grill_meat', 'grill_meat'), ('dessert', 'dessert'), ('soups', 'soups'), ('salads', 'salads'), ('sales', 'sales'), ('delivery', 'delivery'), ('drinks', 'drinks'), ('soft_drinks', 'soft_drinks'), ('beer', 'beer'), ('wine', 'wine'), ('vodka', 'vodka'), ('cognac', 'cognac'), ('whisky', 'whisky'), ('dessert_drinks', 'dessert_drinks'), ('own_alc', 'own_alc'), ('banket', 'banket'), ('mishloha', 'mishloha')], max_length=50),
+        ),
+    ]
+
+
+# End of file
+
+# File: c:\Users\p4ul7\OneDrive\מסמכים\Mimino\restaurant_app\migrations\0012_order_comments.py
+# Generated by Django 4.0 on 2023-05-03 20:12
+
+from django.db import migrations, models
+
+
+class Migration(migrations.Migration):
+
+    dependencies = [
+        ('restaurant_app', '0011_orderitem_printed_quantity_alter_product_category'),
+    ]
+
+    operations = [
+        migrations.AddField(
+            model_name='order',
+            name='comments',
+            field=models.TextField(blank=True, null=True),
+        ),
+    ]
+
+
+# End of file
+
+# File: c:\Users\p4ul7\OneDrive\מסמכים\Mimino\restaurant_app\migrations\0013_order_last_printed_comments.py
+# Generated by Django 4.0 on 2023-05-04 19:05
+
+from django.db import migrations, models
+
+
+class Migration(migrations.Migration):
+
+    dependencies = [
+        ('restaurant_app', '0012_order_comments'),
+    ]
+
+    operations = [
+        migrations.AddField(
+            model_name='order',
+            name='last_printed_comments',
+            field=models.TextField(blank=True, null=True),
+        ),
+    ]
+
+
+# End of file
+
+# File: c:\Users\p4ul7\OneDrive\מסמכים\Mimino\restaurant_app\migrations\0014_order_total_price.py
+# Generated by Django 4.2.1 on 2023-05-23 00:04
+
+from django.db import migrations, models
+
+
+class Migration(migrations.Migration):
+
+    dependencies = [
+        ('restaurant_app', '0013_order_last_printed_comments'),
+    ]
+
+    operations = [
+        migrations.AddField(
+            model_name='order',
+            name='total_price',
+            field=models.DecimalField(blank=True, decimal_places=2, max_digits=10, null=True),
+        ),
+    ]
+
+
+# End of file
+
+# File: c:\Users\p4ul7\OneDrive\מסמכים\Mimino\restaurant_app\migrations\0015_order_table_number.py
+# Generated by Django 4.2.1 on 2023-05-23 00:13
+
+from django.db import migrations, models
+
+
+class Migration(migrations.Migration):
+
+    dependencies = [
+        ('restaurant_app', '0014_order_total_price'),
+    ]
+
+    operations = [
+        migrations.AddField(
+            model_name='order',
+            name='table_number',
+            field=models.IntegerField(default=1),
+            preserve_default=False,
+        ),
+    ]
+
+
+# End of file
+
+# File: c:\Users\p4ul7\OneDrive\מסמכים\Mimino\restaurant_app\migrations\0016_tip.py
+# Generated by Django 4.2.1 on 2023-07-08 11:32
+
+from django.conf import settings
+from django.db import migrations, models
+import django.db.models.deletion
+
+
+class Migration(migrations.Migration):
+
+    dependencies = [
+        migrations.swappable_dependency(settings.AUTH_USER_MODEL),
+        ('restaurant_app', '0015_order_table_number'),
+    ]
+
+    operations = [
+        migrations.CreateModel(
+            name='Tip',
+            fields=[
+                ('id', models.BigAutoField(auto_created=True, primary_key=True, serialize=False, verbose_name='ID')),
+                ('amount', models.DecimalField(decimal_places=2, max_digits=6)),
+                ('date', models.DateTimeField(auto_now_add=True)),
+                ('user', models.ForeignKey(on_delete=django.db.models.deletion.CASCADE, to=settings.AUTH_USER_MODEL)),
+            ],
+        ),
+    ]
+
+
+# End of file
+
+# File: c:\Users\p4ul7\OneDrive\מסמכים\Mimino\restaurant_app\migrations\0017_userprofile.py
+# Generated by Django 4.0 on 2023-07-12 18:26
+
+from django.db import migrations, models
+import django.db.models.deletion
+
+
+class Migration(migrations.Migration):
+
+    dependencies = [
+        ('auth', '0012_alter_user_first_name_max_length'),
+        ('restaurant_app', '0016_tip'),
+    ]
+
+    operations = [
+        migrations.CreateModel(
+            name='UserProfile',
+            fields=[
+                ('id', models.BigAutoField(auto_created=True, primary_key=True, serialize=False, verbose_name='ID')),
+                ('tips', models.FloatField(default=0)),
+                ('user', models.OneToOneField(on_delete=django.db.models.deletion.CASCADE, to='auth.user')),
+            ],
+        ),
+    ]
+
+
+# End of file
+
+# File: c:\Users\p4ul7\OneDrive\מסמכים\Mimino\restaurant_app\migrations\0018_product_is_available.py
+# Generated by Django 4.2.1 on 2023-07-13 16:48
+
+from django.db import migrations, models
+
+
+class Migration(migrations.Migration):
+
+    dependencies = [
+        ('restaurant_app', '0017_userprofile'),
+    ]
+
+    operations = [
+        migrations.AddField(
+            model_name='product',
+            name='is_available',
+            field=models.BooleanField(default=True),
+        ),
+    ]
+
+
+# End of file
+
+# File: c:\Users\p4ul7\OneDrive\מסמכים\Mimino\restaurant_app\migrations\0019_tipgoal.py
+# Generated by Django 4.2.1 on 2023-08-29 09:29
+
+from django.conf import settings
+from django.db import migrations, models
+import django.db.models.deletion
+
+
+class Migration(migrations.Migration):
+
+    dependencies = [
+        migrations.swappable_dependency(settings.AUTH_USER_MODEL),
+        ('restaurant_app', '0018_product_is_available'),
+    ]
+
+    operations = [
+        migrations.CreateModel(
+            name='TipGoal',
+            fields=[
+                ('id', models.BigAutoField(auto_created=True, primary_key=True, serialize=False, verbose_name='ID')),
+                ('goal', models.FloatField(default=0)),
+                ('user', models.OneToOneField(on_delete=django.db.models.deletion.CASCADE, to=settings.AUTH_USER_MODEL)),
+            ],
+        ),
+    ]
+
+
+# End of file
+
+# File: c:\Users\p4ul7\OneDrive\מסמכים\Mimino\restaurant_app\migrations\0020_booking_guests_did_not_arrive.py
+# Generated by Django 4.2.1 on 2023-08-30 09:22
+
+from django.db import migrations, models
+
+
+class Migration(migrations.Migration):
+
+    dependencies = [
+        ('restaurant_app', '0019_tipgoal'),
+    ]
+
+    operations = [
+        migrations.AddField(
+            model_name='booking',
+            name='guests_did_not_arrive',
+            field=models.BooleanField(default=False),
+        ),
+    ]
+
+
+# End of file
+
+# File: c:\Users\p4ul7\OneDrive\מסמכים\Mimino\restaurant_app\migrations\0021_remove_tip_user_tip_users.py
+# Generated by Django 4.2.1 on 2023-09-02 10:17
+
+from django.conf import settings
+from django.db import migrations, models
+
+
+class Migration(migrations.Migration):
+
+    dependencies = [
+        migrations.swappable_dependency(settings.AUTH_USER_MODEL),
+        ('restaurant_app', '0020_booking_guests_did_not_arrive'),
+    ]
+
+    operations = [
+        migrations.RemoveField(
+            model_name='tip',
+            name='user',
+        ),
+        migrations.AddField(
+            model_name='tip',
+            name='users',
+            field=models.ManyToManyField(to=settings.AUTH_USER_MODEL),
+        ),
+    ]
+
+
+# End of file
+
+# File: c:\Users\p4ul7\OneDrive\מסמכים\Mimino\restaurant_app\migrations\0022_remove_tip_users_tipdistribution.py
+# Generated by Django 4.2.1 on 2023-09-14 18:26
+
+from django.conf import settings
+from django.db import migrations, models
+import django.db.models.deletion
+
+
+class Migration(migrations.Migration):
+
+    dependencies = [
+        migrations.swappable_dependency(settings.AUTH_USER_MODEL),
+        ('restaurant_app', '0021_remove_tip_user_tip_users'),
+    ]
+
+    operations = [
+        migrations.RemoveField(
+            model_name='tip',
+            name='users',
+        ),
+        migrations.CreateModel(
+            name='TipDistribution',
+            fields=[
+                ('id', models.BigAutoField(auto_created=True, primary_key=True, serialize=False, verbose_name='ID')),
+                ('amount', models.DecimalField(decimal_places=2, max_digits=6)),
+                ('tip', models.ForeignKey(on_delete=django.db.models.deletion.CASCADE, to='restaurant_app.tip')),
+                ('user', models.ForeignKey(on_delete=django.db.models.deletion.CASCADE, to=settings.AUTH_USER_MODEL)),
+            ],
+        ),
+    ]
+
+
+# End of file
+
+# File: c:\Users\p4ul7\OneDrive\מסמכים\Mimino\restaurant_app\migrations\0023_room_table_room.py
+# Generated by Django 4.2.1 on 2023-09-19 07:17
+
+from django.db import migrations, models
+import django.db.models.deletion
+
+
+class Migration(migrations.Migration):
+
+    dependencies = [
+        ('restaurant_app', '0022_remove_tip_users_tipdistribution'),
+    ]
+
+    operations = [
+        migrations.CreateModel(
+            name='Room',
+            fields=[
+                ('id', models.BigAutoField(auto_created=True, primary_key=True, serialize=False, verbose_name='ID')),
+                ('name', models.CharField(max_length=255)),
+            ],
+        ),
+        migrations.AddField(
+            model_name='table',
+            name='room',
+            field=models.ForeignKey(blank=True, null=True, on_delete=django.db.models.deletion.CASCADE, related_name='tables', to='restaurant_app.room'),
+        ),
+    ]
+
+
+# End of file
+
+# File: c:\Users\p4ul7\OneDrive\מסמכים\Mimino\restaurant_app\migrations\0024_product_printer.py
+# Generated by Django 4.2.1 on 2023-09-21 08:41
+
+from django.db import migrations, models
+
+
+class Migration(migrations.Migration):
+
+    dependencies = [
+        ('restaurant_app', '0023_room_table_room'),
+    ]
+
+    operations = [
+        migrations.AddField(
+            model_name='product',
+            name='printer',
+            field=models.CharField(choices=[('kitchen_1', 'Кухня 1'), ('kitchen_2', 'Кухня 2'), ('kitchen_3', 'Кухня 3')], default='kitchen_1', max_length=50, verbose_name='Принтер'),
+        ),
+    ]
+
+
+# End of file
+
+# File: c:\Users\p4ul7\OneDrive\מסמכים\Mimino\restaurant_app\migrations\0025_alter_product_product_img.py
+# Generated by Django 4.2.1 on 2023-09-21 08:44
+
+from django.db import migrations, models
+
+
+class Migration(migrations.Migration):
+
+    dependencies = [
+        ('restaurant_app', '0024_product_printer'),
+    ]
+
+    operations = [
+        migrations.AlterField(
+            model_name='product',
+            name='product_img',
+            field=models.ImageField(blank=True, null=True, upload_to='product_images/'),
+        ),
+    ]
+
+
+# End of file
+
+# File: c:\Users\p4ul7\OneDrive\מסמכים\Mimino\restaurant_app\migrations\0026_alter_product_printer.py
+# Generated by Django 4.2.1 on 2023-09-21 09:03
+
+from django.db import migrations, models
+
+
+class Migration(migrations.Migration):
+
+    dependencies = [
+        ('restaurant_app', '0025_alter_product_product_img'),
+    ]
+
+    operations = [
+        migrations.AlterField(
+            model_name='product',
+            name='printer',
+            field=models.CharField(choices=[('kitchen_1', 'Кухня 1'), ('kitchen_2', 'Кухня 2'), ('kitchen_3', 'Бар')], default='kitchen_1', max_length=50, verbose_name='Принтер'),
+        ),
+    ]
+
+
+# End of file
+
+# File: c:\Users\p4ul7\OneDrive\מסמכים\Mimino\restaurant_app\migrations\0027_alter_product_printer.py
+# Generated by Django 4.0 on 2023-09-21 10:11
+
+from django.db import migrations, models
+
+
+class Migration(migrations.Migration):
+
+    dependencies = [
+        ('restaurant_app', '0026_alter_product_printer'),
+    ]
+
+    operations = [
+        migrations.AlterField(
+            model_name='product',
+            name='printer',
+            field=models.CharField(choices=[('print80', 'Кухня 1'), ('Printer80', 'Кухня 2'), ('Printer80-2', 'Бар')], default='kitchen_1', max_length=50, verbose_name='Принтер'),
+        ),
+    ]
+
+
+# End of file
+
+# File: c:\Users\p4ul7\OneDrive\מסמכים\Mimino\restaurant_app\migrations\0028_alter_product_printer.py
+# Generated by Django 4.0 on 2023-09-21 10:55
+
+from django.db import migrations, models
+
+
+class Migration(migrations.Migration):
+
+    dependencies = [
+        ('restaurant_app', '0027_alter_product_printer'),
+    ]
+
+    operations = [
+        migrations.AlterField(
+            model_name='product',
+            name='printer',
+            field=models.CharField(choices=[('print80', 'Бар'), ('Printer80', 'Мал Кухня'), ('Printer80-2', 'Бол Кухня')], default='kitchen_1', max_length=50, verbose_name='Принтер'),
+        ),
+    ]
+
+
+# End of file
+
+# File: c:\Users\p4ul7\OneDrive\מסמכים\Mimino\restaurant_app\migrations\0029_alter_tipdistribution_unique_together.py
+# Generated by Django 4.2.1 on 2023-10-01 14:48
+
+from django.conf import settings
+from django.db import migrations
+
+
+class Migration(migrations.Migration):
+
+    dependencies = [
+        migrations.swappable_dependency(settings.AUTH_USER_MODEL),
+        ('restaurant_app', '0028_alter_product_printer'),
+    ]
+
+    operations = [
+        migrations.AlterUniqueTogether(
+            name='tipdistribution',
+            unique_together={('tip', 'user')},
+        ),
+    ]
+
+
+# End of file
+
+# File: c:\Users\p4ul7\OneDrive\מסמכים\Mimino\restaurant_app\migrations\0030_tip_order.py
+# Generated by Django 4.2.1 on 2023-10-01 15:22
+
+from django.db import migrations, models
+import django.db.models.deletion
+
+
+class Migration(migrations.Migration):
+
+    dependencies = [
+        ('restaurant_app', '0029_alter_tipdistribution_unique_together'),
+    ]
+
+    operations = [
+        migrations.AddField(
+            model_name='tip',
+            name='order',
+            field=models.ForeignKey(blank=True, null=True, on_delete=django.db.models.deletion.CASCADE, related_name='tips', to='restaurant_app.order'),
+        ),
+    ]
+
+
+# End of file
+

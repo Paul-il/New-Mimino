@@ -1,126 +1,199 @@
 {% extends "base.html" %}
-
 {% load static %}
-
-{% block title %}
-Список транзакций
-{% endblock %}
+{% block title %}Список транзакций{% endblock %}
 
 {% block extra_head %}
-    <link rel="stylesheet" href="{% static 'css/style.css' %}">
-    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-    <script src="{% static 'scripts/chart_script.js' %}"></script>
+<link rel="stylesheet" href="{% static 'css/style.css' %}">
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script src="{% static 'scripts/chart_script.js' %}"></script>
 {% endblock %}
 
 {% block content %}
-<div class="container my-content">
+<div class="container my-5">
+    <h1 class="mb-4" style="color: white;">Список транзакций</h1>
 
-    <h1>Статистика</h1>
-
-    <form method="GET" action="">
-        <label for="start_date">С:</label>
-        <input type="date" name="start_date" id="start_date" value="{{ start_date }}" style="opacity: 0.3;">
-        <label for="end_date">По:</label>
-        <input type="date" name="end_date" id="end_date" value="{{ end_date }}" style="opacity: 0.3;">
-        <button type="submit">Фильтровать</button>
-        <button type="button" id="todayBtn">Сегодня</button>
-    </form>
-
-    <div class="statistics">
-        <h4>Общая</h4>
-        
-        <p><strong>Разница по сумме:</strong> {{ difference }} ₪.</p>
-        <p><strong>Разница в процентах (Прибыль):</strong> {{ percentage_difference|floatformat:2 }}%</p>
-
-        <div class="payment-methods-container">
-            
-            <div style="width:50%; float:left;">
-                
-                <h4>Методы оплаты (Прибыль)</h4>
-                {% for method_stat in payment_methods_income_stats %}
-                    <p><strong>{{ method_stat.payment_method }}:</strong> {{ method_stat.total }} ₪.</p>
-                {% endfor %}
-                <div class="additional-income-container">
-
-                    <h4>Доход от столов: <strong>{{ total_table_service_income }} ₪.</strong></h4>
-
-                    <p><strong>Доход от столов (Наличные):</strong> {{ total_table_service_income_cash }} ₪.</p>
-                    <p><strong>Доход от столов (Карта):</strong> {{ total_table_service_income_card }} ₪.</p>
-
-                    <h4>Доход от доставки: <strong>{{ total_delivery_income }} ₪.</strong></h4>
-
-                    <p><strong>Доход от доставки (Наличные):</strong> {{ total_delivery_income_cash }} ₪.</p>
-                    <p><strong>Доход от доставки (Карта):</strong> {{ total_delivery_income_card }} ₪.</p>
-
-                    <h4>Доход от самовывоза:<strong> {{ total_pickup_income }} ₪.</strong></h4>
-
-                    <p><strong>Доход от самовывоза (Наличные):</strong> {{ total_pickup_income_cash }} ₪.</p>
-                    <p><strong>Доход от самовывоза (Карта):</strong> {{ total_pickup_income_card }} ₪.</p>
-
-                    
-
-                </div>
-            </div>
-
-            <div style="width:50%; float:right;">
-                <h4>Методы оплаты (Затраты)</h4>
-                {% for method_stat in payment_methods_stats %}
-                    <p><strong>{{ method_stat.payment_method }}:</strong> {{ method_stat.total }} ₪.</p>
-                {% endfor %}
-            </div>
-
-            <div style="clear:both;"></div>
-        </div>
-
+    <div class="date-selection mb-3">
+        <form method="GET" action="">
+            <label for="start_date" style="color: white;">С:</label>
+            <input type="date" name="start_date" id="start_date" value="{{ start_date }}" required>
+            <label for="end_date" style="color: white;">По:</label>
+            <input type="date" name="end_date" id="end_date" value="{{ end_date }}" required>
+            <button type="submit">Фильтровать</button>
+            <button type="button" id="todayBtn">Сегодня</button>
+        </form>
     </div>
 
-    <button id="toggleTransactions">Показать</button>
-
-    <table class="transactions-table">
-        <tr>
-            <td valign="top" width="50%">
-                <h2>Прибыль: <strong>{{ total_income }} ₪.</strong></h2>
-                <ul class="transaction-details" style="display:none;">
-                    {% for transaction in incomes %}
-                    <li>
-                        <strong>Category:</strong> {{ transaction.category }}<br>
-                        <strong>Amount:</strong> {{ transaction.amount }} ₪.<br>
-                        <strong>Date:</strong> {{ transaction.date|date:"M. d, Y" }}<br>
-                        {% if transaction.cash_amount %}
-                            <strong>Cash Amount:</strong> {{ transaction.cash_amount }} ₪.<br>
-                        {% endif %}
-                        {% if transaction.card_amount %}
-                            <strong>Card Amount:</strong> {{ transaction.card_amount }} ₪.<br>
-                        {% endif %}
-                        {% if transaction.payment_method %}
-                            <strong>Payment Method:</strong> {{ transaction.payment_method }}<br>
-                        {% endif %}
-                    </li>
-                    {% endfor %}
-                </ul>
-            </td>
-            <td valign="top" width="50%">
-                <h2>Затраты: <strong>{{ total_expense }} ₪.</strong></h2>
-                <ul class="transaction-details" style="display:none;">
-                    {% for transaction in expenses %}
-                    <li>
-                        <strong>Category:</strong> {{ transaction.category }}<br>
-                        <strong>Amount:</strong> {{ transaction.amount }} ₪.<br>
-                        <strong>Date:</strong> {{ transaction.date|date:"M. d, Y" }}<br>
-                        {% if transaction.payment_method %}
-                            <strong>Payment Method:</strong> {{ transaction.payment_method }}<br>
-                        {% endif %}
-                    </li>
-                    {% endfor %}
-                </ul>
-            </td>
-        </tr>
+    <h2 class="mb-4" style="color: white;">Общая статистика</h2>
+    <table id="transactionSummaryTable" class="table table-striped">
+        <thead>
+            <tr>
+                <th scope="col" style="color: white; font-size: 15px;">Описание</th>
+                <th scope="col" style="color: white; font-size: 15px;">Сумма</th>
+            </tr>
+        </thead>
+        <tbody>
+            <tr>
+                <td style="color: white;">Разница по сумме</td>
+                <td style="color: white;">{{ difference }} ₪</td>
+            </tr>
+            <tr>
+                <td style="color: white;">Разница в процентах (Прибыль)</td>
+                <td style="color: white;">{{ percentage_difference|floatformat:2 }}%</td>
+            </tr>
+        </tbody>
     </table>
 
-    <div class="chart-container">
-        <canvas id="expenseChart"></canvas>
+    <h2 class="mb-4" style="color: white;">Методы оплаты</h2>
+    <div class="row">
+        <div class="col-md-6">
+            <h4 class="mb-3" style="color: white;">Прибыль <strong>{{ total_income }}₪</strong></h4>
+            <table class="table table-striped">
+                <thead>
+                    <tr>
+                        <th scope="col" style="color: white; font-size: 15px;">Метод оплаты</th>
+                        <th scope="col" style="color: white; font-size: 15px;">Сумма</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for method_stat in payment_methods_income_stats %}
+                    <tr>
+                        <td style="color: white;">{{ method_stat.payment_method }}</td>
+                        <td style="color: white;">{{ method_stat.total }} ₪</td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+
+            <h4 class="mb-3" style="color: white;">Доход от столов</h4>
+            <h5 class="mb-3" style="color: white;">Закрытые столы: {{ total_closed_tables }}</h5>
+            <table class="table table-striped">
+                <tbody>
+                        <td style="color: white;">Наличные</td>
+                        <td style="color: white;">{{ total_table_service_income_cash }} ₪</td>
+                    </tr>
+                    <tr>
+                        <td style="color: white;">Карта</td>
+                        <td style="color: white;">{{ total_table_service_income_card }} ₪</td>
+                    </tr>
+                    <tr>
+                        <td style="color: white;">Общий доход</td>
+                        <td style="color: white;">{{ total_table_service_income }} ₪</td>
+                    </tr>
+                    <tr>
+                </tbody>
+            </table>
+
+            <h4 class="mb-3" style="color: white;">Доход от доставки</h4>
+            <h5 class="mb-3" style="color: white;">Доставка: {{ total_delivery_orders }}</h5>
+            <table class="table table-striped">
+                <tbody>
+                    <tr>
+                        <td style="color: white;">Наличные</td>
+                        <td style="color: white;">{{ total_delivery_income_cash }} ₪</td>
+                    </tr>
+                    <tr>
+                        <td style="color: white;">Карта</td>
+                        <td style="color: white;">{{ total_delivery_income_card }} ₪</td>
+                    </tr>
+                    <tr>
+                        <td style="color: white;">Общий доход</td>
+                        <td style="color: white;">{{ total_delivery_income }} ₪</td>
+                    </tr>
+                </tbody>
+            </table>
+
+            <h4 class="mb-3" style="color: white;">Доход от самовывоза</h4>
+            <h5 class="mb-3" style="color: white;">Самовывоз: {{ total_pickup_orders }}</h5>
+            <table class="table table-striped">
+                <tbody>
+                    <tr>
+                        <td style="color: white;">Наличные</td>
+                        <td style="color: white;">{{ total_pickup_income_cash }} ₪</td>
+                    </tr>
+                    <tr>
+                        <td style="color: white;">Карта</td>
+                        <td style="color: white;">{{ total_pickup_income_card }} ₪</td>
+                    </tr>
+                    <tr>
+                        <td style="color: white;">Общий доход</td>
+                        <td style="color: white;">{{ total_pickup_income }} ₪</td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+
+        <div class="col-md-6">
+            <h4 class="mb-3" style="color: white;">Затраты <strong>{{ total_expense }}₪</strong></h4>
+            <table class="table table-striped">
+                <thead>
+                    <tr>
+                        <th scope="col" style="color: white; font-size: 15px;">Метод оплаты</th>
+                        <th scope="col" style="color: white; font-size: 15px;">Сумма</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for method_stat in payment_methods_stats %}
+                    <tr>
+                        <td style="color: white;">{{ method_stat.payment_method }}</td>
+                        <td style="color: white;">{{ method_stat.total }} ₪</td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
     </div>
 
+    <h2 class="mb-4" style="color: white;">Детали транзакций</h2>
+    <button id="toggleTransactions" style="color: white;">Показать/Скрыть детали транзакций</button>
+    <div class="transactions-container d-flex justify-content-between">
+        <div class="transactions-column col-md-6">
+            <h4 class="mb-3" style="color: white;">Прибыль: <strong>{{ total_income }}₪</strong></h4>
+            <ul class="transaction-details list-unstyled" style="display:none;">
+                {% for transaction in incomes %}
+                <li class="transaction-item">
+                    <p style="color: white; margin-bottom: 0.5em;"><strong>Категория:</strong> {{ transaction.category }}</p>
+                    <p style="color: white; margin-bottom: 0.5em;"><strong>Сумма:</strong> {{ transaction.amount }} ₪</p>
+                    <p style="color: white; margin-bottom: 0.5em;"><strong>Дата:</strong> {{ transaction.date|date:"M. d, Y" }}</p>
+                    {% if transaction.cash_amount %}
+                    <p style="color: white; margin-bottom: 0.5em;"><strong>Наличные:</strong> {{ transaction.cash_amount }} ₪</p>
+                    {% endif %}
+                    {% if transaction.card_amount %}
+                    <p style="color: white; margin-bottom: 0.5em;"><strong>Карта:</strong> {{ transaction.card_amount }} ₪</p>
+                    {% endif %}
+                    {% if transaction.payment_method %}
+                    <p style="color: white; margin-bottom: 0.5em;"><strong>Метод оплаты:</strong> {{ transaction.payment_method }}</p>
+                    {% endif %}
+                </li>
+                {% endfor %}
+            </ul>
+        </div>
+
+        <div class="transactions-column col-md-6">
+            <h4 class="mb-3" style="color: white;">Затраты: <strong>{{ total_expense }}₪</strong></h4>
+            <ul class="transaction-details list-unstyled" style="display:none;">
+                {% for transaction in expenses %}
+                <li class="transaction-item">
+                    <p style="color: white; margin-bottom: 0.5em;"><strong>Категория:</strong> {{ transaction.category }}</p>
+                    <p style="color: white; margin-bottom: 0.5em;"><strong>Сумма:</strong> {{ transaction.amount }} ₪</p>
+                    <p style="color: white; margin-bottom: 0.5em;"><strong>Дата:</strong> {{ transaction.date|date:"M. d, Y" }}</p>
+                    {% if transaction.cash_amount %}
+                    <p style="color: white; margin-bottom: 0.5em;"><strong>Наличные:</strong> {{ transaction.cash_amount }} ₪</p>
+                    {% endif %}
+                    {% if transaction.card_amount %}
+                    <p style="color: white; margin-bottom: 0.5em;"><strong>Карта:</strong> {{ transaction.card_amount }} ₪</p>
+                    {% endif %}
+                    {% if transaction.payment_method %}
+                    <p style="color: white; margin-bottom: 0.5em;"><strong>Метод оплаты:</strong> {{ transaction.payment_method }}</p>
+                    {% endif %}
+                </li>
+                {% endfor %}
+            </ul>
+        </div>
+    </div>
+
+    <div class="chart-container mt-5">
+        <canvas id="expenseChart"></canvas>
+    </div>
 </div>
 {% endblock %}
 
@@ -138,10 +211,10 @@ window.addEventListener('DOMContentLoaded', function() {
         detailsLists.forEach(function(detailsList) {
             if (detailsList.style.display === "none") {
                 detailsList.style.display = "block";
-                toggleButton.textContent = "Скрыть";
+                toggleButton.textContent = "Скрыть детали транзакций";
             } else {
                 detailsList.style.display = "none";
-                toggleButton.textContent = "Показать";
+                toggleButton.textContent = "Показать детали транзакций";
             }
         });
     });

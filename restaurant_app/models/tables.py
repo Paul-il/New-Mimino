@@ -6,9 +6,10 @@ from django import forms
 class Room(models.Model):
     name = models.CharField(max_length=255)
     max_capacity = models.IntegerField(null=True, blank=True)
-    
+
     def __str__(self):
         return self.name
+
 
 class Table(models.Model):
     table_id = models.IntegerField()
@@ -39,6 +40,7 @@ class Table(models.Model):
     class Meta:
         ordering = ['table_id']
 
+
 class Booking(models.Model):
     table = models.ForeignKey(Table, on_delete=models.CASCADE, related_name='bookings')
     user = models.ForeignKey(User, on_delete=models.CASCADE, related_name='bookings')
@@ -53,12 +55,14 @@ class Booking(models.Model):
 
     def __str__(self):
         return f"Бронирование {self.id} - стол {self.table.table_id} ({self.reserved_date} {self.reserved_time} {self.user.first_name})"
-        
+
+
 class GuestsHereForm(forms.ModelForm):
     class Meta:
         model = Booking
         fields = ['are_guests_here']
         widgets = {'are_guests_here': forms.HiddenInput()}
+
 
 class Tip(models.Model):
     amount = models.DecimalField(max_digits=6, decimal_places=2)
@@ -67,6 +71,7 @@ class Tip(models.Model):
 
     def __str__(self):
         return f"Total tip: {self.amount} on {self.date}"
+
 
 class TipDistribution(models.Model):
     tip = models.ForeignKey(Tip, on_delete=models.CASCADE)
@@ -82,11 +87,12 @@ class TipDistribution(models.Model):
     def __str__(self):
         return f"{self.user.username} получает {self.amount} чаевых от чаевых {self.tip.id}"
 
-    
+
 class UserProfile(models.Model):
-    user = models.OneToOneField(User, on_delete=models.CASCADE)
-    tips = models.FloatField(default=0)  # Или любое другое поле, которое вам нужно
+    user = models.OneToOneField(User, on_delete=models.CASCADE, related_name='userprofile')
+    tips = models.FloatField(default=0)
+
 
 class TipGoal(models.Model):
-    user = models.OneToOneField(User, on_delete=models.CASCADE)
+    user = models.OneToOneField(User, on_delete=models.CASCADE, related_name='tipgoal')
     goal = models.FloatField(default=0)

@@ -6,10 +6,13 @@ from django.shortcuts import redirect
 
 from django.conf.urls import handler404
 
+from restaurant_app.views_folder.cabinet import (personal_cabinet, change_password, edit_profile)
+from restaurant_app.views_folder.message_view import (inbox, send_message, unread_messages_count, 
+                                                      delete_all_messages,delete_selected_messages, 
+                                                      send_link_to_paul,chat_detail,chat_with_user)
 from restaurant_app.views_folder.tip_view import tip_view, check_tips
 from restaurant_app.views_folder.order_summary import order_summary
 from restaurant_app.views_folder.find_product import find_products
-from restaurant_app.views_folder.add_stock_view import add_stock
 from restaurant_app.views_folder.confirm_order_view import confirm_order
 from restaurant_app.views_folder.close_table_view import close_table_view
 from restaurant_app.views_folder.room_view import rooms_view, room_detail_view
@@ -22,19 +25,22 @@ from restaurant_app.views_folder.menu_view import menu_view, menu_for_waiter_vie
 from restaurant_app.views_folder.pdf_view import generate_pdf_view
 from restaurant_app.views_folder.kitchen_template import kitchen_template_view, print_kitchen, print_kitchen_for_waiter
 from restaurant_app.views_folder.order_statistics_view import OrderStatisticsView
+from restaurant_app.views_folder.productdetailview import ProductDetailView
 from restaurant_app.views_folder.search_product import search_products
 from restaurant_app.views_folder.pdf_template_view import pdf_template_view
 from restaurant_app.views_folder.ask_where_views import ask_where_view
 from restaurant_app.views_folder.search_view import search_products_view
 from restaurant_app.views_folder.login_view import login_page_view, logout_view
 from restaurant_app.views_folder.tables_view import tables_view, table_order_view
+from restaurant_app.views_folder.table_detail_view import table_detail
+from restaurant_app.views_folder.add_stock_view import limited_products_view, update_product_stock
 from restaurant_app.views_folder.cart_view import (
     add_to_cart_view, order_detail_view, increase_product_in_order_view,
     decrease_product_from_order_view, get_order_item_quantity_view,
     delete_product_from_order_view,
-    empty_order_detail_view, waiter_cart_view, add_product_to_waiter_order,
-    delete_product_from_waiter_order_view, password_check_view, apply_discount_view,
-    update_delivery_status
+    empty_order_detail_view, waiter_cart_view, add_product_to_waiter_order_view,
+    delete_product_from_waiter_order_view,delete_waiter_order_and_items_view, password_check_view, 
+    apply_discount_view, update_delivery_status
 )
 
 from restaurant_app.views import (
@@ -49,6 +55,7 @@ urlpatterns = [
     path('table/<int:table_id>/', table_order_view, name='table_order_view'),
     path('tables/', tables_view, name='tables'),
     path('tables/<int:room_id>/', tables_view, name='tables'),
+    path('table_detail/<int:table_id>/<int:order_id>/', table_detail, name='table_detail'),
     path('apply_discount/', apply_discount_view, name='apply_discount'),
 
     path('rooms/', rooms_view, name='rooms'),
@@ -61,14 +68,13 @@ urlpatterns = [
     path('search', search_products_view, name='search_products'),
     path('search-products/', search_products, name='search_products'),
 
-    path('', include('expenses.urls', namespace='expenses')),
+    path('expenses/', include('expenses.urls')),
     path('pickup/', include('pickup_app.urls')),
 
     path('', include('delivery_app.urls')),
 
     path('sales/', include('sales.urls')),
    
-    path('add-stock/', add_stock, name='add_stock'),
 
     path('book_table/', book_table_view, name='book_table'),
     path('bookings/', bookings_view, name='bookings'),
@@ -79,16 +85,17 @@ urlpatterns = [
 
     path('menu_for_waiter/<str:category>/', menu_for_waiter_view, name='menu_for_waiter'),
     path('waiter_cart/', waiter_cart_view, name='waiter_cart'),
-    path('add_product_to_waiter_order/', add_product_to_waiter_order, name='add_product_to_waiter_order'),
+    path('add_product_to_waiter_order/<int:product_id>/<int:quantity>/', add_product_to_waiter_order_view, name='add_product_to_waiter_order'),
     path('delete_product_from_waiter_order/<int:waiter_order_id>/<int:order_item_id>/', delete_product_from_waiter_order_view, name='delete_product_from_waiter_order'),
+    path('delete_waiter_order_and_items/<int:waiter_order_id>/', delete_waiter_order_and_items_view, name='delete_waiter_order_and_items'),
     path('print_kitchen_for_waiter/', print_kitchen_for_waiter, name='print_kitchen_for_waiter'),
-
+    
     path('table_order/<int:table_id>/', table_order_view, name='table_order'),
     path('cart_detail/<int:order_id>/', order_detail_view, name='cart_detail'),
 
     path('empty_order_detail/', empty_order_detail_view, name='empty_order_detail'),
 
-    path('/print_kitchen/', print_kitchen, name='print_kitchen'),
+    path('print_kitchen/', print_kitchen, name='print_kitchen'),
     path('set_bill_printed/<int:order_id>/', set_bill_printed, name='set_bill_printed'),
 
     path('order/<int:order_id>/', order_detail_view, name='cart_detail'),
@@ -106,6 +113,7 @@ urlpatterns = [
     path('order-item/<int:order_item_id>/update-delivery-status/', update_delivery_status, name='update_delivery_status'),
 
     path('order_statistics/', OrderStatisticsView.as_view(), name='order_statistics'),
+    path('product/<int:pk>/', ProductDetailView.as_view(), name='product_detail'),
     path('tip/<int:table_id>/', tip_view, name='tip'),
     path('check_tips/', check_tips, name='check_tips'),
     path('close_table/', close_table_view, name='close_table'),
@@ -120,6 +128,22 @@ urlpatterns = [
     path('recommendations/<int:order_id>/', recommend_view, name='recommendations'),
 
     path('find_products/', find_products, name='find_products'),
+
+    path('personal-cabinet/', personal_cabinet, name='personal_cabinet'),
+    path('personal-cabinet/change-password/', change_password, name='change_password'),
+    path('personal-cabinet/edit-profile/', edit_profile, name='edit_profile'),
+    path('inbox/', inbox, name='inbox'),
+    path('chat/<int:chat_id>/', chat_detail, name='chat_detail'),
+    path('chat_with_user/<int:user_id>/', chat_with_user, name='chat_with_user'),
+    path('send_message/', send_message, name='send_message'),
+    path('send_message/<int:chat_id>/', send_message, name='send_message'),
+    path('delete_selected_messages/<int:chat_id>/', delete_selected_messages, name='delete_selected_messages'),
+    path('delete_all_messages/<int:chat_id>/', delete_all_messages, name='delete_all_messages'),
+    path('unread_messages_count/', unread_messages_count, name='unread_messages_count'),
+    path('send_link_to_paul/', send_link_to_paul, name='send_link_to_paul'),
+
+    path('limited-products/', limited_products_view, name='limited_products'),
+    path('update-product-stock/<int:product_id>/', update_product_stock, name='update_product_stock'),
 ]
 
 if settings.DEBUG:

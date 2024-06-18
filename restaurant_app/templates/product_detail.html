@@ -1,0 +1,61 @@
+{% extends "base.html" %}
+{% load static %}
+{% block title %}{{ product.product_name_rus }} - Детали{% endblock %}
+
+{% block content %}
+<div class="container my-5">
+    <h1 class="mb-4" style="color: white;">{{ product.product_name_rus }}</h1>
+
+    <form method="get" class="form-inline mb-4">
+        {{ form.as_p }}
+        <button type="submit" class="btn btn-primary">Фильтровать</button>
+    </form>
+
+    <table class="table table-striped">
+        <thead>
+            <tr>
+                <th scope="col" style="color: white; font-size: 15px;">Период</th>
+                <th scope="col" style="color: white; font-size: 15px;">Количество</th>
+                <th scope="col" style="color: white; font-size: 15px;">Сумма (₪)</th>
+            </tr>
+        </thead>
+        <tbody>
+            <tr>
+                <td style="color: white;">За период ({{ daily_sales.start_date|date:"F j, Y" }} - {{ daily_sales.end_date|date:"F j, Y" }})</td>
+                <td style="color: white;">{{ daily_sales.total_quantity }}</td>
+                <td style="color: white;">₪{{ daily_sales.total_price|floatformat:2 }}</td>
+            </tr>
+        </tbody>
+    </table>
+
+    <canvas id="weeklySalesChart" width="400" height="200"></canvas>
+</div>
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script>
+    const ctx = document.getElementById('weeklySalesChart').getContext('2d');
+    const weeklySalesChart = new Chart(ctx, {
+        type: 'bar',
+        data: {
+            labels: ['Понедельник', 'Вторник', 'Среда', 'Четверг', 'Пятница', 'Суббота', 'Воскресенье'],
+            datasets: [{
+                label: 'Количество продаж',
+                data: [
+                    {% for day in weekly_sales %}
+                        {{ day.total_quantity }},
+                    {% endfor %}
+                ],
+                backgroundColor: 'rgba(75, 192, 192, 0.2)',
+                borderColor: 'rgba(75, 192, 192, 1)',
+                borderWidth: 1
+            }]
+        },
+        options: {
+            scales: {
+                y: {
+                    beginAtZero: true
+                }
+            }
+        }
+    });
+</script>
+{% endblock %}

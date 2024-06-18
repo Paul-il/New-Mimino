@@ -1,0 +1,932 @@
+# File: c:\Users\p4ul7\OneDrive\מסמכים\Mimino\restaurant_app\views_folder\cart_view.py
+from django.shortcuts import get_object_or_404, render, redirect
+from django_user_agents.utils import get_user_agent
+from django.http import JsonResponse, HttpResponseNotAllowed
+from django.db.models import Sum, F
+from django.contrib import messages
+from django.contrib.auth.models import User
+from django.contrib.auth.decorators import login_required
+from django.core.cache import cache
+from django.utils import timezone
+from asgiref.sync import sync_to_async
+from decimal import Decimal
+from django.conf import settings
+from django.contrib.auth.hashers import check_password
+
+from ..models.product import Product, OrderChangeLog
+from ..models.tables import Table
+from ..models.orders import OrderItem, Order, WaiterOrder
+from ..forms import PasswordForm
+
+# Configure logger
+import logging
+logger = logging.getLogger(__name__)
+
+def log_order_change(order, product_name, action, changed_by):
+    """Log changes in the order."""
+    try:
+        OrderChangeLog.objects.create(
+            order=order, 
+            product_name=product_name, 
+            action=action, 
+            change_time=timezone.now(),
+            changed_by=changed_by
+        )
+    except Exception as e:
+        logger.error(f"Error logging order change: {e}")
+
+
+def get_cached_product(product_id):
+    """Get product from cache or database."""
+    product = cache.get(f'product_{product_id}')
+    if not product:
+        product = get_object_or_404(Product, pk=product_id)
+        cache.set(f'product_{product_id}', product, timeout=300)  # кешируем на 5 минут
+    return product
+
+
+@login_required
+def confirm_order_view(request, order_id):
+    order = get_object_or_404(Order, pk=order_id)
+    order.is_confirmed = True
+    order.save()
+    return redirect('order_detail', order_id=order.id)
+
+
+@login_required
+def password_check_view(request, order_id, action, order_item_id=None):
+    order = get_object_or_404(Order, pk=order_id)
+    is_admin = request.user.is_superuser
+
+    if is_admin or (not order.is_confirmed and not order.is_bill_printed):
+        return perform_order_action(request, order_id, action, order_item_id)
+
+    if request.method == 'POST':
+        form = PasswordForm(request.POST)
+        if form.is_valid() and check_password(form.cleaned_data['password'], settings.OPERATIONAL_PASSWORD):
+            return perform_order_action(request, order_id, action, order_item_id)
+        else:
+            messages.error(request, 'Неверный операционный пароль.')
+    else:
+        form = PasswordForm()
+    
+    return render(request, 'password_check.html', {
+        'form': form,
+        'order_id': order_id,
+        'order_item_id': order_item_id,
+        'action': action
+    })
+
+
+@login_required
+def perform_order_action(request, order_id, action, order_item_id):
+    if action == 'decrease':
+        return decrease_product_from_order_view(request, order_id, order_item_id)
+    elif action == 'delete':
+        return delete_product_from_order_view(request, order_id, order_item_id)
+    else:
+        messages.error(request, 'Неизвестное действие.')
+        return redirect('some_default_view')
+
+@login_required
+def add_to_cart_view(request, table_id):
+    try:
+        table = get_object_or_404(Table, pk=table_id)
+        room = table.room
+
+        if request.method == 'POST':
+            active_order = table.get_active_order()
+
+            if not active_order:
+                num_of_people_str = request.POST.get('num_of_people')
+                if num_of_people_str:
+                    num_of_people = int(num_of_people_str)
+                    if num_of_people > room.max_capacity:
+                        messages.error(request, f'Количество людей не может превышать максимальную вместимость комнаты {room.max_capacity}.')
+                        return redirect('rooms')
+
+                    active_order = Order.objects.create(
+                        table=table, 
+                        created_by=request.user, 
+                        num_of_people=num_of_people,
+                        table_number=table.table_id
+                    )
+                else:
+                    messages.error(request, 'Необходимо указать количество посетителей.')
+                    return redirect('rooms')
+
+            product_id = request.POST.get('product_id')
+            if product_id:
+                quantity = int(request.POST.get('quantity', 1))
+                product = get_cached_product(product_id)
+
+                try:
+                    if product.has_limit and product.limit_quantity < quantity:
+                        messages.error(request, f"Количество лимитированного продукта '{product.product_name_rus}' не может превышать {product.limit_quantity}.")
+                        return redirect('menu', table_id=table_id, category=request.POST.get('category', 'salads'))
+
+                    order_item, created = active_order.order_items.get_or_create(
+                        product=product, 
+                        defaults={'quantity': quantity}
+                    )
+                    if not created:
+                        order_item.quantity += quantity
+                    order_item.save()
+
+                    # Get the updated product quantity after saving the order item
+                    product.refresh_from_db()
+
+                    messages.success(request, f"{quantity} {product.product_name_rus} добавлено в заказ.")
+                    log_order_change(order=active_order, product_name=order_item.product.product_name_rus, action='add', changed_by=request.user)
+
+                    if product.has_limit:
+                        if product.limit_quantity <= 3:
+                            messages.warning(request, f'Внимание: количество продукта "{product.product_name_rus}" ниже порогового уровня. Осталось {product.limit_quantity}.')
+                        if not product.is_available:
+                            messages.warning(request, f'Внимание: продукт "{product.product_name_rus}" больше не доступен.')
+
+                except ValueError as e:
+                    messages.error(request, str(e))
+                return redirect('menu', table_id=table_id, category=request.POST.get('category', 'salads'))
+
+        return redirect('menu', table_id=table_id, category='salads')
+
+    except Table.DoesNotExist:
+        messages.error(request, "Table not found.")
+        return redirect('rooms')
+
+
+@login_required
+def calculate_discount_for_product(product_id):
+    """Calculate discount for a product."""
+    product = Product.objects.get(id=product_id)
+    return product.product_price * (product.discount_percentage / 100)
+
+
+def add_product_to_order(product_id, quantity, active_order, request):
+    product = get_cached_product(product_id)
+    discount_amount = calculate_discount_for_product(product_id)
+    order_item, created = active_order.order_items.get_or_create(
+        product=product, 
+        defaults={'quantity': quantity, 'discount': discount_amount}
+    )
+    if not created:
+        order_item.quantity += quantity
+        order_item.discount = discount_amount
+        order_item.save()
+    messages.success(request, f"{quantity} {order_item.product.product_name_rus} добавлено в заказ.")
+    log_order_change(order=active_order, product_name=order_item.product.product_name_rus, action='add')
+
+
+@login_required
+def increase_product_in_order_view(request, order_id, order_item_id):
+    order_item = get_object_or_404(OrderItem, id=order_item_id)
+    product = order_item.product
+
+    if product.has_limit and product.limit_quantity < 1:
+        messages.error(request, f"Количество лимитированного продукта '{product.product_name_rus}' не может быть увеличено.")
+        return redirect('cart_detail', order_id)
+
+    order_item.quantity += 1
+    order_item.is_delivered = False
+    order_item.save()
+
+    # Refresh the product instance to get the updated limit_quantity and is_available status
+    product.refresh_from_db()
+
+    log_order_change(order=order_item.order, product_name=order_item.product.product_name_rus, action='add', changed_by=request.user)
+    messages.success(request, f"{order_item.product.product_name_rus} добавлено в корзину.")
+
+    if product.has_limit:
+        if product.limit_quantity <= 3:
+            messages.warning(request, f'Внимание: количество продукта "{product.product_name_rus}" ниже порогового уровня. Осталось {product.limit_quantity}.')
+        if not product.is_available:
+            messages.warning(request, f'Внимание: продукт "{product.product_name_rus}" больше не доступен.')
+
+    return redirect('cart_detail', order_id)
+
+
+@login_required
+def decrease_product_from_order_view(request, order_id, order_item_id):
+    order_item = get_object_or_404(OrderItem, id=order_item_id)
+    order = get_object_or_404(Order, id=order_id)
+
+    if order_item.quantity <= 1:
+        order_item.delete()
+        log_order_change(order, order_item.product.product_name_rus, 'decrease', request.user)
+        if not order.order_items.exists():
+            order.delete()
+            return redirect('rooms')
+    else:
+        order_item.quantity -= 1
+        order_item.save()
+        log_order_change(order, order_item.product.product_name_rus, 'decrease', request.user)
+
+    messages.success(request, f"{order_item.product.product_name_rus} убран из заказа.")
+    return redirect('cart_detail', order_id)
+
+
+@login_required
+def delete_product_from_order_view(request, order_id, order_item_id):
+    order_item = get_object_or_404(OrderItem, id=order_item_id)
+    order = get_object_or_404(Order, id=order_id)
+    order_item.delete()
+    messages.success(request, f"{order_item.product.product_name_rus} удален из заказа.")
+    log_order_change(order, order_item.product.product_name_rus, 'delete', request.user)
+
+    if not order.order_items.exists():
+        order.delete()
+        return redirect('rooms')
+
+    return redirect('cart_detail', order_id)
+
+
+@login_required
+def get_order_item_quantity_view(request, order_id, order_item_id):
+    order_item = OrderItem.objects.get(order__id=order_id, id=order_item_id)
+    data = {order_item.quantity}
+    return JsonResponse(data, safe=False)
+
+
+@login_required
+def remove_empty_order_items():
+    """Remove order items with zero quantity."""
+    empty_order_items = OrderItem.objects.filter(quantity=0)
+    empty_order_items.delete()
+
+
+@login_required
+def empty_order_detail_view(request, order_id):
+    order = get_object_or_404(Order, id=order_id)
+    return render(request, 'empty_order_detail.html', {"order_id": order_id, "order": order})
+
+
+@login_required
+def order_detail_view(request, order_id):
+    order = get_object_or_404(Order, id=order_id)
+    all_users = User.objects.filter(is_active=True)
+    user_agent = get_user_agent(request)
+    is_not_desktop = not user_agent.is_pc
+    is_admin = request.user.is_superuser
+
+    order_items = order.order_items.annotate(
+        discount_amount=F('product__product_price') * F('discount_percentage') / 100,
+        final_price=F('product__product_price') - (F('product__product_price') * F('discount_percentage') / 100)
+    )
+
+    total_price = sum(item.final_price * item.quantity for item in order_items)
+    total_price = Decimal(total_price)
+
+    order_logs = OrderChangeLog.objects.filter(order=order).order_by('change_time')
+
+    if request.method == 'POST':
+        payment_method = request.POST.get('payment_method')
+        cash_amount = Decimal(request.POST.get('cash_amount', '0') or '0')
+        card_amount = Decimal(request.POST.get('card_amount', '0') or '0')
+
+        if payment_method in ['cash', 'card', 'mixed']:
+            if payment_method == 'cash':
+                order.cash_amount = total_price
+                order.card_amount = Decimal('0')
+            elif payment_method == 'card':
+                order.card_amount = total_price
+                order.cash_amount = Decimal('0')
+            elif payment_method == 'mixed':
+                order.cash_amount = (order.cash_amount or Decimal('0')) + cash_amount
+                order.card_amount = (order.card_amount or Decimal('0')) + card_amount
+
+            order.save()
+
+            remaining_total = total_price - ((order.cash_amount or Decimal('0')) + (order.card_amount or Decimal('0')))
+
+            if remaining_total <= 0:
+                order.is_completed = True
+                if hasattr(order, 'table'):
+                    order.table.is_ordered = False
+                    order.table.save()
+                return redirect('tip', table_id=order.table.id)
+
+            return redirect('cart_detail', order_id=order.id)
+
+        messages.error(request, 'Неизвестный метод оплаты.')
+        return redirect('cart_detail', order_id=order.id)
+
+    return render(request, 'cart_detail.html', {
+        'order': order,
+        'order_items': order_items,
+        'total_price': total_price,
+        'partial_cash': order.cash_amount or Decimal('0'),
+        'partial_card': order.card_amount or Decimal('0'),
+        'remaining_total': total_price - ((order.cash_amount or Decimal('0')) + (order.card_amount or Decimal('0'))),
+        'table': order.table if hasattr(order, 'table') else None,
+        'all_users': all_users,
+        'is_not_desktop': is_not_desktop,
+        'is_admin': is_admin,
+        'order_logs': order_logs,
+    })
+
+
+@login_required
+def apply_discount_view(request):
+    if request.method != 'POST':
+        return HttpResponseNotAllowed(['POST'])
+
+    for key, value in request.POST.items():
+        if key.startswith('discount_percentage_'):
+            order_item_id = key.split('_')[-1]
+            try:
+                discount_percentage = float(value)
+                order_item = get_object_or_404(OrderItem, pk=order_item_id)
+                order_item.discount_percentage = discount_percentage
+                order_item.save()
+                print(f"Updated discount for OrderItem {order_item_id}: {discount_percentage}%")
+            except (ValueError, OrderItem.DoesNotExist):
+                pass
+
+    return redirect('cart_detail', order_id=request.POST.get('order_id'))
+
+
+@login_required
+def update_delivery_status(request, order_item_id):
+    order_item = get_object_or_404(OrderItem, id=order_item_id)
+    if request.method == "POST":
+        order_item.is_delivered = not order_item.is_delivered
+        order_item.save()
+        return redirect('cart_detail', order_id=order_item.order.id)
+    else:
+        return HttpResponseNotAllowed(['POST'])
+
+
+@login_required
+def add_to_waiter_cart_view(request):
+    if request.method != 'POST':
+        return redirect('menu_for_waiter', category=request.GET.get('category'))
+
+    product_id = request.POST.get('product_id')
+    category = request.POST.get('category')
+    quantity = int(request.POST.get('quantity', 1))
+
+    if not product_id:
+        messages.error(request, "Выбран неверный продукт.")
+        return redirect('menu_for_waiter', category=category)
+
+    # Передаем product_id и quantity как параметры запроса
+    return redirect('add_product_to_waiter_order', product_id=product_id, quantity=quantity)
+
+
+@login_required
+def add_product_to_waiter_order_view(request, product_id, quantity):
+    user = request.user
+    active_order, created = WaiterOrder.objects.get_or_create(user=user, is_completed=False, defaults={'created_by': user})
+    product = get_cached_product(product_id)
+    order_item, created = OrderItem.objects.get_or_create(waiter_order=active_order, product=product)
+
+    if not created:
+        order_item.quantity += quantity
+    else:
+        order_item.quantity = quantity
+    order_item.save()
+
+    messages.success(request, f"{quantity} {order_item.product.product_name_rus} добавлено в корзину.")
+    return redirect('menu_for_waiter', category=request.POST.get('category'))
+
+
+@login_required
+def waiter_cart_view(request):
+    active_order = WaiterOrder.objects.filter(user=request.user, is_completed=False).first()
+
+    if not active_order:
+        messages.warning(request, "Ваша корзина пуста.")
+        return redirect('menu_for_waiter', category='salads')
+
+    order_items = active_order.waiter_order_items.all()
+    total_price = sum(item.product.product_price * item.quantity for item in order_items)
+
+    context = {
+        'active_order': active_order,
+        'order_items': order_items,
+        'total_price': total_price,
+    }
+
+    return render(request, 'waiter_cart.html', context=context)
+
+
+@login_required
+def delete_product_from_waiter_order_view(request, waiter_order_id, order_item_id):
+    waiter_order = get_object_or_404(WaiterOrder, id=waiter_order_id)
+    order_item = get_object_or_404(OrderItem, id=order_item_id, waiter_order=waiter_order)
+    order_item.delete()
+    messages.success(request, f"{order_item.product.product_name_rus} удалено из корзины официанта.")
+    if not waiter_order.waiter_order_items.exists():
+        waiter_order.delete()
+        return redirect('menu_for_waiter', category='salads')
+    return redirect('waiter_cart')
+
+
+# End of file
+
+# File: c:\Users\p4ul7\OneDrive\מסמכים\Mimino\restaurant_app\views_folder\close_table_view.py
+from django.shortcuts import redirect, get_object_or_404
+from django.contrib.auth.decorators import login_required
+from django.http import HttpResponse
+
+from ..models.orders import Order
+
+@login_required
+def close_table_view(request):
+    if request.method == 'POST':
+        table_id = request.POST.get('table_id')
+        order = get_object_or_404(Order, table_id=table_id, is_completed=False)
+
+        # Проверка наличия элементов в заказе
+        if not order.order_items.exists():
+            order.delete()
+        else:
+            order.is_completed = True
+            order.save()
+
+        table = order.table
+        table.is_available = True
+        table.save()
+        return redirect('rooms')
+    else:
+        return HttpResponse("Not Supported Method")
+
+# End of file
+
+# File: c:\Users\p4ul7\OneDrive\מסמכים\Mimino\restaurant_app\views_folder\confirm_order_view.py
+from django.http import JsonResponse
+from restaurant_app.models.orders import Order
+
+def confirm_order(request, order_id):
+    if request.method == 'POST':
+        try:
+            order = Order.objects.get(id=order_id)
+            order.is_confirmed = True
+            order.save()
+            return JsonResponse({'status': 'success', 'message': 'Заказ подтвержден'})
+        except Order.DoesNotExist:
+            return JsonResponse({'status': 'error', 'message': 'Заказ не найден'}, status=404)
+
+
+# End of file
+
+# File: c:\Users\p4ul7\OneDrive\מסמכים\Mimino\restaurant_app\views_folder\consumers.py
+import json
+from channels.generic.websocket import AsyncWebsocketConsumer
+from django.contrib.auth.models import User
+from ..models import Chat, Message
+
+class ChatConsumer(AsyncWebsocketConsumer):
+    async def connect(self):
+        self.chat_id = self.scope['url_route']['kwargs']['chat_id']
+        self.chat_group_name = f'chat_{self.chat_id}'
+
+        # Join room group
+        await self.channel_layer.group_add(
+            self.chat_group_name,
+            self.channel_name
+        )
+
+        await self.accept()
+
+    async def disconnect(self, close_code):
+        # Leave room group
+        await self.channel_layer.group_discard(
+            self.chat_group_name,
+            self.channel_name
+        )
+
+    async def receive(self, text_data):
+        data = json.loads(text_data)
+        message = data['message']
+        sender_username = data['sender']
+
+        sender = User.objects.get(username=sender_username)
+        chat = Chat.objects.get(id=self.chat_id)
+
+        # Save message to database
+        new_message = Message.objects.create(
+            chat=chat,
+            sender=sender,
+            body=message
+        )
+
+        await self.channel_layer.group_send(
+            self.chat_group_name,
+            {
+                'type': 'chat_message',
+                'message': message,
+                'sender': sender.username,
+                'timestamp': new_message.timestamp.strftime('%Y-%m-%d %H:%M:%S')
+            }
+        )
+
+    async def chat_message(self, event):
+        message = event['message']
+        sender = event['sender']
+        timestamp = event['timestamp']
+
+        # Send message to WebSocket
+        await self.send(text_data=json.dumps({
+            'message': message,
+            'sender': sender,
+            'timestamp': timestamp
+        }))
+
+
+# End of file
+
+# File: c:\Users\p4ul7\OneDrive\מסמכים\Mimino\restaurant_app\views_folder\find_product.py
+from django.shortcuts import render
+from django.utils import timezone
+from ..models.orders import OrderItem, Order
+# Убедитесь, что импортируете модель Product, если она находится в другом месте
+from ..models.product import Product, OrderChangeLog
+
+def find_products(request):
+    query = request.GET.get('query', '').strip()
+    today = timezone.now().date()  # Получаем текущую дату
+    products = []
+
+    if query:
+        products = OrderItem.objects.filter(
+            product__product_name_rus__icontains=query, 
+            is_delivered=False,
+            order__orderchangelog__change_time__date=today  # Фильтр по текущей дате
+        ).distinct().select_related('order', 'product', 'order__created_by')  # Добавляем выборку created_by
+
+        for product in products:
+            product_logs = OrderChangeLog.objects.filter(
+                order=product.order, 
+                product_name=product.product.product_name_rus, 
+                change_time__date=today
+            ).order_by('-change_time')
+            if product_logs.exists():
+                product.change_time = product_logs.first().change_time
+            else:
+                product.change_time = None
+
+    return render(request, 'find_product.html', {'products': products})
+
+
+# End of file
+
+# File: c:\Users\p4ul7\OneDrive\מסמכים\Mimino\restaurant_app\views_folder\kitchen_template.py
+from django.core.exceptions import ObjectDoesNotExist
+from django.shortcuts import get_object_or_404
+from restaurant_app.models.orders import Order, OrderItem, WaiterOrder
+from django.http import HttpResponse, JsonResponse
+from django.template.loader import render_to_string
+from django.utils import timezone
+from bs4 import BeautifulSoup
+import sys
+
+if sys.platform != "win32":  # Проверяем, что ОС не Windows
+    import cups
+    
+import tempfile
+from django.conf import settings
+import os
+import shutil
+
+def kitchen_template_view(request, order_id):
+    order = get_object_or_404(Order, id=order_id)
+    context = {'order': order}
+    html_content = render_to_string('kitchen_template.html', context)
+
+    return HttpResponse(html_content)
+
+
+def convert_html_to_text(cart_items):
+    html = render_to_string('kitchen_template.html', {'cart_items': cart_items})
+    soup = BeautifulSoup(html, 'html.parser')
+    text = soup.get_text()
+    return text
+
+
+# Создайте папку для сохранения файлов заказов
+ORDERS_FILES_DIR = os.path.join(settings.MEDIA_ROOT, 'orders_files')
+if not os.path.exists(ORDERS_FILES_DIR):
+    os.makedirs(ORDERS_FILES_DIR)
+
+
+def ensure_orders_files_dir_exists():
+    if not os.path.exists(ORDERS_FILES_DIR):
+        os.makedirs(ORDERS_FILES_DIR)
+
+
+def print_with_cups(order_id, title, text_to_print, comments, printer_name):
+    ensure_orders_files_dir_exists()
+
+    conn = cups.Connection()
+    printers = conn.getPrinters()
+    if printer_name not in printers:
+        printer_name = list(printers.keys())[0]
+
+    # Создаем или открываем файл, связанный с заказом
+    order_file_path = os.path.join(settings.ORDERS_FILES_DIR, f'order_{order_id}.txt')
+
+    # Создаем временный файл для новых продуктов
+    with tempfile.NamedTemporaryFile(mode='w+', encoding='utf-8', delete=False) as temp_file:
+        # Запишите заголовок во временный файл
+        temp_file.write(title)
+        temp_file.write(text_to_print)
+
+        # Запишите комментарии во временный файл, если они есть
+        if comments:
+            temp_file.write('\n____________________________\nКомментарии:\n')
+            temp_file.write(comments)
+
+        temp_file_path = temp_file.name
+
+    # Печатаем содержимое временного файла
+    conn.printFile(printer_name, temp_file_path, title, options={})
+
+    # Добавляем содержимое временного файла в основной файл заказа и удаляем временный файл
+    with open(order_file_path, 'a', encoding='utf-8') as order_file:
+        with open(temp_file_path, 'r', encoding='utf-8') as temp_file:
+            shutil.copyfileobj(temp_file, order_file)
+    os.unlink(temp_file_path)
+
+    conn = cups.Connection()
+    printers = conn.getPrinters()
+    print(printers)
+
+
+CATEGORY_SORT_ORDER = {
+    "salads": 1,
+}
+
+
+def sort_items(item):
+    return CATEGORY_SORT_ORDER.get(item.product.category, 999)
+
+
+def get_sorted_cart_items(order):
+    cart_items = OrderItem.objects.filter(order=order)
+    return sorted(cart_items, key=sort_items)
+
+
+def group_items_by_printer(sorted_cart_items):
+    grouped_items = {}
+    for item in sorted_cart_items:
+        new_quantity = item.quantity - item.printed_quantity
+        if new_quantity <= 0:
+            continue
+        printer = item.product.printer
+        if printer not in grouped_items:
+            grouped_items[printer] = []
+        grouped_items[printer].append(item)
+    return grouped_items
+
+def print_items_for_printers(grouped_items, order_id, title, new_comments, order, print_items):
+    for printer, items in grouped_items.items():
+        text_to_print = ""
+        for item in items:
+            text_to_print += f"{item.product.product_name_rus}\t{item.quantity - item.printed_quantity}\n"
+        
+        comments_to_print = new_comments if new_comments != order.last_printed_comments else ''
+        print_with_cups(order_id, title, text_to_print, comments_to_print, printer)
+
+        if print_items:
+            for item in items:
+                item.printed_quantity = item.quantity
+                item.save()
+
+
+def update_order_comments(order, new_comments):
+    order.comments = new_comments
+    order.last_printed_comments = new_comments
+    order.save()
+
+
+def print_kitchen(request):
+    try:
+        order_id = request.GET.get('order_id')
+        new_comments = request.GET.get('comments', '')
+        order = get_object_or_404(Order, id=order_id)
+        
+        sorted_cart_items = get_sorted_cart_items(order)
+        
+        current_time = timezone.localtime().strftime('%H:%M')
+        title = f"\n\n\nВремя печати: {current_time}\nСтол: {order.table.table_id}\nОфициант: {order.created_by.first_name}\n____________________________\n"
+        
+        grouped_items = group_items_by_printer(sorted_cart_items)
+        
+        print_items_str = request.GET.get('print_items', 'True')
+        print_items = print_items_str.lower() == 'true'
+
+        print_items_for_printers(grouped_items, order_id, title, new_comments, order, print_items)
+        
+        update_order_comments(order, new_comments)
+
+        if grouped_items:
+            return JsonResponse({'status': 'success', 'message': 'Заказ был успешно подтвержден.'})
+        else:
+            return JsonResponse({'status': 'warning', 'message': 'Нет новых товаров для печати.'})
+
+    except ObjectDoesNotExist:
+        return JsonResponse({'status': 'error', 'message': 'Заказ не найден.'})
+    except cups.IPPError as e:
+        return JsonResponse({'status': 'error', 'message': f"Ошибка при печати: {e}"})
+    except Exception as e:
+        return JsonResponse({'status': 'error', 'message': 'Произошла неизвестная ошибка.'})
+
+
+def get_sorted_waiter_cart_items(waiter_order):
+    cart_items = waiter_order.waiter_order_items.all()
+    return sorted(cart_items, key=sort_items)
+
+
+def print_kitchen_for_waiter(request):
+    try:
+        print("КУШАТЬ")
+        waiter_order_id = request.GET.get('waiter_order_id')
+        new_comments = request.GET.get('comments', '')
+        waiter_order = get_object_or_404(WaiterOrder, id=waiter_order_id)
+        
+        sorted_cart_items = get_sorted_waiter_cart_items(waiter_order)
+        
+        current_time = timezone.localtime().strftime('%H:%M')
+        title = f"\n\n\nВремя печати: {current_time}\n(Для официанта): {waiter_order.created_by.first_name} \n____________________________\n"
+        
+        grouped_items = group_items_by_printer(sorted_cart_items)
+        
+        print_items_str = request.GET.get('print_items', 'True')
+        print_items = print_items_str.lower() == 'true'
+
+        print_items_for_printers(grouped_items, waiter_order_id, title, new_comments, waiter_order, print_items)
+        
+        update_order_comments(waiter_order, new_comments)
+
+        # Удаление активного заказа после печати
+        waiter_order.delete()
+
+        if grouped_items:
+            return JsonResponse({'status': 'success', 'message': 'Заказ был успешно подтвержден и отправлен на кухню.'})
+        else:
+            return JsonResponse({'status': 'warning', 'message': 'Нет новых товаров для печати.'})
+
+    except ObjectDoesNotExist:
+        return JsonResponse({'status': 'error', 'message': 'Заказ не найден.'})
+    except cups.IPPError as e:
+        return JsonResponse({'status': 'error', 'message': f"Ошибка при печати: {e}"})
+    except Exception as e:
+        return JsonResponse({'status': 'error', 'message': f'Произошла неизвестная ошибка: {str(e)}'})
+
+
+
+# End of file
+
+# File: c:\Users\p4ul7\OneDrive\מסמכים\Mimino\restaurant_app\views_folder\login_view.py
+from django.shortcuts import render, redirect
+from django.contrib.auth import authenticate, login, logout
+from django.contrib.auth.forms import AuthenticationForm
+from django.contrib.auth.decorators import login_required
+from django.contrib import messages
+
+def login_page_view(request):
+    if request.user.is_authenticated:
+        return redirect('rooms')
+    else:
+        if request.method == 'POST':
+            form = AuthenticationForm(request, data=request.POST)
+            if form.is_valid():
+                username = form.cleaned_data.get('username')
+                password = form.cleaned_data.get('password')
+                user = authenticate(username=username, password=password)
+                if user is not None:
+                    login(request, user)
+                    return redirect('rooms')
+                else:
+                    messages.error(request, "Invalid username or password.")
+            else:
+                messages.error(request, "Invalid username or password.")
+        else:
+            form = AuthenticationForm()
+        return render(request, 'index.html', {'form': form})
+
+@login_required
+def logout_view(request):
+    logout(request)
+    messages.info(request, "You have successfully logged out.")
+    return redirect('login')
+
+
+# End of file
+
+# File: c:\Users\p4ul7\OneDrive\מסמכים\Mimino\restaurant_app\views_folder\manage_products_view.py
+from django.shortcuts import render, redirect, get_object_or_404
+from ..models.product import Product
+from django.views.decorators.http import require_GET, require_POST
+from django.contrib.auth.decorators import login_required
+
+@login_required
+@require_GET
+def manage_products(request):
+    products = Product.objects.all().order_by('product_name_rus')
+    available_products = [product for product in products if product.is_available]
+    unavailable_products = [product for product in products if not product.is_available]
+    
+    return render(request, 'manage_products.html', {'available_products': available_products, 'unavailable_products': unavailable_products})
+
+@login_required
+@require_POST
+def toggle_product_availability(request):
+    product = get_object_or_404(Product, id=request.POST.get('product_id'))
+    product.is_available = request.POST.get('toggle') == 'Enable'
+    product.save()
+    
+    return redirect('manage_products')
+
+
+# End of file
+
+# File: c:\Users\p4ul7\OneDrive\מסמכים\Mimino\restaurant_app\views_folder\menu_view.py
+# menu_view.py
+from django.contrib.auth.decorators import login_required
+from django.shortcuts import get_object_or_404, redirect, render
+from django.urls import reverse
+from django.contrib import messages
+
+from ..forms import ProductQuantityForm, OrderItemForm
+from ..models.orders import Order, OrderItem, WaiterOrder
+from ..models.product import Product
+from ..models.tables import Table
+
+CATEGORIES = {
+    'salads': 'Салаты',
+    'first_dishes': 'Закуски',
+    'khachapuri': 'Хачапури',
+    'bakery': 'Выпечка',
+    'soups': 'Супы',
+    'khinkali': 'Хинкали',
+    'meat_dishes': 'Мясные блюда',
+    'grill_meat': 'Мясо на огне',
+    'garnish': 'Гарниры',
+    'dessert': 'Десерты',
+    'soft_drinks': 'Легкие напитки',
+    'beer': 'Пиво',
+    'wine': 'Вино',
+    'vodka': 'Водка',
+    'cognac': 'Коньяк',
+    'whisky': 'Виски',
+    'dessert_drinks': 'Горячие напитки',
+    'own_alc': 'Свой алкоголь',
+    'banket': 'Банкет',
+}
+
+@login_required
+def menu_view(request, table_id, category):
+    table = get_object_or_404(Table, table_id=table_id)
+    products = Product.objects.filter(category=category)
+    product_quantity_form = ProductQuantityForm()
+    active_order = table.orders.filter(is_completed=False).first()
+    active_order_pk = active_order.pk if active_order else None
+    order_id = request.GET.get('order_id')
+
+    context = {
+        'table': table,
+        'active_order': active_order,
+        'products': products,
+        'category': category,
+        'order_id': order_id,
+        'product_quantity_form': product_quantity_form,
+        'CATEGORIES': CATEGORIES,
+        'active_order_pk': active_order_pk,
+        'has_active_orders': bool(active_order),
+    }
+
+    return render(request, 'menu.html', context=context)
+
+@login_required
+def menu_for_waiter_view(request, category):
+    product_quantity_form = ProductQuantityForm()
+    active_order = WaiterOrder.objects.filter(user=request.user, is_completed=False).first()
+    
+    # Если активного заказа нет, создаем новый
+    if not active_order:
+        active_order = WaiterOrder.objects.create(user=request.user, created_by=request.user)
+
+    active_order_pk = active_order.pk if active_order else None
+
+    products = Product.objects.filter(category=category)
+
+    context = {
+        'user': request.user,
+        'active_order': active_order,
+        'products': products,
+        'category': category,
+        'product_quantity_form': product_quantity_form,
+        'CATEGORIES': CATEGORIES,
+        'active_order_pk': active_order_pk,
+        'has_active_orders': bool(active_order),
+    }
+
+    context['order_item_form'] = OrderItemForm()
+    return render(request, 'menu_for_waiter.html', context=context)
+
+
+# End of file
+

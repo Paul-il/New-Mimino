@@ -20,9 +20,6 @@
     <h3 style="color: white;">Сумма которую должен нам вернуть Стас: {{ our_courier_cash_orders_after_discount }}₪</h3>
     {% endif %}
 
-
-
-
     <div style="text-align: right; margin-bottom: 10px;">
         <form method="GET" action=".">
             <label for="date" style="color: white;">Выберите дату:</label>
@@ -51,7 +48,11 @@
                 <td style="color: white;">{{ order.courier.get_name_display }}</td>
                 <td style="color: white;">{{ order.customer.get_city_display }}</td>
                 <td style="color: white;">{{ order.customer.street }} {{ order.customer.house_number }}</td>
-                <td style="color: white;">{{ order.customer.delivery_phone_number }}</td>
+                <td style="color: white;">
+                    <a href="{% url 'delivery_app:order_detail' order.id %}" style="color: white;">
+                        {{ order.customer.delivery_phone_number }}
+                    </a>
+                </td>
                 <td style="color: white;">{{ order.total_amount }}</td>
                 <td style="color: white;">{{ order.get_payment_method_display }}</td>
                 <td style="color: white;">{{ order.delivery_date }} {{ order.delivery_time|date:"H:i" }}</td>
@@ -59,8 +60,6 @@
             {% endfor %}
         </tbody>        
     </table>
-    
-
 </div>
 
 <div class="city-orders-summary">
@@ -73,6 +72,5 @@
         {% endfor %}
     </ul>
 </div>
-
 
 {% endblock %}

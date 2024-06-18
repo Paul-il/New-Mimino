@@ -4,6 +4,7 @@ from ..models import PickupOrder, Cart, CartItem
 from django.shortcuts import render, redirect, get_object_or_404, get_list_or_404
 from django.contrib.auth.decorators import login_required
 from django.contrib import messages
+from django.db.models import Sum, F
 
 CATEGORIES = {
     'salads': 'Салаты',
@@ -27,13 +28,14 @@ CATEGORIES = {
 
 @login_required
 def pickup_menu_view(request, phone_number, category):
-    products = Product.objects.filter(category=category)
+    # Сортируем продукты по имени
+    products = Product.objects.filter(category=category).order_by('product_name_rus')
     pickup_orders = get_list_or_404(PickupOrder, phone=phone_number)
     pickup_order = pickup_orders[0]
     product_quantity_form = ProductQuantityForm()
 
     if request.method == 'POST':
-        handle_add_to_cart(request, phone_number, pickup_order, category)  # добавлен аргумент category
+        handle_add_to_cart(request, phone_number, pickup_order, category)
 
     context = {
         'phone_number': phone_number,
@@ -42,11 +44,10 @@ def pickup_menu_view(request, phone_number, category):
         'pickup_order': pickup_order,
         'product_quantity_form': product_quantity_form,
         'CATEGORIES': CATEGORIES,
-
     }
 
-
     return render(request, 'pickup_menu.html', context)
+
 
 def handle_add_to_cart(request, phone_number, pickup_order, category):
     product_id = request.POST.get('product_id')
@@ -79,8 +80,19 @@ def handle_add_to_cart(request, phone_number, pickup_order, category):
         cart_item.quantity = quantity
         cart_item.save()
 
-    messages.success(request, f"{product_name} был добавлен в корзину.")
+    # Обновляем количество продукта на складе
+    if product.has_limit:
+        product.limit_quantity = F('limit_quantity') - quantity
+        product.save(update_fields=['limit_quantity'])
+        product.refresh_from_db()
+
+    if quantity > 1:
+        messages.success(request, f"{quantity} {product_name} было добавлено в корзину.")
+    else:
+        messages.success(request, f"{product_name} был добавлен в корзину.")
+
     return redirect('pickup_app:pickup_cart', phone_number=phone_number, category=None)
+
 
 
 

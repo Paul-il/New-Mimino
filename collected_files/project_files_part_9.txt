@@ -1,0 +1,1002 @@
+# File: c:\Users\p4ul7\OneDrive\מסמכים\Mimino\restaurant_app\views_folder\message_view.py
+from django.shortcuts import render, redirect, get_object_or_404
+from django.contrib.auth.decorators import login_required
+from django.http import JsonResponse, HttpResponse
+import json
+from django.contrib import messages
+from ..models.message import Chat, Message
+from ..models.orders import Order
+from django.contrib.auth.models import User
+from ..forms import MessageForm
+
+
+@login_required
+def inbox(request):
+    chats = Chat.objects.filter(participants=request.user)
+    return render(request, 'inbox.html', {'chats': chats})
+
+@login_required
+def chat_detail(request, chat_id):
+    chat = get_object_or_404(Chat, id=chat_id, participants=request.user)
+    messages_received = chat.messages.all()
+    messages_received.filter(read=False).update(read=True)  # Mark all messages as read
+    if request.method == 'POST':
+        form = MessageForm(request.POST)
+        if form.is_valid():
+            message = form.save(commit=False)
+            message.sender = request.user
+            message.chat = chat
+            message.save()
+            return redirect('chat_detail', chat_id=chat.id)
+    else:
+        form = MessageForm()
+    return render(request, 'chat_detail.html', {'chat': chat, 'messages_received': messages_received, 'form': form})
+
+@login_required
+def send_message(request, chat_id=None):
+    users = User.objects.exclude(username=request.user.username)
+    chats = Chat.objects.filter(participants=request.user)
+    all_users = User.objects.all()
+    if request.method == 'POST':
+        form = MessageForm(request.POST)
+        if form.is_valid():
+            message = form.save(commit=False)
+            message.sender = request.user
+            if chat_id:
+                chat = get_object_or_404(Chat, id=chat_id, participants=request.user)
+            else:
+                recipient_username = request.POST.get('recipient')
+                try:
+                    recipient = User.objects.get(username=recipient_username)
+                except User.DoesNotExist:
+                    messages.error(request, 'Пользователь не найден.')
+                    return redirect('send_message')
+
+                chats = Chat.objects.filter(participants=request.user).filter(participants=recipient)
+                if chats.exists():
+                    chat = chats.first()
+                else:
+                    chat = Chat.objects.create()
+                    chat.participants.add(request.user)
+                    chat.participants.add(recipient)
+
+            message.chat = chat
+            message.save()
+            messages.success(request, 'Сообщение отправлено!')
+            return redirect('chat_detail', chat_id=chat.id)
+    else:
+        form = MessageForm()
+    return render(request, 'send_message.html', {'form': form, 'chats': chats, 'users': users, 'all_users': all_users, 'chat_id': chat_id})
+
+@login_required
+def chat_with_user(request, user_id):
+    recipient = get_object_or_404(User, id=user_id)
+    chat = Chat.objects.filter(participants=request.user).filter(participants=recipient).first()
+    if not chat:
+        chat = Chat.objects.create()
+        chat.participants.add(request.user)
+        chat.participants.add(recipient)
+    return redirect('chat_detail', chat_id=chat.id)
+
+
+@login_required
+def unread_messages_count(request):
+    if request.user.is_authenticated:
+        return JsonResponse({'unread_messages_count': Message.unread_count(request.user)})
+    return JsonResponse({'unread_messages_count': 0})
+
+
+@login_required
+def delete_selected_messages(request, chat_id):
+    if request.method == 'POST':
+        message_ids = request.POST.getlist('messages')
+        if message_ids:
+            Message.objects.filter(id__in=message_ids, chat_id=chat_id, chat__participants=request.user).delete()
+    return redirect('chat_detail', chat_id=chat_id)
+
+
+@login_required
+def delete_all_messages(request, chat_id):
+    if request.method == 'POST':
+        Message.objects.filter(chat_id=chat_id, chat__participants=request.user).delete()
+    return redirect('chat_detail', chat_id=chat_id)
+
+
+@login_required
+def send_link_to_paul(request):
+    if request.method == 'POST':
+        data = json.loads(request.body)
+        order_id = data.get('order_id')
+        order = get_object_or_404(Order, id=order_id)
+        paul = User.objects.get(username='paul')
+
+        if paul:
+            order_url = request.build_absolute_uri(order.get_absolute_url())
+            message_body = f"Ссылка на стол: <a href='{order_url}'>{order_url}</a>"
+            message = Message.objects.create(
+                sender=request.user,
+                chat=Chat.objects.filter(participants__in=[request.user, paul]).first(),  # Ensure chat is found or created
+                body=message_body
+            )
+            return JsonResponse({'status': 'success'})
+        else:
+            return JsonResponse({'status': 'error', 'message': 'Пользователь paul не найден'}, status=400)
+    else:
+        return HttpResponse(status=405)
+
+# End of file
+
+# File: c:\Users\p4ul7\OneDrive\מסמכים\Mimino\restaurant_app\views_folder\order_statistics_view.py
+from django.views.generic import TemplateView
+from django.db.models import Sum, F, DecimalField
+from django.db.models.functions import Cast
+from ..models.orders import Order, OrderItem, Product
+from django.db.models import FloatField
+from ..forms import DateRangeForm
+from django.db.models.functions import ExtractWeekDay
+from django.utils import timezone
+from datetime import timedelta
+
+class OrderStatisticsView(TemplateView):
+    template_name = 'order_statistics.html'
+    CATEGORY_TRANSLATIONS = dict(Product.CATEGORY_CHOICES)
+    EXCLUDE_PRODUCTS = ["Замороженные Хинкали", "Пред оплата"]
+
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        form = DateRangeForm(self.request.GET or None)
+        print(form.fields['day_of_week'].choices)  # Для отладки
+        context['form'] = form
+        date_range_form = DateRangeForm(self.request.GET or None)
+        if date_range_form.is_valid():
+            start_date, end_date = self.get_date_range(date_range_form)
+        else:
+            start_date, end_date = None, None
+
+        selected_category = self.request.GET.get('category', '')
+        selected_day_of_week = self.request.GET.get('day_of_week', '')
+
+        product_statistics = self.get_product_statistics(start_date, end_date, selected_category, selected_day_of_week)
+
+        context.update({
+            'form': date_range_form,
+            'total_sales_value': self.calculate_total_sales_value(start_date, end_date),
+            'selected_category': selected_category,
+            'selected_day_of_week': selected_day_of_week,
+            'product_categories': self.get_translated_categories(),
+            'product_statistics': product_statistics,
+            'start_date': start_date,
+            'end_date': end_date
+        })
+
+        return context
+
+    def get_date_range(self, date_range_form):
+        if date_range_form.is_valid():
+            date_range = date_range_form.cleaned_data.get('date_range')
+            if date_range and date_range.isdigit():  # Проверка, является ли date_range числом
+                start_date = timezone.localtime(timezone.now()) - timedelta(days=int(date_range))
+                end_date = timezone.localtime(timezone.now())
+                return start_date, end_date
+        # Возвращаем значения по умолчанию, если форма невалидна или date_range не число
+        first_order = Order.objects.order_by('created_at').first()
+        last_order = Order.objects.order_by('created_at').last()
+        if first_order and last_order:
+            return first_order.created_at, last_order.created_at
+        return None, None
+
+
+    def get_product_statistics(self, start_date, end_date, selected_category, selected_day_of_week=None):
+        product_statistics = OrderItem.objects \
+            .exclude(product__product_name_rus__in=self.EXCLUDE_PRODUCTS) \
+            .values('product__product_name_rus') \
+            .annotate(
+                total_quantity=Sum('quantity'),
+                total_price=Sum(F('quantity') * F('product__product_price'), output_field=DecimalField()),
+                percentage=Cast(Sum('quantity'), FloatField()) / self.get_total_sales() * 100
+            ).order_by('product__product_name_rus')
+
+        if start_date and end_date:
+            product_statistics = product_statistics.filter(order__created_at__range=[start_date, end_date])
+        if selected_category:
+            product_statistics = product_statistics.filter(product__category=selected_category)
+        if selected_day_of_week:
+            product_statistics = product_statistics.annotate(day_of_week=ExtractWeekDay('order__created_at')).filter(day_of_week=selected_day_of_week)
+
+        return product_statistics
+
+    def calculate_total_sales_value(self, start_date, end_date):
+        if start_date and end_date:
+            return OrderItem.objects.filter(order__created_at__range=[start_date, end_date]) \
+                .aggregate(
+                    total_value=Sum(F('quantity') * F('product__product_price'), output_field=DecimalField())
+                )['total_value']
+        return None
+
+    def get_total_sales(self):
+        return OrderItem.objects \
+            .exclude(product__product_name_rus__in=self.EXCLUDE_PRODUCTS) \
+            .aggregate(total=Sum('quantity'))['total']
+
+    def get_translated_categories(self):
+        return [(key, self.CATEGORY_TRANSLATIONS[key]) for key, _ in Product.CATEGORY_CHOICES]
+
+
+# End of file
+
+# File: c:\Users\p4ul7\OneDrive\מסמכים\Mimino\restaurant_app\views_folder\order_summary.py
+from django.shortcuts import render
+from datetime import date, datetime
+from django.utils import timezone
+from restaurant_app.models.orders import Order
+from pickup_app.models import PickupOrder
+from delivery_app.models import DeliveryOrder
+
+def get_summary_data(model, start_date, end_date, total_amount_attr="total_sum"):
+    # Преобразование start_date и end_date в осведомлённые объекты datetime
+    aware_start_date = timezone.make_aware(datetime.combine(start_date, datetime.min.time()))
+    aware_end_date = timezone.make_aware(datetime.combine(end_date, datetime.max.time()))
+
+    count = model.objects.filter(created_at__range=(aware_start_date, aware_end_date)).count()
+    total_sum = sum(getattr(order, total_amount_attr)() if callable(getattr(order, total_amount_attr)) else getattr(order, total_amount_attr) or 0 
+                    for order in model.objects.filter(created_at__range=(aware_start_date, aware_end_date)))
+    return count, total_sum
+
+def order_summary(request):
+    selected_date_str = request.GET.get('date')
+    selected_date = datetime.strptime(selected_date_str, '%Y-%m-%d').date() if selected_date_str else date.today()
+    
+    start_date = timezone.make_aware(datetime.combine(selected_date, datetime.min.time()))
+    end_date = timezone.make_aware(datetime.combine(selected_date, datetime.max.time()))
+
+
+    total_orders_today, total_orders_sum = get_summary_data(Order, start_date, end_date)
+    total_pickup_orders_today, total_pickup_orders_sum = get_summary_data(PickupOrder, start_date, end_date, "total_amount")
+    total_delivery_orders_today, total_delivery_orders_sum = get_summary_data(DeliveryOrder, start_date, end_date, "total_amount")
+
+    total_all_orders_sum = total_orders_sum + total_pickup_orders_sum + total_delivery_orders_sum
+    total_all_orders_today = total_orders_today + total_pickup_orders_today + total_delivery_orders_today
+
+    context = {
+        'selected_date': selected_date,
+        'total_orders_today': total_orders_today,
+        'total_orders_sum': total_orders_sum,
+        'total_pickup_orders_today': total_pickup_orders_today,
+        'total_pickup_orders_sum': total_pickup_orders_sum,
+        'total_delivery_orders_today': total_delivery_orders_today,
+        'total_delivery_orders_sum': total_delivery_orders_sum,
+        'total_all_orders_sum': total_all_orders_sum,
+        'total_all_orders_today': total_all_orders_today
+    }
+
+    return render(request, 'order_summary.html', context)
+
+
+# End of file
+
+# File: c:\Users\p4ul7\OneDrive\מסמכים\Mimino\restaurant_app\views_folder\pdf_template_view.py
+from django.shortcuts import render, get_object_or_404
+from restaurant_app.models.orders import Order
+
+def pdf_template_view(request, order_id):
+    order = get_object_or_404(Order, id=order_id)
+    order_items = order.order_items.all()
+
+    for item in order_items:
+        item.total_price = item.quantity * item.product.product_price
+
+    total_price = sum(item.total_price for item in order_items)
+    context = {'order': order, 'order_items': order_items, 'total_price': total_price}
+    return render(request, 'pdf_template.html', context)
+
+
+# End of file
+
+# File: c:\Users\p4ul7\OneDrive\מסמכים\Mimino\restaurant_app\views_folder\pdf_view.py
+from decimal import Decimal
+from django.shortcuts import get_object_or_404, redirect, HttpResponse
+from ..models.orders import Order
+from django.conf import settings
+
+def generate_pdf_view(request, order_id):
+    if request.method == 'POST':
+        try:
+            order = get_object_or_404(Order, id=order_id)
+
+            payment_method = request.POST.get('payment_method')
+            cash_amount = request.POST.get('cash_amount')
+            card_amount = request.POST.get('card_amount')
+
+            if payment_method == 'cash':
+                order.payment_method = 'cash'
+                order.cash_amount = Decimal(cash_amount) if cash_amount else None
+                order.card_amount = None
+            elif payment_method == 'card':
+                order.payment_method = 'card'
+                order.card_amount = Decimal(card_amount) if card_amount else None
+                order.cash_amount = None
+            elif cash_amount and card_amount:
+                order.payment_method = 'mixed'
+                order.cash_amount = Decimal(cash_amount) if cash_amount else None
+                order.card_amount = Decimal(card_amount) if card_amount else None
+            else:
+                order.payment_method = None
+                order.cash_amount = None
+                order.card_amount = None
+
+            order.status = Order.Status.COMPLETED
+            order.is_completed = True
+            order.payment_processed = True
+            order.save()
+
+            return redirect('rooms')
+
+        except Exception as e:
+            error_message = f"An error occurred: {str(e)}"
+            return HttpResponse(error_message, content_type='text/plain', status=500)
+
+# End of file
+
+# File: c:\Users\p4ul7\OneDrive\מסמכים\Mimino\restaurant_app\views_folder\recommend_view.py
+from django.shortcuts import render
+from mlxtend.frequent_patterns import apriori, association_rules
+from mlxtend.preprocessing import TransactionEncoder
+from ..models.orders import Order, OrderItem
+from ..models.product import Product
+import pandas as pd
+
+def recommend_view(request, order_id):
+    # Получаем заказ пользователя
+    user_order = Order.objects.get(id=order_id)
+    table = user_order.table  # Получаем стол, связанный с заказом
+    user_order_items = OrderItem.objects.filter(order=user_order)
+    user_products = [item.product for item in user_order_items]
+
+    # Получаем идентификатор активного стола
+    active_table_id = user_order.table.table_id
+
+    # Получаем все завершенные заказы и сопутствующие объекты OrderItem и Product
+    completed_orders = Order.objects.filter(is_completed=True).prefetch_related('order_items__product')
+    # Создаем список транзакций (список списков), где каждый внутренний список - это продукты в одном заказе
+    transactions = [[item.product.product_name_rus for item in order.order_items.all()] for order in completed_orders]
+
+    # Преобразование транзакций в формат, который может быть использован библиотекой mlxtend
+    te = TransactionEncoder()
+    te_ary = te.fit(transactions).transform(transactions)
+
+    # Преобразование в DataFrame
+    df = pd.DataFrame(te_ary, columns=te.columns_)
+
+    # Поиск часто встречающихся наборов продуктов с помощью алгоритма apriori
+    frequent_itemsets = apriori(df, min_support=0.001, use_colnames=True)
+
+    # Генерация ассоциативных правил
+    rules = association_rules(frequent_itemsets, metric="leverage", min_threshold=0.001)
+
+    # Создаем список для хранения рекомендаций для каждого продукта
+    recommendations = []
+    all_recommended_products = set()  # Добавляем set для отслеживания всех рекомендованных продуктов
+    for product in user_products:
+        product_recommendations = []
+        for rule in rules.itertuples():
+            antecedents = ', '.join(sorted(list(rule.antecedents)))
+            consequents = ', '.join(sorted(list(rule.consequents)))
+            # Проверяем, является ли любой из продуктов пользователя антецедентом и не является ли он последствием 
+            if any(product.product_name_rus in antecedents for product in user_products) and consequents not in [product.product_name_rus for product in user_products] and consequents not in all_recommended_products:
+                recommended_product = Product.objects.get(product_name_rus=consequents)
+                product_recommendations.append({
+                    'product': recommended_product,
+                    'confidence': rule.confidence
+                })
+                all_recommended_products.add(consequents)  # Добавляем продукт в set всех рекомендованных продуктов
+                if len(product_recommendations) >= 3:  # Ограничиваем количество рекомендаций до трех
+                    break
+        recommendations.append({
+            'product': product,
+            'recommendations': product_recommendations
+        })
+
+    # Отправка рекомендаций и стола в шаблон
+    context = {
+        'recommendations': recommendations,
+        'table': table,  # Передаем стол в контекст
+        'active_table_id': table.id  # Добавляем id стола в контекст
+    }
+    return render(request, 'recommendations.html', context)
+
+
+# End of file
+
+# File: c:\Users\p4ul7\OneDrive\מסמכים\Mimino\restaurant_app\views_folder\room_view.py
+from django.contrib.auth.decorators import login_required
+from django.shortcuts import render, get_object_or_404
+from django.db.models import Sum, F
+from collections import defaultdict
+
+from ..models.tables import Room
+
+@login_required
+def rooms_view(request):
+    rooms = Room.objects.all().prefetch_related('tables')
+    for room in rooms:
+        tables_in_room = room.tables.all()
+
+        table_orders = defaultdict(dict)
+        waiters = defaultdict(lambda: {'tables_info': [], 'all_delivered': True})
+
+        for table in tables_in_room:
+            active_order = table.get_active_order()
+            if active_order:
+                waiter_name = active_order.created_by.first_name
+                all_delivered = all(item.is_delivered for item in active_order.order_items.all())
+                table_and_order_info = (table.id, active_order.id, all_delivered)  # Добавляем статус доставки
+
+                waiters[waiter_name]['tables_info'].append(table_and_order_info)
+
+                active_order_items = active_order.order_items.all().annotate(total_price=F('quantity') * F('product__product_price'))
+                active_order_total = active_order_items.aggregate(Sum('total_price')).get('total_price__sum') or 0
+                table_orders[table.id] = {
+                    'active_order_total': active_order_total,
+                    'created_at': active_order.created_at,
+                    'num_of_people': active_order.num_of_people,
+                    'waiter_name': waiter_name
+                }
+
+        room.waiters = dict(waiters)
+        room.table_orders = dict(table_orders)
+
+    context = {'rooms': rooms}
+    return render(request, 'rooms.html', context)
+
+
+@login_required
+def room_detail_view(request, room_id):
+    room = get_object_or_404(Room, id=room_id)
+    tables = room.tables.all()
+
+    # Этот блок кода добавляет информацию о заказах к каждому столу
+    for table in tables:
+        active_order = table.get_active_order()
+        if active_order:
+            table.active_order = True
+            active_order_items = active_order.order_items.annotate(total_price=F('quantity') * F('product__product_price'))
+            active_order_total = active_order_items.aggregate(Sum('total_price')).get('total_price__sum') or 0
+            created_by_name = active_order.created_by.first_name  # получаем имя пользователя, создавшего заказ
+        else:
+            table.active_order = False
+            active_order_items = None
+            active_order_total = 0
+            created_by_name = None  # если заказ не существует, то и пользователя не может быть
+
+        table.active_order_items = active_order_items
+        table.active_order_total = active_order_total
+        table.created_by_name = created_by_name  # добавляем имя пользователя в объект стола
+
+    context = {
+        'tables': tables,  # Это теперь список столов с добавленной информацией о заказах
+        'room_name': room.name
+    }
+    return render(request, 'room_detail.html', context)
+
+
+
+# End of file
+
+# File: c:\Users\p4ul7\OneDrive\מסמכים\Mimino\restaurant_app\views_folder\search_product.py
+from django.http import JsonResponse
+from restaurant_app.models.product import Product
+
+def search_products(request):
+    query = request.GET.get('query', '')
+    products = Product.objects.filter(name__icontains=query)[:5]  # Пример поиска по имени продукта
+    results = [{'id': p.id, 'name': p.name} for p in products]
+    return JsonResponse(results, safe=False)
+
+
+# End of file
+
+# File: c:\Users\p4ul7\OneDrive\מסמכים\Mimino\restaurant_app\views_folder\search_view.py
+from ..models.product import Product
+from django.shortcuts import render
+from ..forms import ProductQuantityForm
+
+def search_products_view(request):
+    query = request.GET.get('q', '')
+    if query:
+        products = Product.objects.filter(product_name_rus__icontains=query)
+    else:
+        products = Product.objects.none()
+    product_quantity_form = ProductQuantityForm()
+
+    context = {'query': query, 
+               'products': products,
+               'product_quantity_form': product_quantity_form,}
+
+    return render(request,'search_results.html', context=context)
+
+
+
+# End of file
+
+# File: c:\Users\p4ul7\OneDrive\מסמכים\Mimino\restaurant_app\views_folder\set_bill_printed_view.py
+from django.http import JsonResponse
+from django.contrib.auth.decorators import login_required
+from django.shortcuts import get_object_or_404
+
+from restaurant_app.models.orders import Order
+
+@login_required
+def set_bill_printed(request, order_id):
+    if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
+        order = get_object_or_404(Order, id=order_id)
+        order.is_bill_printed = True
+        order.save()
+        return JsonResponse({'status': 'success'})
+    return JsonResponse({'status': 'error'}, status=400)
+
+
+
+# End of file
+
+# File: c:\Users\p4ul7\OneDrive\מסמכים\Mimino\restaurant_app\views_folder\tables_view.py
+from django.contrib.auth.decorators import login_required
+from django.shortcuts import render, redirect, get_object_or_404
+from django.db.models import Sum, F
+
+from ..forms import OrderForm
+from ..models.orders import Order
+from ..models.tables import Table, Room
+
+@login_required
+def tables_view(request, room_id):
+    room = get_object_or_404(Room, id=room_id)
+    tables = room.tables.all().prefetch_related('orders')  # оптимизация запросов
+
+    for table in tables:
+        active_order = table.get_active_order()
+        if active_order:
+            table.active_order = True
+            table.active_order_items, table.active_order_total, table.created_by_name = get_order_details(active_order)
+        else:
+            table.active_order = False
+            table.active_order_items = None
+            table.active_order_total = 0
+            table.created_by_name = None
+
+    context = {
+        'tables': tables,
+        'room': room
+    }
+    return render(request, 'rooms.html', context)
+
+@login_required
+def table_order_view(request, table_id):
+    table = get_object_or_404(Table, table_id=table_id)
+    active_order = table.get_active_order()
+
+    if active_order is None:
+        active_order = Order.objects.create(table=table, created_by=request.user, table_number=table.table_id)
+
+    if request.method == 'POST':
+        form = OrderForm(request.POST)
+        if form.is_valid():
+            product_id = form.cleaned_data['product']
+            quantity = form.cleaned_data['quantity']
+            active_order.add_to_cart(product_id, quantity)
+            return redirect('menu', table_id=table_id)
+    else:
+        form = OrderForm()
+
+    # Добавляем проверку на пустой заказ при выходе
+    if request.method == 'GET' and not active_order.order_items.exists():
+        active_order.delete()
+        return redirect('rooms')
+
+    active_order_items, active_order_total, _ = get_order_details(active_order) if active_order else (None, 0, None)
+
+    return render(request, 'table_order.html', {
+        'table': table,
+        'form': form,
+        'active_order': active_order,
+        'active_order_items': active_order_items,
+        'active_order_total': active_order_total,
+    })
+
+def get_order_details(order):
+    """Helper function to get order details."""
+    active_order_items = order.order_items.annotate(total_price=F('quantity') * F('product__product_price'))
+    active_order_total = active_order_items.aggregate(Sum('total_price')).get('total_price__sum') or 0
+    created_by_name = order.created_by.first_name
+    return active_order_items, active_order_total, created_by_name
+
+
+# End of file
+
+# File: c:\Users\p4ul7\OneDrive\מסמכים\Mimino\restaurant_app\views_folder\table_detail_view.py
+from django.shortcuts import render, get_object_or_404
+from django.contrib.auth.decorators import login_required
+from ..models.orders import Order
+from ..models.tables import Table
+
+@login_required
+def table_detail(request, table_id, order_id):
+    table = get_object_or_404(Table, pk=table_id)
+    order = get_object_or_404(Order, pk=order_id, table=table)
+
+    order_details = {
+        'id': order.id,
+        'closed_at': order.updated_at,
+        'num_of_people': order.num_of_people,
+        'total_sum': order.total_sum(),
+        'order_items': order.order_items.select_related('product').all()
+    }
+
+    context = {
+        'table': table,
+        'order': order_details
+    }
+
+    return render(request, 'table_detail.html', context)
+
+
+# End of file
+
+# File: c:\Users\p4ul7\OneDrive\מסמכים\Mimino\restaurant_app\views_folder\tip_view.py
+from django.contrib.auth.models import User
+from django.contrib.auth.decorators import login_required
+from django.urls import reverse
+from django.http import HttpResponse, JsonResponse
+from django.shortcuts import render, redirect, get_object_or_404
+from django.db import transaction
+from ..models.tables import Tip, TipDistribution
+from ..models.orders import Order
+from django.utils import timezone
+
+import logging
+
+logger = logging.getLogger(__name__)
+
+from django.http import JsonResponse
+
+from django.http import JsonResponse
+
+@login_required
+def tip_view(request, table_id):
+    if request.method == 'POST':
+        with transaction.atomic():
+            try:
+                tip_amount = float(request.POST.get('tip'))
+                order = get_object_or_404(Order, table__id=table_id, is_completed=False)
+
+                if order.tips_provided():
+                    raise ValueError('Чаевые уже были добавлены.')
+
+                print(f"Добавление чаевых: {tip_amount} к заказу {order.id} на столе {table_id}. Время: {timezone.now()}")
+
+                new_tip = Tip.objects.create(amount=tip_amount, order=order)
+
+                user_ids = request.POST.getlist('user_ids[]')
+
+                if str(order.created_by.id) not in user_ids:
+                    user_ids.append(str(order.created_by.id))
+
+                print(f"Список ID официантов для распределения чаевых: {user_ids}")
+
+                amount_per_user = tip_amount / len(user_ids)
+                print(f"Каждому официанту распределяется: {amount_per_user}")
+
+                distributed_tips = []
+
+                for user_id in user_ids:
+                    user = User.objects.get(id=user_id)
+                    TipDistribution.objects.create(tip=new_tip, user=user, amount=amount_per_user)
+                    distributed_tips.append({'first_name': user.first_name, 'amount': amount_per_user})
+
+                order.is_completed = True
+                order.save()
+
+                print("Статус заказа обновлен на 'завершен'.")
+                for tip in distributed_tips:
+                    print(f"{tip['first_name']} получает {tip['amount']} чаевых.")
+
+                return JsonResponse({
+                    'message': 'Чаевые успешно добавлены.',
+                    'distributed_tips': distributed_tips,
+                    'redirect_url': '/rooms/'
+                })
+
+            except Exception as e:
+                print(f"Ошибка при распределении чаевых: {e}")
+                return JsonResponse({'error': str(e)}, status=400)
+    else:
+        all_users = User.objects.filter(is_active=True).only('id', 'username')
+        return render(request, 'tip.html', {'all_users': all_users, 'table_id': table_id})
+
+@login_required
+def check_tips(request):
+    if request.method != 'POST':
+        return HttpResponse("Not Supported Method", status=405)
+
+    table_id = request.POST.get('table_id')
+    order = get_object_or_404(Order, table__id=table_id, is_completed=False)
+
+    if order.tips_provided():
+        return HttpResponse(status=200)  # Чаевые были введены
+    else:
+        return HttpResponse("No tips provided", status=400)  # Чаевые не были введены
+
+
+# End of file
+
+# File: c:\Users\p4ul7\OneDrive\מסמכים\Mimino\restaurant_app\views_folder\user_summary_view.py
+import csv
+import os
+from django.shortcuts import render, get_object_or_404
+from django.contrib.auth.models import User
+from ..models.tables import TipDistribution
+from ..models.orders import Order, OrderItem
+from django.db.models import Sum, F, Prefetch
+from django.utils import timezone
+from django.utils.timezone import localtime
+from django.contrib.auth.decorators import login_required
+import json
+import decimal
+import calendar
+from django.conf import settings
+
+class DecimalEncoder(json.JSONEncoder):
+    def default(self, obj):
+        if isinstance(obj, decimal.Decimal):
+            return float(obj)
+        return super(DecimalEncoder, self).default(obj)
+
+def update_tips_csv(start_date=None, end_date=None):
+    csv_file_path = os.path.join(settings.BASE_DIR, 'tips.csv')
+
+    # Получить чаевые из базы данных за указанные даты
+    tips = TipDistribution.objects.select_related('user', 'tip')
+    if start_date and end_date:
+        tips = tips.filter(tip__date__range=[start_date, end_date])
+
+    with open(csv_file_path, mode='w', newline='', encoding='utf-8') as file:
+        writer = csv.writer(file)
+        writer.writerow(['user_id', 'username', 'tip_amount', 'tip_date'])
+
+        for tip in tips:
+            writer.writerow([tip.user.id, tip.user.username, tip.amount, tip.tip.date])
+
+def calculate_totals(user, orders):
+    total_order_amount = OrderItem.objects.filter(order__in=orders).aggregate(total=Sum(F('quantity') * F('product__product_price')))['total'] or 0
+    total_tips = TipDistribution.objects.filter(user=user, tip__order__in=orders).aggregate(Sum('amount'))['amount__sum'] or 0
+    tip_ratio = round((total_tips / total_order_amount) * 100, 1) if total_order_amount > 0 else 0
+
+    print(f"Общая сумма заказов: {total_order_amount}")
+    print(f"Общая сумма чаевых: {total_tips}")
+    print(f"Соотношение чаевых к заказам: {tip_ratio}%")
+    print(f"Количество заказов: {orders.count()}")
+    print(f"Пользователь: {user.username}")
+
+    return total_order_amount, total_tips, tip_ratio
+
+@login_required
+def user_summary(request):
+    today = localtime(timezone.now()).date()
+    first_day_of_current_month = today.replace(day=1)
+
+    print(f"Сегодня: {today}, Первый день текущего месяца: {first_day_of_current_month}")
+
+    users = User.objects.prefetch_related(
+        'bookings',
+        'userprofile',
+        'tipgoal',
+        Prefetch('order_set', queryset=Order.objects.select_related('table', 'created_by').exclude(order_items__isnull=True))
+    ).all()
+
+    user_summary_list = []
+
+    for user in users:
+        print(f"\nОбработка пользователя {user.username} (ID: {user.id})")
+        
+        user_orders = user.order_set.all()
+        print(f"Количество заказов пользователя: {user_orders.count()}")
+
+        closed_orders = user_orders.filter(is_completed=True)
+        total_closed_tables = closed_orders.count()
+        print(f"Количество закрытых столов: {total_closed_tables}")
+
+        # Чаевые за сегодня
+        today_total_tips = TipDistribution.objects.filter(user=user, tip__order__created_at__date=today).aggregate(Sum('amount'))['amount__sum'] or 0
+        print(f"Чаевые за сегодня: {today_total_tips}")
+
+        # Чаевые за текущий месяц
+        current_month_tips = TipDistribution.objects.filter(user=user, tip__order__created_at__date__gte=first_day_of_current_month).aggregate(Sum('amount'))['amount__sum'] or 0
+        print(f"Чаевые за текущий месяц: {current_month_tips}")
+
+        user_summary_list.append({
+            'user': user,
+            'current_month_tips': current_month_tips,
+            'today_total_tips': today_total_tips,
+        })
+
+    context = {
+        'user_summary_list': user_summary_list,
+        'is_admin': request.user.is_superuser
+    }
+    return render(request, 'user_summary.html', context)
+
+@login_required
+def user_detail(request, user_id):
+    user = get_object_or_404(User.objects.prefetch_related(
+        Prefetch('order_set', queryset=Order.objects.select_related('table', 'created_by').filter(is_completed=True))
+    ), id=user_id)
+    
+    closed_orders = user.order_set.all()
+    total_closed_tables = closed_orders.count()
+    total_order_amount, total_tips_all_time, tip_ratio_all_time = calculate_totals(user, closed_orders)
+
+    today = timezone.localtime(timezone.now())
+    year = today.year
+    month = today.month
+
+    first_day_of_month = today.replace(day=1)
+    last_day = calendar.monthrange(year, month)[1]
+    last_day_of_month = today.replace(day=last_day)
+
+    date_ranges = {
+        'Сегодня': (today.replace(hour=0, minute=0, second=0, microsecond=0), today),
+        'Месяц': (first_day_of_month, today)
+    }
+    
+    stats = {}
+    for period_name, (start_date, end_date) in date_ranges.items():
+        period_orders = closed_orders.filter(created_at__gte=start_date, created_at__lte=end_date)
+        total_order_amount_period, period_total_tips, period_tip_ratio = calculate_totals(user, period_orders)
+
+        # Обновление для сбора чаевых, полученных пользователем за период
+        period_total_tips = TipDistribution.objects.filter(
+            user=user, tip__date__gte=start_date, tip__date__lte=end_date
+        ).aggregate(Sum('amount'))['amount__sum'] or 0
+        
+        stats[period_name] = {
+            'order_count': period_orders.count(),
+            'total_order_amount': total_order_amount_period,
+            'total_tips': period_total_tips,
+            'tip_ratio': period_tip_ratio,
+        }
+
+        print(f"\nПериод: {period_name}")
+        print(f"Сумма заказов: {total_order_amount_period}")
+        print(f"Чаевые: {period_total_tips}")
+        print(f"Соотношение: {period_tip_ratio}%")
+        print(f"Количество заказов за период: {period_orders.count()}")
+
+    today_orders = closed_orders.filter(created_at__date=today.date())
+    today_total_order_amount, today_total_tips, today_tip_ratio = calculate_totals(user, today_orders)
+
+    # Обновление для чаевых за сегодня
+    today_total_tips = TipDistribution.objects.filter(
+        user=user, tip__date__date=today.date()
+    ).aggregate(Sum('amount'))['amount__sum'] or 0
+
+    print(f"Сумма заказов за сегодня: {today_total_order_amount}")
+    print(f"Чаевые за сегодня: {today_total_tips}")
+    print(f"Соотношение чаевых к заказам за сегодня: {today_tip_ratio}%")
+
+    # Обновление CSV файла
+    update_tips_csv(first_day_of_month, today)
+
+    csv_file_path = os.path.join(settings.BASE_DIR, 'tips.csv')
+    events = {}
+
+    with open(csv_file_path, mode='r', encoding='utf-8') as file:
+        reader = csv.DictReader(file)
+        for row in reader:
+            date_str = row['tip_date']
+            if date_str not in events:
+                events[date_str] = {
+                    'total_order_amount': 0,
+                    'total_tips': 0,
+                }
+            events[date_str]['total_tips'] += float(row['tip_amount'])
+
+    tips_with_sharing = []
+    tip_distributions = TipDistribution.objects.filter(user=user).select_related('tip').order_by('-tip__date')
+
+    for tip in tip_distributions:
+        order = tip.tip.order  # Используйте временную переменную для order
+        table_id = order.table.table_id if order and order.table else '-'
+        order_id = order.id if order else ''
+        order_amount = order.get_total_amount() if order else 0
+        num_people = order.num_of_people if order else 0
+
+        shared_with = TipDistribution.objects.filter(tip=tip.tip).exclude(user=tip.user).select_related('user')
+        shared_with_info = [{'user': share.user, 'amount': share.amount} for share in shared_with] if shared_with else '-'
+        tips_with_sharing.append({
+            'user': tip.user,
+            'amount': tip.amount,
+            'date': tip.tip.date,
+            'shared_with': shared_with_info,
+            'table_id': table_id,
+            'order_id': order_id,
+            'order_amount': order_amount,
+            'num_people': num_people
+        })
+
+    return render(request, 'user_detail.html', {
+        'user': user,
+        'total_closed_tables': total_closed_tables,
+        'total_order_amount': total_order_amount,
+        'total_tips_all_time': total_tips_all_time,
+        'tip_ratio_all_time': tip_ratio_all_time,
+        'today_total_order_amount': today_total_order_amount,
+        'today_total_tips': today_total_tips,
+        'today_tip_ratio': today_tip_ratio,
+        'total_closed_tables_today': today_orders.count(),
+        'stats': stats,
+        'events': json.dumps(events, cls=DecimalEncoder),
+        'tips_with_sharing': tips_with_sharing,
+        'is_admin': request.user.is_superuser,  # Ensure this line is present
+    })
+
+
+
+# End of file
+
+# File: c:\Users\p4ul7\OneDrive\מסמכים\Mimino\restaurant_project\asgi.py
+import os
+from django.core.asgi import get_asgi_application
+from channels.routing import ProtocolTypeRouter, URLRouter
+from channels.auth import AuthMiddlewareStack
+import restaurant_project.routing
+
+os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'restaurant_project.settings')
+
+application = ProtocolTypeRouter({
+    "http": get_asgi_application(),
+    "websocket": AuthMiddlewareStack(
+        URLRouter(
+            restaurant_project.routing.websocket_urlpatterns
+        )
+    ),
+})
+
+
+# End of file
+
+# File: c:\Users\p4ul7\OneDrive\מסמכים\Mimino\restaurant_project\celery.py
+import os
+from celery import Celery
+from celery.schedules import crontab
+from tasks import reset_tips 
+
+# установите переменную окружения DJANGO_SETTINGS_MODULE,
+# указывающую на настройки Django
+os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'restaurant_project.settings')
+
+app = Celery('restaurant_project')
+
+# загрузка настроек Celery из файла настроек Django
+app.config_from_object('django.conf:settings', namespace='CELERY')
+
+# автоматическое обнаружение задач в приложениях Django
+app.autodiscover_tasks()
+
+
+
+@app.on_after_configure.connect
+def setup_periodic_tasks(sender, **kwargs):
+    sender.add_periodic_task(crontab(day_of_month='1'), reset_tips.s())
+
+# End of file
+
+# File: c:\Users\p4ul7\OneDrive\מסמכים\Mimino\restaurant_project\routing.py
+from django.urls import re_path
+from . import consumers
+
+websocket_urlpatterns = [
+    re_path(r'ws/chat/(?P<chat_id>\d+)/$', consumers.ChatConsumer.as_asgi()),
+]
+
+
+# End of file
+

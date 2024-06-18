@@ -1,3 +1,4 @@
+import logging
 from django.shortcuts import get_object_or_404
 from django.core.exceptions import ObjectDoesNotExist
 from delivery_app.models import DeliveryOrder, DeliveryCartItem
@@ -7,9 +8,12 @@ from django.utils import timezone
 from bs4 import BeautifulSoup
 import sys
 
+# Настройка логирования
+logger = logging.getLogger(__name__)
+
 if sys.platform != "win32":  # Проверяем, что ОС не Windows
     import cups
-    
+
 import tempfile
 from django.conf import settings
 import os
@@ -30,6 +34,8 @@ def ensure_orders_files_dir_exists():
         os.makedirs(ORDERS_FILES_DIR)
 
 def print_with_cups(order_id, title, text_to_print, comments, printer_name):
+    if 'cups' not in globals():
+        return JsonResponse({'status': 'error', 'message': 'CUPS is not available on this platform.'})
     ensure_orders_files_dir_exists()
     conn = cups.Connection()
     printers = conn.getPrinters()
@@ -90,12 +96,32 @@ def delivery_kitchen_template_view(request, phone_number, order_id):
     html_content = render_to_string('delivery_kitchen_template.html', context)
     return HttpResponse(html_content)
 
-def print_kitchen(request):
+def delivery_print_kitchen(request):
     try:
         phone_number = request.GET.get('phone_number')
         order_id = request.GET.get('order_id')
         new_comments = request.GET.get('comments', '')
+
+        # Логирование параметров запроса
+        logger.debug(f"Received request to print kitchen order with phone_number={phone_number}, order_id={order_id}, comments={new_comments}")
+
+        # Дополнительное логирование SQL-запросов
+        from django.db import connection
+        def print_query():
+            for query in connection.queries:
+                logger.debug(query['sql'])
+
+        # Проверка наличия phone_number
+        if not phone_number:
+            logger.error("Phone number is missing")
+            return JsonResponse({'status': 'error', 'message': 'Номер телефона не указан.'})
+
+        # Поиск заказа
         order = get_object_or_404(DeliveryOrder, customer__delivery_phone_number=phone_number, id=order_id)
+        
+        # Логирование SQL-запросов
+        print_query()
+        
         sorted_cart_items = get_sorted_delivery_cart_items(order)
         current_time = timezone.localtime().strftime('%H:%M')
         title = f"\n\n\nВремя печати: {current_time}\nДоставка\n____________________________\n"
@@ -108,9 +134,11 @@ def print_kitchen(request):
         else:
             return JsonResponse({'status': 'warning', 'message': 'Нет новых товаров для печати.'})
     except ObjectDoesNotExist:
+        logger.error("No DeliveryOrder matches the given query")
         return JsonResponse({'status': 'error', 'message': 'Заказ не найден.'})
-    except cups.IPPError as e:
-        return JsonResponse({'status': 'error', 'message': f"Ошибка при печати: {e}"})
     except Exception as e:
+        if 'cups' in globals() and isinstance(e, cups.IPPError):
+            logger.error(f"Printing error: {e}")
+            return JsonResponse({'status': 'error', 'message': f"Ошибка при печати: {e}"})
+        logger.error(f"Unknown error occurred: {e}")
         return JsonResponse({'status': 'error', 'message': f'Произошла неизвестная ошибка: {e}'})
-

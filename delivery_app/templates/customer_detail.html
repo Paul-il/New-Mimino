@@ -1,0 +1,56 @@
+{% extends "base.html" %}
+{% load static %}
+
+{% block title %}Customer Details{% endblock %}
+
+{% block content %}
+    <h1>Customer Details</h1>
+    <h2>{{ customer.name }}</h2>
+    <p>Номер Телефона: {{ customer.delivery_phone_number }}</p>
+    <p>Город: {{ customer.city }}</p>
+    <p>Улица: {{ customer.street }}</p>
+    <p>Номер Дома: {{ customer.house_number }}</p>
+    <p>Этаж: {{ customer.floor }}</p>
+    <p>Номер Квартиры: {{ customer.apartment_number }}</p>
+    <p>Код: {{ customer.intercom_code }}</p>
+    <p>Сумма Всех Заказов: {{ total_order_amount }}₪</p>
+    <h2>Заказы</h2>
+    <form method="post" action="{% url 'delivery_app:delete_selected_orders' customer.id %}">
+        {% csrf_token %}
+        <table>
+            <tr>
+                <th><input type="checkbox" id="select-all" onclick="toggleSelectAll()"></th>
+                <th>Order ID</th>
+                <th>Created At</th>
+                <th>Is Completed</th>
+                <th>Total Amount</th>
+            </tr>
+            {% for order in orders %}
+            <tr>
+                <td><input type="checkbox" name="selected_orders" value="{{ order.id }}" {% if order.is_completed %}disabled{% endif %}></td>
+                <td><a href="{% url 'delivery_app:order_detail' order.id %}">{{ order.id }}</a></td>
+                <td>{{ order.created_at }}</td>
+                <td>{{ order.is_completed }}</td>
+                <td>{{ order.total_amount }}</td>
+            </tr>
+            {% endfor %}
+        </table>
+        <button type="submit" class="btn btn-danger">Delete Selected Orders</button>
+    </form>
+
+    <h2>Uncompleted Orders</h2>
+    <form method="post" action="{% url 'delivery_app:delete_uncompleted_orders' customer.id %}">
+        {% csrf_token %}
+        <button type="submit" class="btn btn-danger">Delete All Uncompleted Orders</button>
+    </form>
+
+    <script>
+        function toggleSelectAll() {
+            var checkboxes = document.querySelectorAll('input[name="selected_orders"]:not(:disabled)');
+            var selectAllCheckbox = document.getElementById('select-all');
+            checkboxes.forEach(function(checkbox) {
+                checkbox.checked = selectAllCheckbox.checked;
+            });
+        }
+    </script>
+{% endblock %}

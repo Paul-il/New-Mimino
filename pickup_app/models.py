@@ -14,6 +14,7 @@ class PickupOrder(models.Model):
     total_amount = models.DecimalField(max_digits=10, decimal_places=2, null=True, blank=True)
     payment_method = models.CharField(max_length=20, blank=True, null=True)
     cart_snapshot = models.TextField(blank=True, null=True)
+    transaction_created = models.BooleanField(default=False)
     
     NEW = 'new'
     PROCESSING = 'processing'

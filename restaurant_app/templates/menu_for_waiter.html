@@ -38,9 +38,8 @@
                 <div class="card-body">
                     <h5 class="card-title" id="product_name">{{ product.product_name_rus }}</h5>
                     <p class="card-text">{{ product.product_price }}₪</p>
-                    <form method="post" action="{% url 'add_product_to_waiter_order' %}">
+                    <form method="post" action="{% url 'add_product_to_waiter_order' product.id 1 %}">
                         {% csrf_token %}
-                        <input type="hidden" name="product_id" value="{{ product.id }}">
                         <input type="hidden" name="category" value="{{ category }}">
                         {{ product_quantity_form.quantity }}
                         {% if has_active_orders %}

@@ -1,0 +1,1013 @@
+# File: c:\Users\p4ul7\OneDrive\מסמכים\Mimino\pickup_app\pickup_views\pdf_template_view.py
+from django.shortcuts import render, get_object_or_404
+from pickup_app.models import PickupOrder, CartItem
+from django.db import models
+
+def pickup_pdf_template_view(request, phone_number, order_id):
+    order = get_object_or_404(PickupOrder, phone=phone_number, id=order_id)
+    cart_items = CartItem.objects.filter(cart__pickup_order=order)
+    total = order.carts.aggregate(total=models.Sum('total_price'))['total']
+    total_price = sum(
+    item.quantity * item.product.product_price
+    for cart in order.carts.all()
+    for item in cart.cart_items.all()
+    )
+
+    context = {'order': order, 'cart_items': cart_items, 'total_price': total_price}
+    return render(request, 'pickup_pdf_template.html', context)
+
+
+# End of file
+
+# File: c:\Users\p4ul7\OneDrive\מסמכים\Mimino\pickup_app\pickup_views\pickup_cart_view.py
+from django.shortcuts import render, redirect
+from django.contrib.auth.decorators import login_required
+from django.http import JsonResponse, HttpResponseBadRequest
+from django.shortcuts import get_object_or_404, get_list_or_404
+from django.db.models import Sum, F
+from django.contrib import messages
+from ..models import PickupOrder, Cart, CartItem, OrderItem
+from restaurant_app.models.product import Product
+from pickup_app.pickup_views.pickup_menu_view import handle_add_to_cart
+from django.urls import reverse
+
+
+def pickup_add_to_cart_view(request, phone_number, category, product_id):
+    # Пытаемся найти заказ с данным номером телефона и статусом "NEW"
+    pickup_order, created = PickupOrder.objects.get_or_create(
+        phone=phone_number, 
+        status=PickupOrder.NEW,
+        defaults={'name': 'Default Name'}
+    )
+
+    # Если заказ с данным номером телефона и статусом "NEW" не был создан ранее и текущий статус заказа "COMPLETED", создаем новый заказ
+    if not created and pickup_order.status != PickupOrder.NEW:
+        pickup_order = PickupOrder.objects.create(phone=phone_number, name='Default Name')
+
+    handle_add_to_cart(request, phone_number, pickup_order, category)
+    return redirect(reverse('pickup_app:pickup_menu', kwargs={'phone_number': phone_number, 'category': category}))
+
+
+def pickup_empty_cart_view(request, phone_number):
+    return render(request, 'pickup_empty_cart.html', {"phone_number":phone_number})
+
+
+@login_required
+def pickup_cart_view(request, phone_number, category=None):
+    # Получаем объект заказа по номеру телефона с предзагрузкой корзины
+    pickup_order = PickupOrder.objects.filter(phone=phone_number).prefetch_related('carts').order_by('-date_created').first()
+
+    # Если заказ не найден, перенаправляем пользователя на страницу пустой корзины
+    if not pickup_order:
+        return redirect('pickup_app:pickup_empty_cart', phone_number=phone_number)
+
+    # Получаем объект корзины для указанного номера телефона
+    cart = pickup_order.carts.first()  # используем prefetch_related
+    if not cart:
+        return redirect('pickup_app:pickup_empty_cart', phone_number=phone_number)
+
+    # Получаем объекты продуктов, которые находятся в корзине
+    cart_items = cart.cart_items.all()  # используем обратное отношение ForeignKey
+
+    # Если в корзине нет товаров, перенаправляем на страницу пустой корзины
+    if not cart_items:
+        return redirect('pickup_app:pickup_empty_cart', phone_number=phone_number)
+
+    # Получаем объекты заказа, которые находятся в корзине
+    order_items = pickup_order.orderitem_set.annotate(total_price=F('quantity') * F('product__product_price'))
+
+    # Вычисляем общую стоимость заказа
+    total_price = order_items.aggregate(Sum('total_price'))['total_price__sum']
+
+    # Рендерим шаблон и передаем необходимые переменные в контекст
+    return render(request, 'pickup_cart.html', {
+        'cart_items': cart_items,
+        'order_items': order_items,
+        'total_price': total_price,
+        'phone_number': phone_number,
+        'pickup_order': pickup_order,
+        'cart': cart,
+    })
+
+
+@login_required
+def get_order_item_quantity_view(request, order_id, order_item_id):
+    try:
+        order_item = OrderItem.objects.get(order__id=order_id, id=order_item_id)
+        data = {'quantity': order_item.quantity}
+        return JsonResponse(data)
+    except OrderItem.DoesNotExist:
+        return JsonResponse({'error': 'Order item not found'}, status=404)
+
+
+@login_required
+def pickup_increase_product_view(request, phone_number, product_id):
+    # Извлекаем последний заказ по номеру телефона
+    pickup_order = PickupOrder.objects.filter(phone=phone_number).order_by('-date_created').first()
+
+    # Проверяем, что заказ был найден
+    if not pickup_order:
+        messages.error(request, "Заказ не найден.")
+        return redirect('pickup_app:pickup_empty_cart', phone_number=phone_number)
+
+    # Используем select_related для предзагрузки продукта вместе с cart_item
+    cart_item = CartItem.objects.select_related('product').get(cart__pickup_order=pickup_order, product_id=product_id)
+    product_name = cart_item.product.product_name_rus
+    
+    cart_item.quantity += 1
+    cart_item.save()
+
+    messages.success(request, f"{product_name} был добавлен в корзину.")
+    return redirect('pickup_app:pickup_cart', phone_number=phone_number, category=None)
+
+
+@login_required
+def pickup_decrease_product_view(request, phone_number, product_id):
+    # Извлекаем последний заказ по номеру телефона
+    pickup_order = PickupOrder.objects.filter(phone=phone_number).order_by('-date_created').first()
+
+    # Если заказ не найден, перенаправляем пользователя на страницу пустой корзины
+    if not pickup_order:
+        return redirect('pickup_app:pickup_empty_cart', phone_number=phone_number)
+
+    # Используем select_related для предзагрузки продукта вместе с cart_item
+    cart_item = CartItem.objects.select_related('product').get(cart__pickup_order=pickup_order, product_id=product_id)
+    product_name = cart_item.product.product_name_rus
+
+    # Если количество товара равно 1, удаляем элемент из корзины
+    if cart_item.quantity <= 1:
+        cart_item.delete()
+        messages.success(request, f"{product_name} был удалён из корзины.")
+    else:
+        cart_item.quantity -= 1
+        cart_item.save()
+        messages.success(request, f"{product_name} был удалён из корзины.")
+
+    messages.success(request, f"{product_name} был добавлен в корзину.")
+    return redirect('pickup_app:pickup_cart', phone_number=phone_number, category=None)
+
+
+@login_required
+def pickup_remove_product_view(request, phone_number, product_id):
+    # Извлекаем последний заказ по номеру телефона
+    pickup_order = PickupOrder.objects.filter(phone=phone_number).order_by('-date_created').first()
+
+    # Если заказ не найден, перенаправляем пользователя на страницу пустой корзины
+    if not pickup_order:
+        return redirect('pickup_app:pickup_empty_cart', phone_number=phone_number)
+
+    # Используем select_related для предзагрузки продукта вместе с cart_item
+    cart_item = CartItem.objects.select_related('product').get(cart__pickup_order=pickup_order, product_id=product_id)
+    product_name = cart_item.product.product_name_rus
+    cart_item.delete()
+
+    messages.success(request, f"{product_name} Был удалён из корзины!")
+    return redirect('pickup_app:pickup_cart', phone_number=phone_number, category=None)
+
+
+@login_required
+def pickup_total_price_view(cart_items):
+    return sum(item.product.product_price * item.quantity for item in cart_items)
+
+
+@login_required
+def pay_order(request, id):
+    pickup_order = get_object_or_404(PickupOrder, id=id)
+
+    # Используем агрегацию для вычисления общей суммы заказа
+    cart = Cart.objects.get(pickup_order=pickup_order)
+    total_price = cart.cart_items.annotate(
+        item_total=F('product__product_price') * F('quantity')
+    ).aggregate(total=Sum('item_total'))['total']
+
+    # Обновляем total_amount и status для pickup_order одновременно и сохраняем
+    pickup_order.total_amount = total_price
+    pickup_order.status = 'completed'
+    pickup_order.save()
+
+    messages.success(request, f"Заказ {pickup_order.id} оплачен.")
+    return redirect('pickup_app:pickup_cart', phone_number=pickup_order.phone, category='')
+
+
+
+
+# End of file
+
+# File: c:\Users\p4ul7\OneDrive\מסמכים\Mimino\pickup_app\pickup_views\pickup_create_view.py
+from ..forms import PickupForm
+from ..models import PickupOrder
+from django.shortcuts import render,redirect
+from django.contrib.auth.decorators import login_required
+
+@login_required
+def pickup_create_view(request):
+    if request.method == 'POST':
+        form = PickupForm(request.POST)
+        if form.is_valid():
+            phone_number = form.cleaned_data['phone']
+            name = form.cleaned_data.get('name', None) # получаем имя из формы
+            # проверяем, есть ли номер в базе данных
+            pickup_order = PickupOrder.objects.filter(phone=phone_number).first()
+            if pickup_order:
+                return redirect('pickup_app:pickup_menu', phone_number=phone_number, category='salads')
+            else:
+                # создаем объект заказа
+                pickup_order = PickupOrder(phone=phone_number, name=name) # сохраняем имя в базу, если есть
+                pickup_order.save()
+                return redirect('pickup_app:pickup_menu', phone_number=phone_number, category='salads')
+    else:
+        form = PickupForm()
+    context = {
+        'form': form,
+
+    }
+    return render(request, 'pickup_create.html', context)
+
+
+# End of file
+
+# File: c:\Users\p4ul7\OneDrive\מסמכים\Mimino\pickup_app\pickup_views\pickup_kitchen_template_view.py
+from django.shortcuts import render, get_object_or_404
+from django.http import JsonResponse
+from pickup_app.models import PickupOrder, CartItem
+from django.template.loader import render_to_string
+from django.utils import timezone
+from bs4 import BeautifulSoup
+
+def remove_empty_lines_and_spaces(text):
+    lines = text.split('\n')
+    cleaned_lines = [line.strip() for line in lines if line.strip()]
+    cleaned_text = '\n'.join(cleaned_lines)
+    return cleaned_text
+
+def convert_html_to_text(cart_items):
+    html = render_to_string('pickup_kitchen_template.html', {'cart_items': cart_items})
+    soup = BeautifulSoup(html, 'html.parser')
+    text = soup.get_text()
+    return text
+
+def pickup_kitchen_view(request, phone_number, order_id):
+    order = get_object_or_404(PickupOrder, phone=phone_number, id=order_id)
+    cart_items = CartItem.objects.filter(cart__pickup_order=order)
+
+    context = {'order': order, 'cart_items': cart_items, }
+    return render(request, 'pickup_kitchen_template.html', context)
+
+import sys
+
+if sys.platform != "win32":  # Проверяем, что ОС не Windows
+    import cups
+import tempfile
+import os
+
+def print_with_cups(text_to_print, printer_name):
+    conn = cups.Connection()
+    printers = conn.getPrinters()
+    if printer_name not in printers:
+        printer_name = list(printers.keys())[0]
+
+    with tempfile.NamedTemporaryFile(delete=False) as temp_file:
+        temp_file.write(text_to_print.encode('utf-8'))
+        temp_file_path = temp_file.name
+
+    conn.printFile(printer_name, temp_file_path, title="Printing from Django", options={})
+    os.unlink(temp_file_path)
+
+
+def sort_items(item):
+    if item.product.category == "salads":
+        return 0
+    else:
+        return 1
+    
+def print_kitchen(request):
+    phone_number = request.GET.get('phone_number')
+    order_id = request.GET.get('order_id')
+    order = get_object_or_404(PickupOrder, phone=phone_number, id=order_id)
+    cart_items = CartItem.objects.filter(cart__pickup_order=order)
+    sorted_cart_items = sorted(cart_items, key=sort_items)
+
+    # Группируем продукты по принтерам
+    grouped_items = {}
+    for item in sorted_cart_items:
+        new_quantity = item.quantity - item.printed_quantity
+        if new_quantity <= 0:
+            continue
+        printer = item.product.printer
+        if printer not in grouped_items:
+            grouped_items[printer] = []
+        grouped_items[printer].append(item)
+
+    new_items_found = False
+    for printer, items in grouped_items.items():
+        current_time = timezone.localtime().strftime('%H:%M')
+        text_to_print = f"\n\n\nВремя печати: {current_time}\nНа Вынос\n____________________________\n"
+        for item in items:
+            text_to_print += f"{item.product.product_name_rus}\t{item.quantity - item.printed_quantity}\n"
+        
+        print_with_cups(text_to_print, printer_name=printer)
+        new_items_found = True
+
+        for item in items:
+            item.printed_quantity = item.quantity
+            item.save()
+
+    if new_items_found:
+        return JsonResponse({'status': 'success', 'message': 'Заказ был отправлен на кухню.'})
+    else:
+        return JsonResponse({'status': 'warning', 'message': 'Нет новых товаров для печати.'})
+
+
+
+
+
+
+
+
+
+
+# End of file
+
+# File: c:\Users\p4ul7\OneDrive\מסמכים\Mimino\pickup_app\pickup_views\pickup_menu_view.py
+from restaurant_app.models.product import Product
+from ..forms import ProductQuantityForm
+from ..models import PickupOrder, Cart, CartItem
+from django.shortcuts import render, redirect, get_object_or_404, get_list_or_404
+from django.contrib.auth.decorators import login_required
+from django.contrib import messages
+
+CATEGORIES = {
+    'salads': 'Салаты',
+    'first_dishes': 'Закуски',
+    'khachapuri': 'Хачапури',
+    'bakery': 'Выпечка',
+    'soups': 'Супы',
+    'khinkali': 'Хинкали',
+    'meat_dishes': 'Мясные блюда',
+    'grill_meat': 'Мясо на огне',
+    'garnish':'Гарниры',
+    'dessert':'Десерты',
+    'soft_drinks': 'Легкие напитки',
+    'beer': 'Пиво',
+    'wine' :'Вино',
+    'vodka': 'Водка',
+    'cognac': 'Коньяк',
+    'whisky': 'Виски',
+    'dessert_drinks': 'Горячие напитки'
+}
+
+@login_required
+def pickup_menu_view(request, phone_number, category):
+    products = Product.objects.filter(category=category)
+    pickup_orders = get_list_or_404(PickupOrder, phone=phone_number)
+    pickup_order = pickup_orders[0]
+    product_quantity_form = ProductQuantityForm()
+
+    if request.method == 'POST':
+        handle_add_to_cart(request, phone_number, pickup_order, category)  # добавлен аргумент category
+
+    context = {
+        'phone_number': phone_number,
+        'products': products,
+        'category': category,
+        'pickup_order': pickup_order,
+        'product_quantity_form': product_quantity_form,
+        'CATEGORIES': CATEGORIES,
+
+    }
+
+
+    return render(request, 'pickup_menu.html', context)
+
+def handle_add_to_cart(request, phone_number, pickup_order, category):
+    product_id = request.POST.get('product_id')
+    quantity = request.POST.get('quantity')
+    try:
+        quantity = int(quantity)
+        if quantity <= 0:
+            raise ValueError('Число должно быть больше 0.')
+    except ValueError:
+        messages.error(request, 'Не верное количество!')
+        return redirect('pickup_app:pickup_menu', phone_number=phone_number, category=category)
+
+    product = get_object_or_404(Product, id=product_id)
+
+    if not pickup_order.pk and pickup_order.id is None:
+        pickup_order.save()
+
+    cart, created = Cart.objects.get_or_create(pickup_order=pickup_order)
+
+    if not created and not cart.pk:
+        cart.save()
+
+    cart_item, created = CartItem.objects.get_or_create(cart=cart, product=product)
+    product_name = cart_item.product.product_name_rus
+
+    if not created:
+        cart_item.quantity += quantity
+        cart_item.save()
+    else:
+        cart_item.quantity = quantity
+        cart_item.save()
+
+    messages.success(request, f"{product_name} был добавлен в корзину.")
+    return redirect('pickup_app:pickup_cart', phone_number=phone_number, category=None)
+
+
+
+
+
+
+
+
+
+# End of file
+
+# File: c:\Users\p4ul7\OneDrive\מסמכים\Mimino\pickup_app\pickup_views\pickup_pdf_views.py
+import json
+from django.http import JsonResponse
+from django.contrib.auth.decorators import login_required
+from django.shortcuts import redirect
+from django.urls import reverse
+from ..models import PickupOrder, Cart
+
+@login_required
+def pickup_generate_pdf_view(request, phone_number, order_id):
+    try:
+        order = PickupOrder.objects.get(id=order_id, phone=phone_number)
+        payment_method = request.POST.get('payment_method')
+        
+        if payment_method:
+            # Создаем снимок корзины
+            cart_snapshot = [
+                {
+                    'product_name': item.product.product_name_rus,
+                    'quantity': item.quantity,
+                    'price': float(item.product.product_price),  # Преобразуем цену в число
+                    'total': item.quantity * float(item.product.product_price)  # Преобразуем общую сумму в число
+                }
+                for cart in order.carts.all()
+                for item in cart.cart_items.all()
+            ]
+            
+            # Сохраняем снимок корзины в формате JSON
+            order.cart_snapshot = json.dumps(cart_snapshot)
+            order.total_amount = sum(item['total'] for item in cart_snapshot)
+            order.is_completed = True
+            order.status = 'completed'
+            order.payment_method = payment_method
+            order.save()
+
+            # Очищаем корзину
+            Cart.objects.filter(pickup_order=order).delete()
+
+            # Перенаправляем на страницу 'ask_where'
+            return redirect('ask_where')
+        else:
+            return JsonResponse({'message': "Ошибка: метод оплаты не указан."}, status=400)
+    except Exception as e:
+        return JsonResponse({'error': str(e)}, status=500)
+
+
+# End of file
+
+# File: c:\Users\p4ul7\OneDrive\מסמכים\Mimino\pickup_app\pickup_views\pickup_search_view.py
+from django.shortcuts import render
+from django.db.models import Q
+from pickup_app.forms import ProductQuantityForm
+from restaurant_app.models.product import Product
+
+def pickup_search_products_view(request, phone_number):
+    query = request.GET.get('q', '')
+    products = Product.objects.filter(product_name_rus__icontains=query)
+    product_quantity_form = ProductQuantityForm()
+    category = request.GET.get('category', 'category')
+    context = {
+        'query': query,
+        'products': products,
+        'phone_number': phone_number,
+        'product_quantity_form': product_quantity_form,
+        'category': category,  # Pass category to the context with a default value.
+    }
+    return render(request, 'pickup_search_results.html', context)
+
+
+
+# End of file
+
+# File: c:\Users\p4ul7\OneDrive\מסמכים\Mimino\restaurant_app\admin.py
+from django.contrib import admin
+from django.utils.translation import gettext_lazy as _
+from django.db.models import Count, Sum, Q
+from django.urls import reverse
+from django.utils.html import format_html
+from django.db import models
+from django.contrib.admin.views.main import ChangeList
+from django.contrib.admin import SimpleListFilter
+from django.contrib import messages
+
+from .models.product import ProductStock, Product, OrderChangeLog
+from .models.tables import Table, Booking, Tip, TipDistribution, Room
+from .models.orders import Order, Category, PaymentMethod, Transaction
+
+# Классы фильтров
+
+class CategoryFilter(admin.SimpleListFilter):
+    title = _('category')
+    parameter_name = 'category'
+
+    def lookups(self, request, model_admin):
+        categories = set([c.category for c in Product.objects.all()])
+        return [(c, c) for c in categories]
+
+    def queryset(self, request, queryset):
+        if self.value():
+            return queryset.filter(product__category=self.value())
+
+class ActiveOrderFilter(admin.SimpleListFilter):
+    title = _('active order')
+    parameter_name = 'has_active_order'
+
+    def lookups(self, request, model_admin):
+        return (
+            ('yes', _('Yes')),
+            ('no', _('No')),
+        )
+
+    def queryset(self, request, queryset):
+        if self.value() == 'yes':
+            return queryset.annotate(num_active_orders=Count('orders', filter=models.Q(orders__is_completed=False))).filter(num_active_orders__gt=0)
+        if self.value() == 'no':
+            return queryset.annotate(num_active_orders=Count('orders')).filter(num_active_orders=0)
+
+# Класс для оптимизации запросов
+class OptimizedChangeList(ChangeList):
+    def get_queryset(self, request):
+        qs = super().get_queryset(request)
+        return qs.select_related('related_field')  # Замените 'related_field' на соответствующее поле
+
+# Регистрация моделей и настройка админ-панели
+
+@admin.register(ProductStock)
+class ProductStockAdmin(admin.ModelAdmin):
+    list_display = ['product', 'received_quantity', 'received_date']
+    list_filter = [CategoryFilter, 'received_date']  # Добавьте здесь свой фильтр
+    search_fields = ['product__product_name_rus', 'product__product_name_heb']
+
+    def get_changelist(self, request, **kwargs):
+        return OptimizedChangeList
+
+@admin.register(Table)
+class TableAdmin(admin.ModelAdmin):
+    list_display = ['table_id', 'capacity', 'is_booked', 'are_guests_here', 'num_of_people', 'order_time', 'active_order_link']
+    list_filter = [ActiveOrderFilter]  # <--- add the ActiveOrderFilter here
+
+    def active_order_link(self, obj):
+        active_order = obj.orders.filter(is_completed=False).first()
+        if active_order:
+            url = reverse("admin:restaurant_app_order_change", args=[active_order.id])
+            return format_html('<a href="{}">{}</a>', url, active_order)
+        else:
+            return "-"
+
+    active_order_link.short_description = "Active Order"
+
+    def formfield_for_foreignkey(self, db_field, request, **kwargs):
+        if db_field.name == "active_order":
+            kwargs["queryset"] = Order.objects.filter(table=request.obj, is_completed=False)
+        return super().formfield_for_foreignkey(db_field, request, **kwargs)
+
+@admin.register(Booking)
+class BookingAdmin(admin.ModelAdmin):
+    list_display = ['id', 'user', 'table', 'reserved_date', 'reserved_time', 'num_of_people', 'description', 'are_guests_here', 'is_deleted', 'created_at', 'guests_did_not_arrive']
+    list_filter = ['reserved_date', 'is_deleted', 'are_guests_here', 'guests_did_not_arrive']
+    search_fields = ['user__username', 'table__table_id', 'description']
+    date_hierarchy = 'reserved_date'
+
+@admin.register(Product)
+class ProductAdmin(admin.ModelAdmin):
+    list_display = ['id', 'product_name_rus', 'product_name_heb', 'product_price', 'category', 'quantity', 'created_at', 'printer', 'has_limit', 'limit_quantity']
+    list_filter = ['category', 'printer', 'has_limit']
+    search_fields = ['product_name_rus', 'product_name_heb']
+    fields = ('product_name_rus', 'product_name_heb', 'product_price', 'product_img', 'category', 'quantity', 'delivery_price', 'is_available', 'preparation_time', 'has_limit', 'limit_quantity')
+
+    def save_model(self, request, obj, form, change):
+        if obj.has_limit and not obj.limit_quantity:
+            messages.error(request, 'Установите количество лимита для лимитированного продукта.')
+        else:
+            super().save_model(request, obj, form, change)
+
+@admin.register(Order)
+class OrderAdmin(admin.ModelAdmin):
+    list_display = ['id', 'table_number', 'total_sum', 'display_cash_amount', 'display_card_amount', 'status', 'payment_method', 'is_confirmed', 'display_is_bill_printed']
+    list_filter = ['is_completed', 'created_at', 'created_by', 'is_confirmed']
+    fields = ('table', 'created_by', 'created_at', 'is_completed', 
+              'comments', 'last_printed_comments', 'table_number', 
+              'total_price', 'num_of_people', 'cash_amount', 
+              'card_amount', 'status', 'payment_method', 'is_confirmed')
+
+    def display_is_bill_printed(self, obj):
+        return obj.is_bill_printed
+    display_is_bill_printed.short_description = 'Счет Распечатан'
+    display_is_bill_printed.boolean = True
+
+    def display_cash_amount(self, obj):
+        return obj.cash_amount if obj.cash_amount is not None else format_html('<span style="color: #999;">-</span>')
+    display_cash_amount.short_description = 'Cash Amount'
+
+    def display_card_amount(self, obj):
+        return obj.card_amount if obj.card_amount is not None else format_html('<span style="color: #999;">-</span>')
+    display_card_amount.short_description = 'Card Amount'
+
+    def products_list(self, obj):
+        return ", ".join([f"{item.product.product_name_rus} x{item.quantity}" for item in obj.order_items.all()])
+    products_list.short_description = 'Продукты'
+
+    def get_changelist(self, request, **kwargs):
+        return OptimizedChangeList
+
+class TipDistributionInline(admin.TabularInline):
+    model = TipDistribution
+    extra = 0
+
+class UserTipFilter(SimpleListFilter):
+    title = 'официант'  # Название фильтра
+    parameter_name = 'user'
+
+    def lookups(self, request, model_admin):
+        # Возвращает список кортежей. Каждый кортеж содержит (значение_для_фильтрации, человеко-читаемое_название)
+        users = set([tip.user for tip in TipDistribution.objects.all()])
+        return [(user.id, user.first_name) for user in users]
+
+    def queryset(self, request, queryset):
+        # Фильтрует queryset на основе выбранного значения фильтра
+        if self.value():
+            return queryset.filter(tipdistribution__user__id=self.value())
+
+@admin.register(Tip)
+class TipAdmin(admin.ModelAdmin):
+    list_display = ['id', 'amount', 'date', 'distributed_to']
+
+    inlines = [TipDistributionInline]
+    list_filter = ['date', UserTipFilter]  # Используем созданный фильтр
+
+    def distributed_to(self, obj):
+        users = [tip_dist.user for tip_dist in obj.tipdistribution_set.all()]
+        links = [format_html('<a href="{}">{}</a>', reverse("admin:auth_user_change", args=[user.id]), user.first_name) for user in users]
+        return format_html(", ".join(links))
+    
+    distributed_to.short_description = "Официанты"
+
+class TableInline(admin.StackedInline):
+    model = Table
+    extra = 1
+    fields = ['table_id', 'capacity']
+
+@admin.register(Room)
+class RoomAdmin(admin.ModelAdmin):
+    list_display = ('name',)
+    inlines = [TableInline]
+
+@admin.register(Transaction)
+class TransactionAdmin(admin.ModelAdmin):
+    list_display = ('date', 'type', 'amount', 'payment_method')
+    list_filter = ('category', 'payment_method', 'type',)
+    ordering = ('-date',)
+
+    def get_queryset(self, request):
+        return super().get_queryset(request).select_related('category', 'payment_method')
+
+    def changelist_view(self, request, extra_context=None):
+        queryset = self.get_queryset(request)
+        total_income = queryset.filter(type=Transaction.INCOME).aggregate(total=models.Sum('amount'))['total'] or 0
+        if extra_context is None:
+            extra_context = {}
+        extra_context['total_income'] = total_income
+        return super().changelist_view(request, extra_context=extra_context)
+
+@admin.register(OrderChangeLog)
+class OrderChangeLogAdmin(admin.ModelAdmin):
+    list_display = ('order', 'product_name', 'action', 'change_time', 'get_changed_by')
+
+    def get_changed_by(self, obj):
+        return obj.changed_by.first_name if obj.changed_by else '-'
+    get_changed_by.short_description = 'Изменил'
+
+    def get_queryset(self, request):
+        queryset = super().get_queryset(request).select_related('changed_by')
+        return queryset
+
+# Регистрация дополнительных моделей и настройка кастомных представлений, если они есть
+admin.site.register(Category)
+admin.site.register(PaymentMethod)
+
+
+# End of file
+
+# File: c:\Users\p4ul7\OneDrive\מסמכים\Mimino\restaurant_app\apps.py
+from django.apps import AppConfig
+
+class RestaurantAppConfig(AppConfig):
+    default_auto_field = 'django.db.models.BigAutoField'
+    name = 'restaurant_app'
+
+    def ready(self):
+        import restaurant_app.signals
+
+
+# End of file
+
+# File: c:\Users\p4ul7\OneDrive\מסמכים\Mimino\restaurant_app\booking_context.py
+from .models.tables import Booking
+
+def booking_exists(request):
+    has_bookings = Booking.objects.filter(is_deleted=False).exists()
+    return {'has_bookings': has_bookings}
+
+
+# End of file
+
+# File: c:\Users\p4ul7\OneDrive\מסמכים\Mimino\restaurant_app\context_processors.py
+from django.db.models import Sum
+from django.utils import timezone
+from .models.tables import TipDistribution
+from .models.message import Message
+
+from datetime import datetime
+
+def tips_and_goal(request):
+    if request.user.is_authenticated:
+        today = timezone.localtime(timezone.now()).date()
+        start_datetime = timezone.make_aware(datetime.combine(today, datetime.min.time()))  # начало дня
+        end_datetime = timezone.make_aware(datetime.combine(today, datetime.max.time()))  # конец дня
+        today_total_tips = TipDistribution.objects.filter(user=request.user, tip__date__range=(start_datetime, end_datetime)).aggregate(total=Sum('amount'))['total'] or 0
+        return {'tip_amount': today_total_tips}
+    return {}
+
+
+def unread_messages_count(request):
+    if request.user.is_authenticated:
+        return {'unread_messages_count': Message.unread_count(request.user)}
+    return {'unread_messages_count': 0}
+
+# End of file
+
+# File: c:\Users\p4ul7\OneDrive\מסמכים\Mimino\restaurant_app\forms.py
+from django import forms
+from django.forms import CheckboxSelectMultiple
+from .models.tables import Booking, Table
+from .models.orders import Order, OrderItem, Product
+from datetime import time, timedelta, datetime
+from django.utils import timezone  # Убедимся, что timezone импортирован
+from django.core.exceptions import ValidationError
+from .models.product import ProductStock
+from .models.message import Message
+from django.contrib.auth.models import User
+
+class CategorySelectForm(forms.Form):
+    category = forms.ChoiceField(
+        choices=[('', 'Выберите категорию')] + Product.CATEGORY_CHOICES,
+        required=False,
+        label='Категория'
+    )
+
+class MessageForm(forms.ModelForm):
+    class Meta:
+        model = Message
+        fields = ['body']
+        widgets = {
+            'body': forms.Textarea(attrs={'class': 'form-control'}),
+        }
+        labels = {
+            'body': 'Сообщение',
+        }
+
+        
+class ProductStockForm(forms.ModelForm):
+    class Meta:
+        model = ProductStock
+        fields = ['product', 'received_quantity']
+
+class PasswordForm(forms.Form):
+    password = forms.CharField(widget=forms.PasswordInput())
+
+
+def generate_time_intervals(start_time, end_time, delta_minutes):
+    # Преобразование объектов datetime.time в datetime.datetime для выполнения арифметических операций
+    current_datetime = datetime.combine(datetime.today(), start_time)
+    end_datetime = datetime.combine(datetime.today(), end_time)
+    time_intervals = []
+
+    while current_datetime.time() <= end_datetime.time():
+        time_intervals.append((current_datetime.strftime('%H:%M'), current_datetime.strftime('%H:%M')))
+        current_datetime += timedelta(minutes=delta_minutes)
+
+    return time_intervals
+
+start_time = time(11, 0)
+end_time = time(23, 0)
+delta_minutes = 15
+TIME_CHOICES = generate_time_intervals(start_time, end_time, delta_minutes)
+
+
+class BookingForm(forms.ModelForm):
+    reserved_time = forms.ChoiceField(choices=TIME_CHOICES, label='Время')
+
+    # Добавление выпадающего списка для количества гостей
+    NUM_OF_PEOPLE_CHOICES = [(i, str(i)) for i in range(1, 60)]  # Например, от 1 до 20 гостей
+    num_of_people = forms.ChoiceField(choices=NUM_OF_PEOPLE_CHOICES, label='Количество гостей')
+
+    class Meta:
+        model = Booking
+        fields = ['reserved_date', 'reserved_time', 'num_of_people', 'description']
+        widgets = {
+            'reserved_date': forms.TextInput(attrs={'type': 'date'}),
+            'description': forms.Textarea(attrs={'rows': 3}),
+        }
+        labels = {
+            'reserved_date': 'Дата',
+            'reserved_time': 'Время',
+            'num_of_people': 'Количество гостей',
+            'description': 'Комментарий',
+        }
+
+    def __init__(self, *args, **kwargs):
+        self.request = kwargs.pop('request', None)
+        self.table = kwargs.pop('table', None)
+        super().__init__(*args, **kwargs)
+        
+        # Проверка и настройка поля table
+        if 'table' in self.fields:
+            if self.table:
+                self.fields['table'].initial = self.table
+                self.fields['table'].widget = forms.HiddenInput()
+            else:
+                self.fields['table'].widget = forms.HiddenInput()
+
+        # Проверка и настройка поля user
+        if 'user' in self.fields:
+            self.fields['user'].widget = forms.HiddenInput()
+            if self.request:
+                self.fields['user'].initial = self.request.user
+
+
+    def clean(self):
+        cleaned_data = super().clean()
+        table_id = cleaned_data.get('table')  # Получаем ID стола
+        num_of_people = int(cleaned_data.get('num_of_people'))  # Преобразование в число
+        reserved_date = cleaned_data.get('reserved_date')
+        reserved_time_str = cleaned_data.get('reserved_time')
+
+        try:
+            reserved_time = datetime.strptime(reserved_time_str, "%H:%M").time()
+        except ValueError:
+            raise forms.ValidationError('Неверный формат времени.')
+
+        # Получение даты и времени бронирования
+        reserved_datetime = datetime.combine(reserved_date, reserved_time)
+
+        # Проверка статуса последнего заказа для выбранного стола
+        last_order = Order.objects.filter(table_id=table_id).order_by('-created_at').first()
+
+        if last_order and not last_order.is_completed:
+            # Проверка на количество человек и соответствующее ограничение времени
+            if num_of_people <= 3:
+                one_hour_later = timezone.now() + timedelta(hours=1)
+                if reserved_time < one_hour_later.time():
+                    raise forms.ValidationError('Для бронирования столика на группу до трех человек доступно только время через час после текущего.')
+            
+            elif 3 < num_of_people <= 6:
+                two_hours_later = timezone.now() + timedelta(hours=2)
+                if reserved_time < two_hours_later.time():
+                    raise forms.ValidationError('Для бронирования столика на группу от трех до шести человек доступно только время через два часа после текущего.')
+
+        if num_of_people > 10 and not cleaned_data.get('description'):
+            raise forms.ValidationError('Поле "Комментарий" обязательно для заполнения, если количество гостей больше 10.')
+
+        # Получение всех бронирований для выбранного стола на эту дату
+        existing_bookings = Booking.objects.filter(table_id=table_id, reserved_date=reserved_date)
+
+        # Проверка, что новое время бронирования не пересекается с существующими
+        for booking in existing_bookings:
+            booking_start = datetime.combine(booking.reserved_date, booking.reserved_time)
+            booking_end = booking_start + timedelta(hours=1)  # Предполагаем, что бронь длится один час
+
+            # Создаем диапазон времени, когда столик не доступен
+            unavailable_start = booking_start - timedelta(hours=1)
+            unavailable_end = booking_end + timedelta(hours=1)
+
+            # Проверяем, попадает ли запрашиваемое время в недоступный диапазон
+            if unavailable_start <= reserved_datetime <= unavailable_end:
+                raise forms.ValidationError('Этот столик недоступен для бронирования за час до и после существующего бронирования.')
+
+        # Поиск доступных столов на указанную дату и время
+        available_tables = Table.objects.filter(
+            capacity__gte=num_of_people,
+            is_booked=False
+        ).exclude(
+            bookings__reserved_date=reserved_date,
+            bookings__reserved_time=reserved_time,
+            bookings__is_deleted=False
+        )
+
+        if not available_tables:
+            raise ValidationError('Нет доступных столов на выбранное время и дату для указанного количества гостей.')
+
+        # Выбор первого доступного стола
+        cleaned_data['table'] = available_tables.first()
+
+        return cleaned_data
+
+class GuestsHereForm(forms.ModelForm):
+    class Meta:
+        model = Booking
+        fields = ['are_guests_here']
+        widgets = {'are_guests_here': forms.HiddenInput()}
+
+
+class OrderForm(forms.ModelForm):
+    PAYMENT_CHOICES = (
+        ('cash', 'Наличные'),
+        ('card', 'Кредитная карта'),
+    )
+
+    payment_method = forms.MultipleChoiceField(widget=CheckboxSelectMultiple, choices=PAYMENT_CHOICES)
+
+    class Meta:
+        model = Order
+        fields = ['payment_method']
+
+    
+class OrderItemForm(forms.ModelForm):
+    class Meta:
+        model = OrderItem
+        fields = ['product', 'quantity']
+
+class ProductQuantityForm(forms.Form):
+    quantity = forms.IntegerField(min_value=1, max_value=10000, initial=1, widget=forms.NumberInput(attrs={
+        'class': 'form-control',
+        'style': 'width: 100px; display: inline-block;'
+    }))
+
+class ProductForm(forms.Form):
+    product = forms.ModelChoiceField(queryset=Product.objects.all())
+
+class DateRangeForm(forms.Form):
+    DATERANGE_CHOICES = [
+        ('1', 'Последний день'),
+        ('7', 'Последние 7 дней'),
+        ('30', 'Последний месяц'),
+        ('365', 'Последний год'),
+        # Добавьте другие опции по вашему выбору
+    ]
+    date_range = forms.ChoiceField(choices=DATERANGE_CHOICES, required=False, label="Выберите диапазон")
+    DAY_OF_WEEK_CHOICES = [
+        ('', 'Выбрать день недели'),
+        ('1', 'Понедельник'),
+        ('2', 'Вторник'),
+        ('3', 'Среда'),
+        ('4', 'Четверг'),
+        ('5', 'Пятница'),
+        ('6', 'Суббота'),
+        ('7', 'Воскресенье'),
+    ]
+    day_of_week = forms.ChoiceField(choices=DAY_OF_WEEK_CHOICES, required=False, label="День недели")
+
+
+
+# End of file
+
+# File: c:\Users\p4ul7\OneDrive\מסמכים\Mimino\restaurant_app\signals.py
+from django.db.models.signals import post_save, post_delete
+from django.dispatch import receiver
+from django.core.cache import cache
+from django.contrib.auth.models import User
+from .models.tables import TipDistribution
+from .models.orders import Order, OrderItem
+
+@receiver(post_save, sender=TipDistribution)
+@receiver(post_save, sender=Order)
+@receiver(post_save, sender=OrderItem)
+@receiver(post_delete, sender=TipDistribution)
+@receiver(post_delete, sender=Order)
+@receiver(post_delete, sender=OrderItem)
+def update_cache(sender, instance, **kwargs):
+    user_id = None
+
+    if isinstance(instance, TipDistribution):
+        user_id = instance.user.id
+    elif isinstance(instance, Order):
+        user_id = instance.created_by.id
+    elif isinstance(instance, OrderItem):
+        if instance.order:
+            user_id = instance.order.created_by.id
+        elif instance.waiter_order:
+            user_id = instance.waiter_order.created_by.id
+
+    if user_id:
+        cache_key = f'user_summary_{user_id}'
+        cache.delete(cache_key)
+
+
+# End of file
+

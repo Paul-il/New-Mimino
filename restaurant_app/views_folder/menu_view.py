@@ -1,3 +1,4 @@
+# menu_view.py
 from django.contrib.auth.decorators import login_required
 from django.shortcuts import get_object_or_404, redirect, render
 from django.urls import reverse
@@ -21,7 +22,7 @@ CATEGORIES = {
     'dessert': 'Десерты',
     'soft_drinks': 'Легкие напитки',
     'beer': 'Пиво',
-    'wine' :'Вино',
+    'wine': 'Вино',
     'vodka': 'Водка',
     'cognac': 'Коньяк',
     'whisky': 'Виски',
@@ -30,11 +31,13 @@ CATEGORIES = {
     'banket': 'Банкет',
 }
 
-
 @login_required
 def menu_view(request, table_id, category):
     table = get_object_or_404(Table, table_id=table_id)
-    products = Product.objects.filter(category=category)
+    
+    # Сортируем продукты по имени
+    products = Product.objects.filter(category=category).order_by('product_name_rus')
+    
     product_quantity_form = ProductQuantityForm()
     active_order = table.orders.filter(is_completed=False).first()
     active_order_pk = active_order.pk if active_order else None

@@ -10,14 +10,16 @@ def close_table_view(request):
         table_id = request.POST.get('table_id')
         order = get_object_or_404(Order, table_id=table_id, is_completed=False)
 
-        order.is_completed = True
-        order.save()
+        # Проверка наличия элементов в заказе
+        if not order.order_items.exists():
+            order.delete()
+        else:
+            order.is_completed = True
+            order.save()
 
         table = order.table
         table.is_available = True
         table.save()
         return redirect('rooms')
-
     else:
         return HttpResponse("Not Supported Method")
-    

@@ -1,5 +1,5 @@
 from django.shortcuts import render, get_object_or_404, redirect
-
+from django.contrib import messages
 from restaurant_app.models.product import Product
 from ..models import DeliveryCustomer, DeliveryOrder, DeliveryCart, DeliveryCartItem, Courier
 from ..forms import ProductQuantityForm
@@ -25,11 +25,12 @@ CATEGORIES = {
     'mishloha':'Мишлоха',
 }
 
-
 def delivery_menu_view(request, delivery_phone_number, category, delivery_type):
     delivery_customer = get_object_or_404(DeliveryCustomer, delivery_phone_number=delivery_phone_number)
     delivery_order = DeliveryOrder.objects.filter(customer=delivery_customer, is_completed=False).first()
-    products = Product.objects.filter(category=category)
+    
+    # Фильтруем продукты, доступные для доставки
+    products = Product.objects.filter(category=category, is_available_for_delivery=True).order_by('product_name_rus')
     product_quantity_form = ProductQuantityForm()
 
     context = {
