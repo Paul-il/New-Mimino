@@ -7,8 +7,12 @@ from django.utils import timezone
 from bs4 import BeautifulSoup
 import sys
 
+# Определяем переменную для контроля импорта cups
+cups_imported = False
+
 if sys.platform != "win32":  # Проверяем, что ОС не Windows
     import cups
+    cups_imported = True
     
 import tempfile
 from django.conf import settings
@@ -153,10 +157,13 @@ def print_kitchen(request):
 
     except ObjectDoesNotExist:
         return JsonResponse({'status': 'error', 'message': 'Заказ не найден.'})
-    except cups.IPPError as e:
-        return JsonResponse({'status': 'error', 'message': f"Ошибка при печати: {e}"})
+    except NameError as e:
+        if 'cups' in str(e):
+            return JsonResponse({'status': 'error', 'message': 'CUPS не импортирован. Эта функция недоступна на Windows.'})
+        else:
+            return JsonResponse({'status': 'error', 'message': f'Произошла ошибка: {str(e)}'})
     except Exception as e:
-        return JsonResponse({'status': 'error', 'message': 'Произошла неизвестная ошибка.'})
+        return JsonResponse({'status': 'error', 'message': f'Произошла неизвестная ошибка: {str(e)}'})
 
 
 def get_sorted_waiter_cart_items(waiter_order):
@@ -195,8 +202,10 @@ def print_kitchen_for_waiter(request):
 
     except ObjectDoesNotExist:
         return JsonResponse({'status': 'error', 'message': 'Заказ не найден.'})
-    except cups.IPPError as e:
-        return JsonResponse({'status': 'error', 'message': f"Ошибка при печати: {e}"})
+    except NameError as e:
+        if 'cups' in str(e):
+            return JsonResponse({'status': 'error', 'message': 'CUPS не импортирован. Эта функция недоступна на Windows.'})
+        else:
+            return JsonResponse({'status': 'error', 'message': f'Произошла ошибка: {str(e)}'})
     except Exception as e:
         return JsonResponse({'status': 'error', 'message': f'Произошла неизвестная ошибка: {str(e)}'})
-
