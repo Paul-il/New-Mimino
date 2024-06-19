@@ -52,8 +52,6 @@ def user_summary(request):
     today = localtime(timezone.now()).date()
     first_day_of_current_month = today.replace(day=1)
 
-    print(f"Сегодня: {today}, Первый день текущего месяца: {first_day_of_current_month}")
-
     users = User.objects.prefetch_related(
         'bookings',
         'userprofile',
@@ -64,22 +62,21 @@ def user_summary(request):
     user_summary_list = []
 
     for user in users:
-        print(f"\nОбработка пользователя {user.username} (ID: {user.id})")
-        
         user_orders = user.order_set.all()
-        print(f"Количество заказов пользователя: {user_orders.count()}")
-
         closed_orders = user_orders.filter(is_completed=True)
         total_closed_tables = closed_orders.count()
-        print(f"Количество закрытых столов: {total_closed_tables}")
 
         # Чаевые за сегодня
-        today_total_tips = TipDistribution.objects.filter(user=user, tip__order__created_at__date=today).aggregate(Sum('amount'))['amount__sum'] or 0
-        print(f"Чаевые за сегодня: {today_total_tips}")
+        today_total_tips = TipDistribution.objects.filter(
+            user=user, 
+            tip__date__date=today
+        ).aggregate(Sum('amount'))['amount__sum'] or 0
 
         # Чаевые за текущий месяц
-        current_month_tips = TipDistribution.objects.filter(user=user, tip__order__created_at__date__gte=first_day_of_current_month).aggregate(Sum('amount'))['amount__sum'] or 0
-        print(f"Чаевые за текущий месяц: {current_month_tips}")
+        current_month_tips = TipDistribution.objects.filter(
+            user=user, 
+            tip__date__date__gte=first_day_of_current_month
+        ).aggregate(Sum('amount'))['amount__sum'] or 0
 
         user_summary_list.append({
             'user': user,
@@ -87,11 +84,19 @@ def user_summary(request):
             'today_total_tips': today_total_tips,
         })
 
+        # Отладочная информация
+        print(f"Пользователь: {user.username}, Чаевые за сегодня: {today_total_tips}, Чаевые за месяц: {current_month_tips}")
+
+    # Сортировка по чаевым за сегодня в порядке убывания
+    user_summary_list.sort(key=lambda x: x['today_total_tips'], reverse=True)
+
     context = {
         'user_summary_list': user_summary_list,
         'is_admin': request.user.is_superuser
     }
     return render(request, 'user_summary.html', context)
+
+
 
 @login_required
 def user_detail(request, user_id):

@@ -29,7 +29,9 @@
 </div>
 <script>
     $(document).ready(function () {
-        $('#userSummaryTable').DataTable();
+        $('#userSummaryTable').DataTable({
+            "order": [[2, "desc"]]  // Сортировка по третьему столбцу (индекс 2) в порядке убывания
+        });
     });
 </script>
 {% endblock %}
