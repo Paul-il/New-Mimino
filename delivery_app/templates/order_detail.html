@@ -7,7 +7,7 @@
     <h1 class="mb-4" style="color: white;">Детали Заказа</h1>
     <div class="order-details mb-4">
         <p style="color: white;"><strong>Имя:</strong> {{ order.customer.name }}</p>
-        <p style="color: white;"><strong>Номер телефона:</strong> {{ order.customer.delivery_phone_number }}</p>
+        <p style="color: white;"><strong>Номер телефона:</strong> <a href="{% url 'delivery_app:customer_detail' order.customer.id %}">{{ order.customer.delivery_phone_number }}</a></p>
         <p style="color: white;"><strong>Создан:</strong> {{ order.created_at }}</p>
         <p style="color: white;"><strong>На Сумму:</strong> {{ order.total_amount }}₪</p>
     </div>
