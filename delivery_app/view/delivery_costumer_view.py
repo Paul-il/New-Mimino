@@ -27,7 +27,7 @@ def customer_orders_view(request):
 
 def customer_detail_view(request, customer_id):
     customer = get_object_or_404(DeliveryCustomer, pk=customer_id)
-    orders = DeliveryOrder.objects.filter(customer=customer)
+    orders = DeliveryOrder.objects.filter(customer=customer).order_by('-created_at')
     total_order_amount = sum(order.total_amount for order in orders if order.total_amount is not None)
     
     context = {

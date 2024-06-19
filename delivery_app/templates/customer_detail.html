@@ -20,17 +20,15 @@
         <table>
             <tr>
                 <th><input type="checkbox" id="select-all" onclick="toggleSelectAll()"></th>
-                <th>Order ID</th>
-                <th>Created At</th>
-                <th>Is Completed</th>
-                <th>Total Amount</th>
+                <th>Номер Заказа</th>
+                <th>Создано</th>
+                <th>Сумма</th>
             </tr>
             {% for order in orders %}
             <tr>
                 <td><input type="checkbox" name="selected_orders" value="{{ order.id }}" {% if order.is_completed %}disabled{% endif %}></td>
                 <td><a href="{% url 'delivery_app:order_detail' order.id %}">{{ order.id }}</a></td>
                 <td>{{ order.created_at }}</td>
-                <td>{{ order.is_completed }}</td>
                 <td>{{ order.total_amount }}</td>
             </tr>
             {% endfor %}
