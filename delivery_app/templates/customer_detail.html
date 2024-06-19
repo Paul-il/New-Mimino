@@ -18,28 +18,32 @@
     <form method="post" action="{% url 'delivery_app:delete_selected_orders' customer.id %}">
         {% csrf_token %}
         <table>
-            <tr>
-                <th><input type="checkbox" id="select-all" onclick="toggleSelectAll()"></th>
-                <th>Номер Заказа</th>
-                <th>Создано</th>
-                <th>Сумма</th>
-            </tr>
-            {% for order in orders %}
-            <tr>
-                <td><input type="checkbox" name="selected_orders" value="{{ order.id }}" {% if order.is_completed %}disabled{% endif %}></td>
-                <td><a href="{% url 'delivery_app:order_detail' order.id %}">{{ order.id }}</a></td>
-                <td>{{ order.created_at }}</td>
-                <td>{{ order.total_amount }}</td>
-            </tr>
-            {% endfor %}
+            <thead>
+                <tr>
+                    <th><input type="checkbox" id="select-all" onclick="toggleSelectAll()"></th>
+                    <th>Номер Заказа</th>
+                    <th>Создано</th>
+                    <th>Сумма</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for order in orders %}
+                <tr>
+                    <td><input type="checkbox" name="selected_orders" value="{{ order.id }}" {% if order.is_completed %}disabled{% endif %}></td>
+                    <td><a href="{% url 'delivery_app:order_detail' order.id %}">{{ order.id }}</a></td>
+                    <td>{{ order.created_at }}</td>
+                    <td>{{ order.total_amount }}</td>
+                </tr>
+                {% endfor %}
+            </tbody>
         </table>
-        <button type="submit" class="btn btn-danger">Delete Selected Orders</button>
+        <button type="submit" class="btn btn-danger mt-3">Delete Selected Orders</button>
     </form>
 
     <h2>Uncompleted Orders</h2>
     <form method="post" action="{% url 'delivery_app:delete_uncompleted_orders' customer.id %}">
         {% csrf_token %}
-        <button type="submit" class="btn btn-danger">Delete All Uncompleted Orders</button>
+        <button type="submit" class="btn btn-danger mt-3">Delete All Uncompleted Orders</button>
     </form>
 
     <script>
