@@ -17,6 +17,49 @@ def get_discount(city_name):
     else:
         return 0
 
+def stas_summary(request):
+    # Получение выбранных пользователем дат
+    start_date_str = request.GET.get('start_date')
+    end_date_str = request.GET.get('end_date')
+
+    if start_date_str and end_date_str:
+        start_date = datetime.strptime(start_date_str, '%Y-%m-%d').date()
+        end_date = datetime.strptime(end_date_str, '%Y-%m-%d').date()
+    else:
+        start_date = None
+        end_date = None
+
+    # Фильтрация данных по выбранным датам
+    if start_date and end_date:
+        delivery_orders = DeliveryOrder.objects.filter(delivery_date__range=(start_date, end_date))
+    else:
+        delivery_orders = DeliveryOrder.objects.all()
+
+    all_dates = delivery_orders.values('delivery_date').distinct()
+    date_discount_totals = []
+    total_discount = 0
+
+    # Подсчет суммы скидок по каждой дате
+    for date_data in all_dates:
+        date = date_data['delivery_date']
+        orders_on_date = delivery_orders.filter(delivery_date=date, courier__name="our_courier")
+        total_discount_on_date = sum([get_discount(order.customer.city) for order in orders_on_date])
+        date_discount_totals.append({'date': date, 'total_discount': total_discount_on_date})
+        total_discount += total_discount_on_date
+
+    total_days = len(date_discount_totals)
+
+    # Добавление данных в контекст
+    context = {
+        'date_discount_totals': date_discount_totals,
+        'start_date': start_date_str,
+        'end_date': end_date_str,
+        'total_days': total_days,
+        'total_discount': total_discount,
+    }
+
+    return render(request, 'stas_summary.html', context)
+
 def delivery_summary(request):
     selected_date_str = request.GET.get('date')
     if selected_date_str:

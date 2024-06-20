@@ -37,11 +37,15 @@ Mimino/
 │   │   └── 0020_alter_courier_name.py
 │   │   └── 0021_alter_courier_name.py
 │   │   └── 0022_deliveryorder_transaction_created.py
+│   │   └── 0023_deliverycart_is_completed.py
 │   │       __init__.py
 │   ├── templates/
 │   │   └── add_delivery_customer.html
 │   │   └── check_delivery_customer.html
 │   │   └── check_delivery_number.html
+│   │   └── confirm_delete.html
+│   │   └── customer_detail.html
+│   │   └── customer_orders.html
 │   │   └── delivery_cart.html
 │   │   └── delivery_empty_cart.html
 │   │   └── delivery_kitchen_template.html
@@ -52,13 +56,15 @@ Mimino/
 │   │   └── delivery_summary.html
 │   │   └── error_page.html
 │   │   └── future_orders_template.html
-│   │       later_delivery.html
+│   │   └── later_delivery.html
+│   │       order_detail.html
 │   ├── view/
 │   │   └── add_delivery_customer_views.py
 │   │   └── check_delivery_customer_views.py
 │   │   └── clear_solo_dept.py
 │   │   └── delivery_cart_views.py
 │   │   └── delivery_close_cart.py
+│   │   └── delivery_costumer_view.py
 │   │   └── delivery_kitchen_template_view.py
 │   │   └── delivery_menu_views.py
 │   │   └── delivery_process.py
@@ -68,6 +74,7 @@ Mimino/
 │   │   └── delivery_views.py
 │   │   └── for_later_delivery_view.py
 │   │   └── future_orders_view.py
+│   │   └── recreate_order_view.py
 │   │       telegram_webhook_view.py
 ├── expenses/
 │   └── admin.py
@@ -293,6 +300,7 @@ Mimino/
 │   │   └── password_check.html
 │   │   └── pdf_template.html
 │   │   └── personal_cabinet.html
+│   │   └── product_detail.html
 │   │   └── recommendations.html
 │   │   └── rooms.html
 │   │   └── room_detail.html
@@ -328,6 +336,7 @@ Mimino/
 │   │   └── order_summary.py
 │   │   └── pdf_template_view.py
 │   │   └── pdf_view.py
+│   │   └── productdetailview.py
 │   │   └── recommend_view.py
 │   │   └── room_view.py
 │   │   └── search_product.py
@@ -383,3 +392,19 @@ Mimino/
 │   │   ├── salads/
 │   ├── js/
 │   ├── scripts/
+├── telegram_bot/
+│   └── admin.py
+│   └── apps.py
+│   └── models.py
+│   └── tasks.py
+│   └── tests.py
+│   └── utils.py
+│   └── views.py
+│       __init__.py
+│   ├── management/
+│   │   ├── commands/
+│   │   │       startbot.py
+│   ├── migrations/
+│   │       __init__.py
+│   ├── views/
+│   │       bot.py

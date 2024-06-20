@@ -1,0 +1,26 @@
+{% extends "base.html" %}
+{% load static %}
+
+{% block content %}
+<h1>Стаса ЗП</h1>
+
+<form method="get" action="">
+    <label for="start_date">Start Date:</label>
+    <input type="date" id="start_date" name="start_date" value="{{ start_date }}">
+    <label for="end_date">End Date:</label>
+    <input type="date" id="end_date" name="end_date" value="{{ end_date }}">
+    <button type="submit">Filter</button>
+</form>
+
+<h2>Summary</h2>
+<p>Всего Дней: {{ total_days }}</p>
+<p>Стас Заработал: {{ total_discount }}</p>
+
+<ul>
+    {% for date_data in date_discount_totals %}
+    <li>{{ date_data.date }}: Total Discount - {{ date_data.total_discount }}</li>
+    {% endfor %}
+</ul>
+
+
+{% endblock %}

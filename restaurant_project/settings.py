@@ -26,7 +26,7 @@ SECRET_KEY = 'django-insecure-l#mt3(j6lln3-z+c=kg-57)exqckh4gurzjob@11qg8*^0cwlr
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = True
 
-ALLOWED_HOSTS = ['https://mimino.app','127.0.0.1','34.134.12.206','192.168.1.12','10.0.0.39']
+ALLOWED_HOSTS = ['127.0.0.1','10.0.0.39']
 
 CSRF_TRUSTED_ORIGINS = [
     'https://mimino.app',
@@ -138,8 +138,12 @@ DATABASES = {
     'default': {
         'ENGINE': 'django.db.backends.sqlite3',
         'NAME': BASE_DIR / 'db.sqlite3',
+        'OPTIONS': {
+            'timeout': 20,  # Увеличьте таймаут до 20 секунд или больше, если необходимо
+        }
     }
 }
+
 
 
 # Password validation
@@ -162,6 +166,7 @@ AUTH_PASSWORD_VALIDATORS = [
     },
 ]
 
+TELEGRAM_BOT_TOKEN = '7430086576:AAHKKzTAvBoxDHqwwh-MZ7hkKlKZB4ECXew'
 
 # Internationalization
 # https://docs.djangoproject.com/en/4.1/topics/i18n/

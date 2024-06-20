@@ -2,7 +2,7 @@ from django.urls import path
 from .view.clear_solo_dept import clear_solo_debt
 from .view.delivery_views import delivery_view
 from .view.delivery_process import delivery_process_view
-from .view.delivery_summary import delivery_summary
+from .view.delivery_summary import delivery_summary, stas_summary
 from .view.delivery_template_pdf import delivery_pdf_template_view
 from .view.delivery_menu_views import delivery_menu_view, set_courier
 from .view.delivery_kitchen_template_view import delivery_print_kitchen
@@ -60,6 +60,8 @@ urlpatterns = [
     path('recreate_order/<int:order_id>/', recreate_order_view, name='recreate_order'),
     path('delete_selected_orders/<int:customer_id>/', delete_selected_orders_view, name='delete_selected_orders'),
     path('delete_uncompleted_orders/<int:customer_id>/', delete_uncompleted_orders_view, name='delete_uncompleted_orders'),
+
+    path('stas-summary/', stas_summary, name='stas_summary'),
 
 
 ]

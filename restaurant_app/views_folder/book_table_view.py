@@ -1,13 +1,15 @@
 from django.shortcuts import render, redirect, get_object_or_404
 from django.contrib import messages
 from django.contrib.auth.decorators import login_required
-from django.urls import reverse
 from django.db import transaction
 from django.core.exceptions import ValidationError
-from ..models.orders import Order,OrderItem
+from ..models.orders import Order, OrderItem
 from ..models.tables import Booking
 from ..forms import BookingForm
 
+import logging
+# Configure logger
+logger = logging.getLogger(__name__)
 
 @login_required
 def edit_booking_view(request, booking_id):
@@ -19,6 +21,8 @@ def edit_booking_view(request, booking_id):
             form.save()
             messages.success(request, 'Бронирование успешно обновлено.')
             return redirect('bookings')
+        else:
+            messages.error(request, 'Исправьте ошибки в форме.')
     else:
         form = BookingForm(instance=booking)
 
@@ -37,7 +41,9 @@ def book_table_view(request):
                 return redirect('bookings')
             except Exception as e:
                 messages.error(request, f'Ошибка при бронировании стола: {e}')
-
+                logger.error(f'Error booking table: {e}', exc_info=True)
+        else:
+            messages.error(request, 'Исправьте ошибки в форме.')
     else:
         form = BookingForm(request=request)
 
@@ -46,47 +52,48 @@ def book_table_view(request):
 
 @login_required
 def create_booking_and_order(request, form):
-    booking = form.save(commit=False)
-    booking.user = request.user
-    booking.table = form.cleaned_data['table']  # Получение выбранного стола из очищенных данных
-    booking.save()
+    try:
+        booking = form.save(commit=False)
+        booking.user = request.user
+        booking.table = form.cleaned_data['table']  # Получение выбранного стола из очищенных данных
+        booking.save()
 
-    order = Order.objects.create(
-        table=booking.table,
-        created_by=request.user,
-        is_completed=False,
-    )
-
-    banket_products = booking.get_banket_products()
-    for product in banket_products:
-        OrderItem.objects.create(
-            order=order,
-            product=product,
-            quantity=1
+        order = Order.objects.create(
+            table=booking.table,
+            created_by=request.user,
+            is_completed=False,
         )
-    return booking
+
+        banket_products = booking.get_banket_products()
+        order_items = [
+            OrderItem(order=order, product=product, quantity=1)
+            for product in banket_products
+        ]
+        OrderItem.objects.bulk_create(order_items)
+        
+        return booking
+    except ValidationError as e:
+        raise e
+    except Exception as e:
+        logger.error(f'Error in creating booking and order: {e}', exc_info=True)
+        raise e
 
 
 @login_required
 def guests_not_arrived_view(request, booking_id):
     if request.method == "POST":
-        # Получаем объект бронирования по переданному ID
         booking = get_object_or_404(Booking, id=booking_id)
 
-        # Получаем комментарий из запроса, если он был предоставлен
         comment = request.POST.get('comment', '').strip()
         if comment:
             booking.description = comment
 
-        # Отмечаем, что гости не пришли
         booking.guests_did_not_arrive = True
-        
-        # Отмечаем бронирование как "удаленное" (но фактически не удаляем из базы данных)
         booking.is_deleted = True
 
         booking.save()
 
-        # Сообщаем пользователю, что бронирование было обновлено
         messages.success(request, 'Бронирование обновлено.')
-
         return redirect('bookings')
+
+    return render(request, 'error.html', {'message': 'Invalid request method.'})
