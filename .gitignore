@@ -2,5 +2,6 @@ media
 pdf
 db.sqlite3
 debug.log
+settings.py
 
 *.log
