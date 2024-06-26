@@ -35,7 +35,7 @@ from restaurant_app.views_folder.tables_view import tables_view, table_order_vie
 from restaurant_app.views_folder.table_detail_view import table_detail
 from restaurant_app.views_folder.add_stock_view import limited_products_view, update_product_stock
 from restaurant_app.views_folder.cart_view import (
-    add_to_cart_view, order_detail_view, increase_product_in_order_view,
+    add_to_cart_view, confirm_addition_view, order_detail_view, increase_product_in_order_view,
     decrease_product_from_order_view, get_order_item_quantity_view,
     delete_product_from_order_view,
     empty_order_detail_view, waiter_cart_view, add_product_to_waiter_order_view,
@@ -104,6 +104,7 @@ urlpatterns = [
     path('pdf_template/<int:order_id>/', pdf_template_view, name='pdf_template'),
 
     path('add_to_cart/<str:table_id>/', add_to_cart_view, name='add_to_cart'),
+    path('confirm_addition/', confirm_addition_view, name='confirm_addition'),
     path('generate-pdf/<int:order_id>/', generate_pdf_view, name='generate_pdf'),
     path('order/<int:order_id>/add/<int:order_item_id>/', increase_product_in_order_view, name='increase_product_in_order'),
     path('order/<int:order_id>/remove/<int:order_item_id>/', decrease_product_from_order_view, name='decrease_product_from_order'),

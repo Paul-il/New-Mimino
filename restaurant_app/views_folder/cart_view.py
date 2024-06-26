@@ -83,6 +83,71 @@ def perform_order_action(request, order_id, action, order_item_id):
         return redirect('some_default_view')
 
 @login_required
+def confirm_addition_view(request):
+    if request.method == 'POST':
+        product_id = request.POST.get('product_id')
+        quantity = int(request.POST.get('quantity', 1))
+        table_id = request.POST.get('table_id')
+
+        if request.POST.get('confirm') == 'yes':
+            table = get_object_or_404(Table, pk=table_id)
+            active_order = table.get_active_order()
+            if not active_order:
+                num_of_people_str = request.POST.get('num_of_people')
+                if num_of_people_str:
+                    num_of_people = int(num_of_people_str)
+                    room = table.room
+                    if num_of_people > room.max_capacity:
+                        messages.error(request, f'Количество людей не может превышать максимальную вместимость комнаты {room.max_capacity}.')
+                        return redirect('rooms')
+
+                    active_order = Order(
+                        table=table,
+                        created_by=request.user,
+                        num_of_people=num_of_people,
+                        table_number=table.table_id
+                    )
+                    active_order.save()
+                else:
+                    messages.error(request, 'Необходимо указать количество посетителей.')
+                    return redirect('rooms')
+
+            product = get_cached_product(product_id)
+            order_item, created = active_order.order_items.get_or_create(
+                product=product, 
+                defaults={'quantity': quantity}
+            )
+            if not created:
+                order_item.quantity += quantity
+            order_item.save()
+
+            log_order_change(order=active_order, product_name=order_item.product.product_name_rus, action='add', changed_by=request.user)
+            messages.success(request, f"{quantity} {product.product_name_rus} добавлено в заказ.")
+            return redirect('menu', table_id=table_id, category=request.POST.get('category', 'salads'))
+
+        elif request.POST.get('confirm') == 'no':
+            messages.info(request, 'Добавление продукта отменено.')
+            return redirect('menu', table_id=table_id, category=request.POST.get('category', 'salads'))
+
+    elif request.method == 'GET':
+        product_id = request.GET.get('product_id')
+        quantity = int(request.GET.get('quantity', 1))
+        table_id = request.GET.get('table_id')
+        category = request.GET.get('category', 'salads')
+
+        product = get_cached_product(product_id)
+        return render(request, 'confirm_addition.html', {
+            'product': product,
+            'quantity': quantity,
+            'table_id': table_id,
+            'category': category
+        })
+
+    return redirect('rooms')
+
+from django.urls import reverse
+
+@login_required
 def add_to_cart_view(request, table_id):
     try:
         table = get_object_or_404(Table, pk=table_id)
@@ -115,10 +180,39 @@ def add_to_cart_view(request, table_id):
                 quantity = int(request.POST.get('quantity', 1))
                 product = get_cached_product(product_id)
 
-                try:
-                    if product.has_limit and product.limit_quantity < quantity:
-                        messages.error(request, f"Количество лимитированного продукта '{product.product_name_rus}' не может превышать {product.limit_quantity}.")
-                        return redirect('menu', table_id=table_id, category=request.POST.get('category', 'salads'))
+                if quantity > 5 and not request.POST.get('confirm'):
+                    return render(request, 'confirm_addition.html', {
+                        'product': product,
+                        'quantity': quantity,
+                        'table_id': table_id,
+                        'category': request.POST.get('category', 'salads')
+                    })
+
+                if request.POST.get('confirm') == 'no':
+                    return redirect('menu', table_id=table_id, category=request.POST.get('category', 'salads'))
+
+                if request.POST.get('confirm') == 'yes':
+                    table = get_object_or_404(Table, pk=table_id)
+                    active_order = table.get_active_order()
+                    if not active_order:
+                        num_of_people_str = request.POST.get('num_of_people')
+                        if num_of_people_str:
+                            num_of_people = int(num_of_people_str)
+                            room = table.room
+                            if num_of_people > room.max_capacity:
+                                messages.error(request, f'Количество людей не может превышать максимальную вместимость комнаты {room.max_capacity}.')
+                                return redirect('rooms')
+
+                            active_order = Order(
+                                table=table,
+                                created_by=request.user,
+                                num_of_people=num_of_people,
+                                table_number=table.table_id
+                            )
+                            active_order.save()
+                        else:
+                            messages.error(request, 'Необходимо указать количество посетителей.')
+                            return redirect('rooms')
 
                     order_item, created = active_order.order_items.get_or_create(
                         product=product, 
@@ -128,30 +222,16 @@ def add_to_cart_view(request, table_id):
                         order_item.quantity += quantity
                     order_item.save()
 
-                    product.refresh_from_db()
-
-                    if quantity > 1:
-                        messages.success(request, f"{quantity} {product.product_name_rus} добавлено в заказ.")
-                    else:
-                        messages.success(request, f"{product.product_name_rus} добавлено в заказ.")
-                    
                     log_order_change(order=active_order, product_name=order_item.product.product_name_rus, action='add', changed_by=request.user)
-
-                    if product.has_limit:
-                        if product.limit_quantity <= 3:
-                            messages.warning(request, f'Внимание: количество продукта "{product.product_name_rus}" ниже порогового уровня. Осталось {product.limit_quantity}.')
-                        if not product.is_available:
-                            messages.warning(request, f'Внимание: продукт "{product.product_name_rus}" больше не доступен.')
-
-                except ValueError as e:
-                    messages.error(request, str(e))
-                return redirect('menu', table_id=table_id, category=request.POST.get('category', 'salads'))
+                    messages.success(request, f"{quantity} {product.product_name_rus} добавлено в заказ.")
+                    return redirect('menu', table_id=table_id, category=request.POST.get('category', 'salads'))
 
         return redirect('menu', table_id=table_id, category='salads')
 
     except Table.DoesNotExist:
         messages.error(request, "Table not found.")
         return redirect('rooms')
+
 
 @login_required
 def calculate_discount_for_product(product_id):
