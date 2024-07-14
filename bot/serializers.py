@@ -23,3 +23,11 @@ class ProductSerializer(serializers.Serializer):
     id = serializers.IntegerField()
     product_name_rus = serializers.CharField(max_length=255)
     is_available = serializers.BooleanField()
+
+class BookingSerializer(serializers.Serializer):
+    user = serializers.CharField(source='user.first_name')
+    table = serializers.IntegerField(source='table.table_id')
+    reserved_date = serializers.DateField()
+    reserved_time = serializers.TimeField(format="%H:%M")
+    num_of_people = serializers.IntegerField()
+    description = serializers.CharField()

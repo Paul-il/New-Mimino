@@ -173,3 +173,82 @@ async def get_unavailable_products(update: Update, context: CallbackContext) -> 
             [KeyboardButton("Открытые столы"), KeyboardButton("Недоступные продукты")],
             [KeyboardButton("Другие команды")]
         ], resize_keyboard=True))
+
+async def get_bookings(update: Update, context: CallbackContext) -> None:
+    selected_date_str = update.message.text if update.message.text else datetime.now().strftime('%Y-%m-%d')
+    url = 'http://127.0.0.1:31337/api/booking_summary/'  # URL для получения данных о бронях
+
+    try:
+        response = requests.get(url, params={'date': selected_date_str})
+        response.raise_for_status()
+        
+        # Печать содержимого ответа для отладки
+        logger.info(f"Ответ от сервера: {response.text}")
+
+        # Попытка парсинга JSON
+        data = response.json()
+
+        # Обработка данных и создание сообщения для Telegram
+        message = f"Бронирования на {selected_date_str}:\n\n"
+        for booking in data:
+            message += (
+                f"Кто делал бронь: {booking['user']}\n"
+                f"Номер стола: {booking['table']}\n"
+                f"Дата бронирования: {booking['reserved_date']}\n"
+                f"Время бронирования: {booking['reserved_time']}\n"
+                f"Количество людей: {booking['num_of_people']}\n"
+                f"Описание: {booking['description']}\n\n"
+            )
+
+        message += "Хотите выбрать другую дату? Напишите /choose_date."
+
+        await update.message.reply_text(message, reply_markup=ReplyKeyboardMarkup([
+            [KeyboardButton("Сводка"), KeyboardButton("Чаевые официантов")],
+            [KeyboardButton("Открытые столы"), KeyboardButton("Недоступные продукты")],
+            [KeyboardButton("Сводка по доставке"), KeyboardButton("Забронированные столы")],
+            [KeyboardButton("Другие команды")]
+        ], resize_keyboard=True))
+    except requests.RequestException as e:
+        logger.error(f"Ошибка при получении данных: {e}")
+        await update.message.reply_text('Произошла ошибка при получении данных с сайта.', reply_markup=ReplyKeyboardMarkup([
+            [KeyboardButton("Сводка"), KeyboardButton("Чаевые официантов")],
+            [KeyboardButton("Открытые столы"), KeyboardButton("Недоступные продукты")],
+            [KeyboardButton("Сводка по доставке"), KeyboardButton("Забронированные столы")],
+            [KeyboardButton("Другие команды")]
+        ], resize_keyboard=True))
+    except ValueError as e:
+        logger.error(f"Ошибка при парсинге JSON: {e}")
+        await update.message.reply_text('Ошибка при обработке данных с сайта.', reply_markup=ReplyKeyboardMarkup([
+            [KeyboardButton("Сводка"), KeyboardButton("Чаевые официантов")],
+            [KeyboardButton("Открытые столы"), KeyboardButton("Недоступные продукты")],
+            [KeyboardButton("Сводка по доставке"), KeyboardButton("Забронированные столы")],
+            [KeyboardButton("Другие команды")]
+        ], resize_keyboard=True))
+
+async def choose_date(update: Update, context: CallbackContext) -> None:
+    url = 'http://127.0.0.1:31337/api/available_booking_dates/'  # URL для получения доступных дат
+
+    try:
+        response = requests.get(url)
+        response.raise_for_status()
+        
+        # Печать содержимого ответа для отладки
+        logger.info(f"Ответ от сервера: {response.text}")
+
+        # Попытка парсинга JSON
+        data = response.json()
+
+        # Создание кнопок с доступными датами
+        buttons = [[KeyboardButton(date)] for date in data['available_dates']]
+        buttons.append([KeyboardButton("Меню")])
+        
+        await update.message.reply_text(
+            'Выберите одну из доступных дат:',
+            reply_markup=ReplyKeyboardMarkup(buttons, resize_keyboard=True)
+        )
+    except requests.RequestException as e:
+        logger.error(f"Ошибка при получении данных: {e}")
+        await update.message.reply_text('Произошла ошибка при получении данных с сайта.')
+    except ValueError as e:
+        logger.error(f"Ошибка при парсинге JSON: {e}")
+        await update.message.reply_text('Ошибка при обработке данных с сайта.')
