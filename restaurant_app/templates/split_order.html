@@ -1,0 +1,30 @@
+{% extends "base_cart.html" %}
+{% load static %}
+
+{% block content %}
+<div class="container">
+    <h1>Выберите продукты для нового счета</h1>
+    <form method="POST" action="{% url 'split_order' order.id %}">
+        {% csrf_token %}
+        <table class="table">
+            <thead>
+                <tr>
+                    <th style="color: white;">Продукт</th>
+                    <th style="color: white;">Количество</th>
+                    <th style="color: white;">Выбрать</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for item in order.order_items.all %}
+                <tr>
+                    <td style="color: white;">{{ item.product.product_name_rus }}</td>
+                    <td style="color: white;">{{ item.quantity }}</td>
+                    <td style="color: white;"><input type="checkbox" name="selected_items" value="{{ item.id }}"></td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+        <button type="submit" class="btn btn-primary">Создать новый счет</button>
+    </form>
+</div>
+{% endblock %}

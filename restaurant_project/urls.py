@@ -6,7 +6,8 @@ from django.shortcuts import redirect
 
 from django.conf.urls import handler404
 
-from restaurant_app.views_folder.cabinet import (personal_cabinet, change_password, edit_profile)
+from restaurant_app.views_folder.cabinet import (personal_cabinet, change_password, edit_profile, transfer_order,
+                                                 select_table, select_waiter)
 from restaurant_app.views_folder.message_view import (inbox, send_message, unread_messages_count, 
                                                       delete_all_messages,delete_selected_messages, 
                                                       send_link_to_paul,chat_detail,chat_with_user)
@@ -42,6 +43,7 @@ from restaurant_app.views_folder.cart_view import (
     delete_product_from_waiter_order_view,delete_waiter_order_and_items_view, password_check_view, 
     apply_discount_view, update_delivery_status
 )
+from restaurant_app.views_folder import split_order_view
 
 from restaurant_app.views import (
     book_table_view, bookings_view, guests_here_view,
@@ -75,7 +77,6 @@ urlpatterns = [
 
     path('sales/', include('sales.urls')),
    
-
     path('book_table/', book_table_view, name='book_table'),
     path('bookings/', bookings_view, name='bookings'),
     path('edit_booking/<int:booking_id>/', edit_booking_view, name='edit_booking'),
@@ -133,6 +134,9 @@ urlpatterns = [
     path('personal-cabinet/', personal_cabinet, name='personal_cabinet'),
     path('personal-cabinet/change-password/', change_password, name='change_password'),
     path('personal-cabinet/edit-profile/', edit_profile, name='edit_profile'),
+    path('select_table/', select_table, name='select_table'),
+    path('select_waiter/<int:table_id>/', select_waiter, name='select_waiter'),
+    path('transfer_order/', transfer_order, name='transfer_order'),
     path('inbox/', inbox, name='inbox'),
     path('chat/<int:chat_id>/', chat_detail, name='chat_detail'),
     path('chat_with_user/<int:user_id>/', chat_with_user, name='chat_with_user'),
@@ -145,6 +149,9 @@ urlpatterns = [
 
     path('limited-products/', limited_products_view, name='limited_products'),
     path('update-product-stock/<int:product_id>/', update_product_stock, name='update_product_stock'),
+
+    path('order/<int:order_id>/split/', split_order_view.split_order, name='split_order'),
+    path('virtual_table/<int:virtual_table_id>/', split_order_view.virtual_table_detail, name='virtual_table_detail'),
 ]
 
 if settings.DEBUG:

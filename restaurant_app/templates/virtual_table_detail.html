@@ -1,0 +1,67 @@
+{% extends "base.html" %}
+{% load static %}
+
+{% block title %}Информация о виртуальном столе{% endblock %}
+<link rel="stylesheet" href="{{ STATIC_URL }}css/style.css">
+
+{% block content %}
+<div class="container">
+    <h1 class="my-4" style="color: white;">Информация о виртуальном столе</h1>
+    <p style="color: white; font-size: 20px;">Номер виртуального стола: {{ virtual_table.id }}</p>
+
+    <table class="table my-table">
+        <thead>
+            <tr>
+                <th scope="col" style="color: white; font-size: 26px;">Название</th>
+                <th scope="col" style="color: white; font-size: 26px;">Количество</th>
+                <th scope="col" style="color: white; font-size: 26px;">Цена</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for item in order.order_items.all %}
+            <tr>
+                <td style="color: white;">{{ item.product.product_name_rus }}</td>
+                <td style="color: white;">{{ item.quantity }}</td>
+                <td style="color: white;">{{ item.product.product_price }}₪</td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+
+    <p style="color: white;">Общая сумма: {{ total_price }}₪</p>
+
+    <form id="print-form" method="POST" action="{% url 'virtual_table_detail' virtual_table.id %}">
+        {% csrf_token %}
+        <button type="button" class="btn btn-primary" onclick="printInvoice({{ order.id }})">Распечатать счет</button>
+    </form>
+</div>
+{% endblock %}
+
+{% block script %}
+<script>
+    function printInvoice(orderId) {
+        var printWindow = window.open('', '', 'height=600,width=800,hidden');
+
+        fetch(`/pdf_template/${orderId}/`, {
+            method: 'GET',
+            headers: {'X-Requested-With': 'XMLHttpRequest'}
+        })
+        .then(response => response.text())
+        .then(html => {
+            printWindow.document.write(html);
+            setTimeout(function() {
+                printWindow.print();
+                setTimeout(function() {
+                    printWindow.close();
+                    updateOrderStatus(orderId);
+                }, 1);
+            }, 500);
+        });
+    }
+
+    function updateOrderStatus(orderId) {
+        var form = document.getElementById('print-form');
+        form.submit();
+    }
+</script>
+{% endblock %}

@@ -1,7 +1,7 @@
 from django.db import models
 from django.contrib.auth.models import User
 from django import forms
-
+from django.conf import settings
 
 class Room(models.Model):
     name = models.CharField(max_length=255)
@@ -39,6 +39,16 @@ class Table(models.Model):
 
     class Meta:
         ordering = ['table_id']
+
+
+class VirtualTable(models.Model):
+    main_table = models.ForeignKey(Table, related_name='virtual_tables', on_delete=models.CASCADE)
+    created_by = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE)
+    created_at = models.DateTimeField(auto_now_add=True)
+    is_closed = models.BooleanField(default=False)
+
+    def __str__(self):
+        return f"VirtualTable for Table {self.main_table.table_id} (ID: {self.id})"
 
 
 class Booking(models.Model):

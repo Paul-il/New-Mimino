@@ -8,8 +8,11 @@
 
 <!-- Кнопка для перехода на страницу изменения пароля -->
 <h2>Настройки</h2>
-<a class="btn btn-warning" href="{% url 'change_password' %}">Изменить пароль</a>
+<a class="btn btn-primary" href="{% url 'change_password' %}">Изменить пароль</a>
 
 <!-- Кнопка для перехода на страницу редактирования информации -->
-<a class="btn btn-info" href="{% url 'edit_profile' %}">Редактировать личную информацию</a>
+<a class="btn btn-primary" href="{% url 'edit_profile' %}">Редактировать личную информацию</a>
+
+<!-- Кнопка для перехода на страницу выбора стола -->
+<a class="btn btn-primary" href="{% url 'select_table' %}">Сменить официанта</a>
 {% endblock %}

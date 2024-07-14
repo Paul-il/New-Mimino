@@ -1,0 +1,23 @@
+{% extends "base.html" %}
+{% load static %}
+
+{% block title %}Выбор нового официанта{% endblock %}
+
+{% block content %}
+<div class="container mt-5">
+    <h2>Выбор нового официанта</h2>
+    <form action="{% url 'transfer_order' %}" method="post">
+        {% csrf_token %}
+        <input type="hidden" name="table_id" value="{{ table_id }}">
+        <div class="mb-3">
+            <label for="new_waiter" class="form-label">Выберите нового официанта:</label>
+            <select id="new_waiter" name="new_waiter" class="form-select" required>
+                {% for waiter in waiters %}
+                    <option value="{{ waiter.id }}">{{ waiter.first_name }} {{ waiter.last_name }}</option>
+                {% endfor %}
+            </select>
+        </div>
+        <button type="submit" class="btn btn-primary">Подтвердить</button>
+    </form>
+</div>
+{% endblock %}

@@ -1,0 +1,22 @@
+{% extends "base.html" %}
+{% load static %}
+
+{% block title %}Выбор стола{% endblock %}
+
+{% block content %}
+<div class="container mt-5">
+    <h2>Выбор открытого стола</h2>
+    <form action="{% url 'select_table' %}" method="post">
+        {% csrf_token %}
+        <div class="mb-3">
+            <label for="table_id" class="form-label">Выберите открытый стол:</label>
+            <select id="table_id" name="table_id" class="form-select" required>
+                {% for table in tables %}
+                    <option value="{{ table.id }}">Стол №{{ table.table_id }}</option>
+                {% endfor %}
+            </select>
+        </div>
+        <button type="submit" class="btn btn-primary">Подтвердить</button>
+    </form>
+</div>
+{% endblock %}

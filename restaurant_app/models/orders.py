@@ -18,7 +18,7 @@ class Order(models.Model):
     is_completed = models.BooleanField(default=False)
     comments = models.TextField(null=True, blank=True)
     last_printed_comments = models.TextField(null=True, blank=True)
-    table_number = models.IntegerField()
+    table_number = models.CharField(max_length=255)
     total_price = models.DecimalField(max_digits=10, decimal_places=2, null=True, blank=True)
     num_of_people = models.IntegerField(default=1)
     cash_amount = models.DecimalField(max_digits=10, decimal_places=2, default=0)
