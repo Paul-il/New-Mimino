@@ -6,6 +6,7 @@ from django.shortcuts import redirect
 
 from django.conf.urls import handler404
 
+
 from restaurant_app.views_folder.cabinet import (personal_cabinet, change_password, edit_profile, transfer_order,
                                                  select_table, select_waiter)
 from restaurant_app.views_folder.message_view import (inbox, send_message, unread_messages_count, 
@@ -51,6 +52,7 @@ from restaurant_app.views import (
 
 urlpatterns = [
     path('admin/', admin.site.urls),
+    path('', include('bot.urls')),
     path('', login_page_view, name='login'),
     path('logout/', logout_view, name='logout'),
     path('ask_where', ask_where_view, name='ask_where'),
