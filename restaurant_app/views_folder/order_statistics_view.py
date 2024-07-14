@@ -1,13 +1,12 @@
 import logging
-from django.views.generic import TemplateView
-from django.db.models import Sum, F, DecimalField
-from django.db.models.functions import Cast
-from ..models.orders import Order, OrderItem, Product
-from django.db.models import FloatField
-from ..forms import CombinedFilterForm
-from django.db.models.functions import ExtractWeekDay
-from django.utils import timezone
+import calendar
 from datetime import timedelta
+
+from django.views.generic import TemplateView
+from django.db.models import Sum, F, DecimalField, FloatField
+from django.db.models.functions import Cast, ExtractWeekDay
+from ..models.orders import OrderItem, Product
+from ..forms import CombinedFilterForm
 from django.core.cache import cache
 
 logger = logging.getLogger(__name__)
@@ -41,6 +40,8 @@ class OrderStatisticsView(TemplateView):
             product_statistics = []
             weekly_sales = []
 
+        days_with_dates = self.get_days_with_dates(start_date, end_date) if start_date and end_date and (end_date - start_date).days <= 7 else []
+
         context.update({
             'form': form,
             'total_sales_value': self.calculate_total_sales_value(start_date, end_date),
@@ -50,7 +51,9 @@ class OrderStatisticsView(TemplateView):
             'product_statistics': product_statistics,
             'weekly_sales': weekly_sales,
             'start_date': start_date,
-            'end_date': end_date
+            'end_date': end_date,
+            'days_of_week': self.get_days_of_week(),
+            'days_with_dates': days_with_dates
         })
 
         return context
@@ -93,6 +96,10 @@ class OrderStatisticsView(TemplateView):
                 total_quantity=Sum('quantity')
             ).order_by('day_of_week')
 
+            # Преобразуем результат в список для удобства отображения
+            weekly_sales_dict = {day['day_of_week']: day['total_quantity'] for day in weekly_sales}
+            weekly_sales = [weekly_sales_dict.get(i, 0) for i in range(1, 8)]  # Дни недели от 1 (Понедельник) до 7 (Воскресенье)
+
             cache.set(cache_key, weekly_sales, 60 * 15)  # Кэшируем на 15 минут
         return weekly_sales
 
@@ -111,3 +118,17 @@ class OrderStatisticsView(TemplateView):
 
     def get_translated_categories(self):
         return [(key, self.CATEGORY_TRANSLATIONS[key]) for key, _ in Product.CATEGORY_CHOICES]
+
+    def get_days_of_week(self):
+        days_of_week = list(calendar.day_name)
+        days_of_week_rus = ['Понедельник', 'Вторник', 'Среда', 'Четверг', 'Пятница', 'Суббота', 'Воскресенье']
+        return days_of_week_rus
+
+    def get_days_with_dates(self, start_date, end_date):
+        delta = end_date - start_date
+        days_with_dates = []
+        for i in range(delta.days + 1):
+            day_date = start_date + timedelta(days=i)
+            day_name = calendar.day_name[day_date.weekday()]
+            days_with_dates.append(f"{day_name} ({day_date.strftime('%d-%m-%Y')})")
+        return days_with_dates

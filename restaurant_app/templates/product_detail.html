@@ -21,7 +21,7 @@
         </thead>
         <tbody>
             <tr>
-                <td style="color: white;">За период ({{ daily_sales.start_date|date:"F j, Y" }} - {{ daily_sales.end_date|date:"F j, Y" }})</td>
+                <td style="color: white;">За период ({{ start_date|date:"F j, Y" }} - {{ end_date|date:"F j, Y" }})</td>
                 <td style="color: white;">{{ daily_sales.total_quantity }}</td>
                 <td style="color: white;">₪{{ daily_sales.total_price|floatformat:2 }}</td>
             </tr>
@@ -36,12 +36,16 @@
     const weeklySalesChart = new Chart(ctx, {
         type: 'bar',
         data: {
-            labels: ['Понедельник', 'Вторник', 'Среда', 'Четверг', 'Пятница', 'Суббота', 'Воскресенье'],
+            labels: [
+                {% for day in days_with_dates %}
+                    '{{ day }}',
+                {% endfor %}
+            ],
             datasets: [{
                 label: 'Количество продаж',
                 data: [
                     {% for day in weekly_sales %}
-                        {{ day.total_quantity }},
+                        {{ day }},
                     {% endfor %}
                 ],
                 backgroundColor: 'rgba(75, 192, 192, 0.2)',

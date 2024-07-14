@@ -49,6 +49,7 @@
 <link rel="stylesheet" href="https://cdn.datatables.net/1.11.3/css/jquery.dataTables.min.css">
 <script src="https://code.jquery.com/jquery-3.5.1.js"></script>
 <script src="https://cdn.datatables.net/1.11.3/js/jquery.dataTables.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 <script>
     $(document).ready(function () {
         $('#orderStatisticsTableByProduct').DataTable({
@@ -65,12 +66,22 @@
     const weeklySalesChart = new Chart(ctx, {
         type: 'bar',
         data: {
-            labels: ['Понедельник', 'Вторник', 'Среда', 'Четверг', 'Пятница', 'Суббота', 'Воскресенье'],
+            labels: [
+                {% if days_with_dates %}
+                    {% for day in days_with_dates %}
+                        '{{ day }}',
+                    {% endfor %}
+                {% else %}
+                    {% for day in days_of_week %}
+                        '{{ day }}',
+                    {% endfor %}
+                {% endif %}
+            ],
             datasets: [{
                 label: 'Количество продаж',
                 data: [
                     {% for day in weekly_sales %}
-                        {{ day.total_quantity }},
+                        {{ day }},
                     {% endfor %}
                 ],
                 backgroundColor: 'rgba(75, 192, 192, 0.2)',
