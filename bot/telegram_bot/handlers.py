@@ -1,7 +1,7 @@
 import logging
 from telegram import KeyboardButton, ReplyKeyboardMarkup
 from telegram.ext import CommandHandler, MessageHandler, filters
-from bot.telegram_bot.utils import get_data, get_tips, get_table_data, get_unavailable_products
+from bot.telegram_bot.utils import get_data, get_tips, get_table_data, get_unavailable_products, get_delivery_data
 
 logger = logging.getLogger(__name__)
 
@@ -9,6 +9,7 @@ async def start(update, context):
     keyboard = [
         [KeyboardButton("Сводка"), KeyboardButton("Чаевые официантов")],
         [KeyboardButton("Открытые столы"), KeyboardButton("Недоступные продукты")],
+        [KeyboardButton("Сводка по доставке")],
         [KeyboardButton("Другие команды")]
     ]
     reply_markup = ReplyKeyboardMarkup(keyboard, resize_keyboard=True)
@@ -18,6 +19,7 @@ async def menu(update, context):
     keyboard = [
         [KeyboardButton("Сводка"), KeyboardButton("Чаевые официантов")],
         [KeyboardButton("Открытые столы"), KeyboardButton("Недоступные продукты")],
+        [KeyboardButton("Сводка по доставке")],
         [KeyboardButton("Другие команды")]
     ]
     reply_markup = ReplyKeyboardMarkup(keyboard, resize_keyboard=True)
@@ -31,3 +33,4 @@ def setup_handlers(application):
     application.add_handler(MessageHandler(filters.Regex("^(Чаевые официантов)$"), get_tips))
     application.add_handler(MessageHandler(filters.Regex("^(Открытые столы)$"), get_table_data))
     application.add_handler(MessageHandler(filters.Regex("^(Недоступные продукты)$"), get_unavailable_products))
+    application.add_handler(MessageHandler(filters.Regex("^(Сводка по доставке)$"), get_delivery_data))
