@@ -3,7 +3,7 @@ from django.utils import timezone
 from django.db.models import Sum
 from rest_framework.decorators import api_view
 from rest_framework.response import Response
-from ..models import DeliveryOrder
+from delivery_app.models import DeliveryOrder
 
 def get_discount(city_name):
     if city_name == 'חיפה':
