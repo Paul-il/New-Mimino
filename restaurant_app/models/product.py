@@ -51,6 +51,7 @@ class Product(models.Model):
     has_limit = models.BooleanField(default=False, verbose_name='Лимитированный продукт')
     limit_quantity = models.PositiveIntegerField(null=True, blank=True, verbose_name='Количество лимита')
     is_available_for_delivery = models.BooleanField(default=False, verbose_name='Доступен для доставки')
+    show_in_menu = models.BooleanField(default=True, verbose_name='Показывать в меню')
 
     def __str__(self):
         return f"{self.product_name_rus} ({self.product_price}₪)"

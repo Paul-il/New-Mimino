@@ -7,7 +7,8 @@ from django.contrib.auth.models import User
 from django.contrib.admin.views.main import ChangeList
 from django.contrib import messages
 from django.db import models
-
+from django.urls import path
+from django.http import HttpResponseRedirect
 from .models.product import ProductStock, Product, OrderChangeLog
 from .models.tables import Table, Booking, Tip, TipDistribution, Room
 from .models.orders import Order, Category, PaymentMethod, Transaction
@@ -92,15 +93,48 @@ class BookingAdmin(BaseAdmin):
     date_hierarchy = 'reserved_date'
 
 @admin.register(Product)
-class ProductAdmin(BaseAdmin):
-    list_display = ['id', 'product_name_rus', 'product_name_heb', 'product_price', 'category', 'quantity', 'created_at', 'printer', 'has_limit', 'limit_quantity', 'is_available_for_delivery']
-    list_filter = ['category', 'printer', 'has_limit', 'is_available_for_delivery']
+class ProductAdmin(admin.ModelAdmin):
+    list_display = [
+        'id', 'product_name_rus', 'product_name_heb', 'product_price', 
+        'category', 'quantity', 'created_at', 'printer', 'has_limit', 
+        'limit_quantity', 'is_available_for_delivery', 'is_available', 
+        'show_in_menu', 'toggle_availability_button'
+    ]
+    list_filter = ['category', 'printer', 'has_limit', 'is_available_for_delivery', 'is_available', 'show_in_menu']
     search_fields = ['product_name_rus', 'product_name_heb']
-    fields = ('product_name_rus', 'product_name_heb', 'product_price', 'product_img', 'category', 'quantity', 'delivery_price', 'is_available', 'preparation_time', 'has_limit', 'limit_quantity', 'is_available_for_delivery')
+    fields = (
+        'product_name_rus', 'product_name_heb', 'product_price', 'product_img', 
+        'category', 'quantity', 'delivery_price', 'is_available', 
+        'preparation_time', 'has_limit', 'limit_quantity', 'is_available_for_delivery',
+        'show_in_menu'
+    )
+    list_editable = ['is_available', 'show_in_menu']
+
+    def toggle_availability_button(self, obj):
+        if obj.is_available:
+            return format_html('<a class="button" href="{}">Отключить</a>', reverse('admin:toggle_availability', args=[obj.pk]))
+        else:
+            return format_html('<a class="button" href="{}">Включить</a>', reverse('admin:toggle_availability', args=[obj.pk]))
+    toggle_availability_button.short_description = 'Изменить доступность'
+    toggle_availability_button.allow_tags = True
+
+    def get_urls(self):
+        urls = super().get_urls()
+        custom_urls = [
+            path('toggle_availability/<int:pk>/', self.admin_site.admin_view(self.toggle_availability), name='toggle_availability'),
+        ]
+        return custom_urls + urls
+
+    def toggle_availability(self, request, pk):
+        product = self.get_object(request, pk)
+        product.is_available = not product.is_available
+        product.save()
+        self.message_user(request, f"Доступность продукта '{product.product_name_rus}' изменена.")
+        return HttpResponseRedirect(request.META.get('HTTP_REFERER', '/admin'))
 
     def save_model(self, request, obj, form, change):
         if obj.has_limit and not obj.limit_quantity:
-            messages.error(request, 'Установите количество лимита для лимитированного продукта.')
+            self.message_user(request, 'Установите количество лимита для лимитированного продукта.', level='error')
         else:
             super().save_model(request, obj, form, change)
 

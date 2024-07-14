@@ -35,8 +35,8 @@ CATEGORIES = {
 def menu_view(request, table_id, category):
     table = get_object_or_404(Table, table_id=table_id)
     
-    # Сортируем продукты по имени
-    products = Product.objects.filter(category=category).order_by('product_name_rus')
+    # Сортируем продукты по имени и фильтруем по show_in_menu
+    products = Product.objects.filter(category=category, show_in_menu=True).order_by('product_name_rus')
     
     product_quantity_form = ProductQuantityForm()
     active_order = table.orders.filter(is_completed=False).first()
@@ -68,7 +68,8 @@ def menu_for_waiter_view(request, category):
 
     active_order_pk = active_order.pk if active_order else None
 
-    products = Product.objects.filter(category=category)
+    # Фильтруем продукты по show_in_menu
+    products = Product.objects.filter(category=category, show_in_menu=True)
 
     context = {
         'user': request.user,

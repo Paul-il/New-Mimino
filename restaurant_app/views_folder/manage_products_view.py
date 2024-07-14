@@ -7,8 +7,8 @@ from django.contrib.auth.decorators import login_required
 @require_GET
 def manage_products(request):
     products = Product.objects.all().order_by('product_name_rus')
-    available_products = [product for product in products if product.is_available]
-    unavailable_products = [product for product in products if not product.is_available]
+    available_products = [product for product in products if product.is_available and product.show_in_menu]
+    unavailable_products = [product for product in products if not product.is_available and product.show_in_menu]
     
     return render(request, 'manage_products.html', {'available_products': available_products, 'unavailable_products': unavailable_products})
 
@@ -16,7 +16,7 @@ def manage_products(request):
 @require_POST
 def toggle_product_availability(request):
     product = get_object_or_404(Product, id=request.POST.get('product_id'))
-    product.is_available = request.POST.get('toggle') == 'Enable'
+    product.is_available = not product.is_available
     product.save()
     
     return redirect('manage_products')
